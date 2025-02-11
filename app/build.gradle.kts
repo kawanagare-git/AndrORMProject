@@ -1,28 +1,27 @@
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android) version "1.9.0" // Kotlin 1.9.0 を使用
+    id("com.android.application")
+    kotlin("android")
+    kotlin("kapt")
 }
 
 android {
-    namespace = "jp.pgw.lab78.androrm"
+    namespace = "jp.pgw.lab78"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "jp.pgw.lab78.androrm"
-        minSdk = 26
+        applicationId = "jp.pgw.lab78"
+        minSdk = 24
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
@@ -34,70 +33,35 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-
-    buildToolsVersion = "34.0.0"
-
-    testOptions {
-        unitTests.all {
-            // it.isIncludeAndroidResources = true // Robolectricなどを使用する場合に必要
-        }
-    }
-    packaging {
-        resources {
-            excludes.add("META-INF/LICENSE.md")
-            excludes.add("META-INF/LICENSE-notice.md")
-        }
-    }
-}
-
-configurations.all {
-    resolutionStrategy.eachDependency {
-        if (requested.group == "org.jetbrains.kotlin") {
-            useVersion("1.9.0")
-        }
-    }
-}
-
-tasks.withType<Test> {
-    useJUnitPlatform() // JUnit 5 を有効化
-}
-
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17)) // 必ず Java 17 を指定
-    }
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0") // 1.9.0 に戻す
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.core.ktx)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    // https://mvnrepository.com/artifact/org.jetbrains.kotlin/kotlin-reflect
-    implementation(libs.kotlin.reflect)
-    
-    // JUnit 5 の基本依存関係
-    testImplementation(libs.junit.jupiter)
-    androidTestImplementation(project(":app"))
-    androidTestImplementation(libs.jupiter.junit.jupiter)
-    testRuntimeOnly(libs.platform.junit.platform.launcher)
-    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
-    testImplementation(libs.junit.jupiter.api)
-    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
-    testImplementation(libs.junit.jupiter.engine)
+    // Kotlin 標準ライブラリ
+    implementation(kotlin("stdlib"))
 
-    // モックテスト用
-    // https://mvnrepository.com/artifact/org.mockito/mockito-core
-    androidTestImplementation(libs.mockito.core)
+    // リフレクション（必要に応じて）
+    implementation(libs.kotlin.reflect)
+
+    // Material Components
+    implementation(libs.material)
+
+    // ==== 単体テスト（JVM 上で動作） ====
+    testImplementation(libs.junit.jupiter.api)      // JUnit 5 API
+    testImplementation(libs.junit.jupiter.params)   // パラメータ化テスト用
+    testRuntimeOnly(libs.junit.jupiter.engine)      // JUnit 5 Engine
+    // Mockito for unit tests
     testImplementation(libs.mockito.core)
 
-    // 必要に応じて、追加のモジュールを指定
-    testImplementation(libs.junit.jupiter.params)
-    testRuntimeOnly(libs.junit.platform.launcher)
-    // Android 向けに Robolectric を使用する場合（必要に応じて）
-    testImplementation(libs.robolectric)
+    // ==== インストルメンテーションテスト（Android） ====
+    androidTestImplementation(libs.junit)           // JUnit 4 本体 :contentReference[oaicite:2]{index=2}
+    androidTestImplementation(libs.runner)          // テストランナー :contentReference[oaicite:3]{index=3}
+    androidTestImplementation(libs.ext.junit)       // AndroidX の JUnit 4 拡張 :contentReference[oaicite:4]{index=4}
+    androidTestImplementation(libs.mockito.android) // Mockito for Android tests
+    // Android UI テスト（必要なら）
+    androidTestImplementation(libs.espresso.core)
+}
+
+// build.gradle.kts の末尾付近に追加
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
 }

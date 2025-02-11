@@ -12,5 +12,4 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AndrORM"
         tools:targetApi="31" />
-
 </manifest>

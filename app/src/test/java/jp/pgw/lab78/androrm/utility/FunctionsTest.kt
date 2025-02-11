@@ -4,14 +4,11 @@ import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvFileSource
-import kotlin.reflect.typeOf
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.LocalDateTime
-import kotlin.reflect.KClass
+import java.time.LocalTime
 import kotlin.reflect.full.createType
 
 class FunctionsTest {

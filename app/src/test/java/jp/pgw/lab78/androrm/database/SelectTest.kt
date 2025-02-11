@@ -1,24 +1,24 @@
 package jp.pgw.lab78.androrm.database
 
-import org.junit.jupiter.api.Assertions.*
-
+import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 
 class SelectTest {
 
-    @Test
-    fun fromTest() {
+    companion object {
+        @JvmStatic
+        lateinit var SELECT: Select<*>
+
+        @BeforeAll
+        @JvmStatic
+        fun initialize() {
+            SELECT = Select(TestSelectEntity::class)
+        }
+
     }
 
     @Test
-    fun whereTest() {
-    }
-
-    @Test
-    fun buildTest() {
-    }
-
-    @Test
-    fun getColumnsTest() {
+    fun build() {
     }
 }

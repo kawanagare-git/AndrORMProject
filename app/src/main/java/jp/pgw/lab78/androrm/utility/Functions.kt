@@ -12,14 +12,15 @@ import kotlin.reflect.full.createType
  */
 object Functions {
     /**
-     * toSnakeCase 関数
-     * キャメルケースの文字列をスネークケースに変換
+     * ## toSnakeCase 関数
+     * ### キャメルケースの文字列をスネークケースに変換
      */
     fun String.toSnakeCase(): String {
         return this.replace(Regex("([a-z])([A-Z])")) { "${it.groupValues[1]}_${it.groupValues[2]}" }
             .uppercase()
     }
 
+    /** ## 型変換用マップ */
     private val fieldToColumnMap = mapOf(
         Int::class to "INTEGER"
         ,Long::class to "INTEGER"
@@ -33,14 +34,16 @@ object Functions {
     )
 
     /**
-     * mapKotlinTypeToSqlType 関数
-     * クラスのフィールド型をデータベースのカラム型に変換
+     * ## mapKotlinTypeToSqlType 関数
+     * ### クラスのフィールド型をデータベースのカラム型に変換
      * @param field 変換対象のフィールドを指定
      */
     fun mapKotlinTypeToSqlType(field : Any): String {
         val valueForJudgment = when (field) {
-            is KType -> field.classifier as? KClass<*> // arg が既に KType の場合、KClass<*> にキャスト
-            else -> field::class // それ以外は、KClass<*> を取得
+            // arg が既に KType の場合、KClass<*> にキャスト
+            is KType -> field.classifier as? KClass<*>
+            // それ以外は、KClass<*> を取得
+            else -> field::class
         }
         if (valueForJudgment == null) {
             throw IllegalArgumentException("Unsupported type: $field")

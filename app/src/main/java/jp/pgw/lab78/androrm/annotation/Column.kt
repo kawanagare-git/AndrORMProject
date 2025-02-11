@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.annotation
 
 /**
- * Column アノテーション
+ * ## Column アノテーション
  * @param name フィールド名にカラム名を指定する
  */
 @Target(AnnotationTarget.PROPERTY)

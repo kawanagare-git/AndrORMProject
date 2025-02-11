@@ -3,11 +3,13 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
-import junit.framework.TestCase.assertNotNull
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.spy
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
 class DatabaseHelperTest {
@@ -22,7 +24,7 @@ class DatabaseHelperTest {
         context = ApplicationProvider.getApplicationContext()
 
         // DatabaseHelper を作成
-        dbHelper = DatabaseHelper(context, version = 1, entities = arrayOf(TestEntity::class))
+        dbHelper = spy(DatabaseHelper(context, version = 1, entities = arrayOf(TestEntity::class)))
 
         // SQLiteDatabase をモック
         mockDb = mock(SQLiteDatabase::class.java)
@@ -37,8 +39,10 @@ class DatabaseHelperTest {
     @Test
     @DisplayName("onCreate メソッドのテスト")
     fun onCreateTest() {
-        assertNotNull(dbHelper)
-        verify(dbHelper).onCreate(mockDb)
+        Assertions.assertNotNull(dbHelper)
+        // verify(dbHelper).onCreate(mockDb) は不可 → spy を利用する
+        verify(dbHelper, times(1)).onCreate(mockDb)
+
     }
 
     /**
@@ -47,5 +51,6 @@ class DatabaseHelperTest {
     @Test
     @DisplayName("onUpgrade メソッドのテスト")
     fun onUpgradeTest() {
+        Assertions.assertNotNull(dbHelper)
     }
 }
