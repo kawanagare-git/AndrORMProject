@@ -42,6 +42,12 @@ android {
             // it.isIncludeAndroidResources = true // Robolectricなどを使用する場合に必要
         }
     }
+    packaging {
+        resources {
+            excludes.add("META-INF/LICENSE.md")
+            excludes.add("META-INF/LICENSE-notice.md")
+        }
+    }
 }
 
 configurations.all {
@@ -67,6 +73,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.core.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -74,8 +81,20 @@ dependencies {
     implementation(libs.kotlin.reflect)
     
     // JUnit 5 の基本依存関係
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation(libs.junit.jupiter)
+    androidTestImplementation(project(":app"))
+    androidTestImplementation(libs.jupiter.junit.jupiter)
+    testRuntimeOnly(libs.platform.junit.platform.launcher)
+    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
+    testImplementation(libs.junit.jupiter.api)
+    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
+    testImplementation(libs.junit.jupiter.engine)
+
+    // モックテスト用
+    // https://mvnrepository.com/artifact/org.mockito/mockito-core
+    androidTestImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.core)
+
     // 必要に応じて、追加のモジュールを指定
     testImplementation(libs.junit.jupiter.params)
     testRuntimeOnly(libs.junit.platform.launcher)

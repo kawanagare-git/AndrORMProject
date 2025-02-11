@@ -1,25 +1,22 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.annotation.TableColumns
+
 /**
  * QueryBuilder クラス
  *
  */
-class QueryBuilder {
+class Select(vararg val columns: TableColumns) {
     private val selectColumns = mutableListOf<String>()
     private var fromTable: String? = null
     private var whereCondition: String? = null
 
-    fun select(vararg columns: String): QueryBuilder {
-        selectColumns.addAll(columns)
-        return this
-    }
-
-    fun from(tableName: String): QueryBuilder {
+    fun from(tableName: String): Select {
         fromTable = tableName
         return this
     }
 
-    fun where(condition: String): QueryBuilder {
+    fun where(condition: String): Select {
         whereCondition = condition
         return this
     }
