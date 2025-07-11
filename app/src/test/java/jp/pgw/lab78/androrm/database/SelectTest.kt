@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
-import org.junit.jupiter.api.BeforeAll
+import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
 import org.junit.jupiter.api.Test
 
 class SelectTest {
@@ -10,15 +10,18 @@ class SelectTest {
         @JvmStatic
         lateinit var SELECT: Select<*>
 
-        @BeforeAll
-        @JvmStatic
-        fun initialize() {
-            SELECT = Select(TestSelectEntity::class)
-        }
-
     }
 
     @Test
     fun build() {
+        SELECT = Select(TestSelectEntity::class)
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntityWithAlias::class)
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntity::class, isDistinct = true)
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntityWithAlias::class).join(Select.JoinType.LEFT, TestSelectEntity::class,TestSelectEntityWithAlias::id,
+            ComparisonOperator.EQUALS,TestSelectEntity::id)
+        println(SELECT.build())
     }
 }

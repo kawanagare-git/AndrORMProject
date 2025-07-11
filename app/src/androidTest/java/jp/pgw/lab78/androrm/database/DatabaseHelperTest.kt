@@ -3,10 +3,8 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.DisplayName
-import org.junit.jupiter.api.Test
+import org.junit.*
+import org.junit.Assert.assertNotNull
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
@@ -18,7 +16,7 @@ class DatabaseHelperTest {
     private lateinit var context: Context
     private lateinit var mockDb: SQLiteDatabase
 
-    @BeforeEach
+    @Before
     fun setUp() {
         // Context をモックする
         context = ApplicationProvider.getApplicationContext()
@@ -37,9 +35,8 @@ class DatabaseHelperTest {
      * onCreate テストメソッド
      */
     @Test
-    @DisplayName("onCreate メソッドのテスト")
     fun onCreateTest() {
-        Assertions.assertNotNull(dbHelper)
+        assertNotNull(dbHelper)
         // verify(dbHelper).onCreate(mockDb) は不可 → spy を利用する
         verify(dbHelper, times(1)).onCreate(mockDb)
 
@@ -49,8 +46,7 @@ class DatabaseHelperTest {
      * onUpgrade テストメソッド
      */
     @Test
-    @DisplayName("onUpgrade メソッドのテスト")
     fun onUpgradeTest() {
-        Assertions.assertNotNull(dbHelper)
+        assertNotNull(dbHelper)
     }
 }

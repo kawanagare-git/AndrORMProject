@@ -6,4 +6,4 @@ package jp.pgw.lab78.androrm.annotation
  */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class Column(val name: String = "")
+annotation class Column(val name: String = "", val alias: String = "")

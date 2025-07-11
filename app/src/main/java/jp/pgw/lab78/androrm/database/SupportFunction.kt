@@ -8,8 +8,10 @@ import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * SupportFunction オブジェクトクラス
@@ -45,35 +47,19 @@ object SupportFunction {
 
     /**
      * ## テーブル名取得
-     * ### エンティティクラスからテーブル名取得する
+     * ### エンティティクラスからテーブル名を取得する
      * @param entityClass エンティティクラスを指定
      * @return 取得したテーブル名
      */
-    fun <T : Entity> getTableName(entityClass: KClass<T>): String
-    // すでにマップに登録されているか確認し、なければ新たに登録する
-            = entityDefinitionMap.getOrPut(entityClass) {
-        // entityDefinitionMap から get できなかった場合、テーブル名を生成
-        val tableAnnotation = entityClass.findAnnotation<Table>()
-        val computedTableName =
-            // @Table の有無
-            tableAnnotation
-                // @Table 有 属性 name の有
-                ?.name
-                // 属性 name の無
-                ?.ifBlank {
-                    // 属性 name 無、クラス名をスネークケースに変換
-                    entityClass.simpleName?.toSnakeCase()
-                    // entityClass.simpleName は通常 null はない
-                        ?: error("Could not determine class name (${entityClass.simpleName}).")
-                }
-                // テーブル名のエイリアスを付与
-                ?.plus(" ${tableAnnotation.alias}")
-            // @Table 無、クラス名をスネークケースに変換
-                ?: (entityClass.simpleName?.toSnakeCase()
-                // entityClass.simpleName は通常 null はない
-                    ?: error("Could not determine class name (${entityClass.simpleName})."))
-        EntityDefinitionManager(computedTableName, mutableMapOf())
-    }.tableName
+    fun <T : Entity> getTableName(entityClass: KClass<T>): String =
+        entityDefinitionMap.getOrPut(entityClass) {
+            val tableAnnotation = entityClass.findAnnotation<Table>()
+            val computedTableName = tableAnnotation?.name
+                                                    ?.ifBlank { entityClass.simpleNameToSnakeCase() }
+                                                    ?.plus(" ${tableAnnotation.alias}")
+                                                    ?: (entityClass.simpleNameToSnakeCase())
+            EntityDefinitionManager(computedTableName, mutableMapOf())
+        }.tableName//.let { splitTableNameAndAlias(it).first } // ← パースして「テーブル名」だけ返す
 
     /**
      * ## カラム名取得
@@ -81,51 +67,103 @@ object SupportFunction {
      * @param entityClass エンティティクラスを指定
      * @return 取得したカラム名のリスト
      */
-    fun <T : Entity> getColumnNames(entityClass: KClass<T>): List<Pair<String, String>>
-    // すでにマップに登録されているか確認し、なければ新たに登録する
-            = entityClass.memberProperties.map { prop ->
-        val columnAnnotation = prop.findAnnotation<Column>()
-        val columnName =
-            // @Column 有無
-            columnAnnotation
-            // @Column 有 name 属性の有
-            ?.name
-            // name 属性の無
-            ?.ifBlank {
-                // フィールド名をスネークケースに変換
-                prop.name.toSnakeCase()
-            }
-            // エイリアスの付与
-            ?.plus(" ${getAlias(entityClass)
-                // 空でない alias のみ通す
-                .takeIf { it.isNotBlank() }
-                // 通った alias にドットを付ける
-                ?.let { "$it." }
-                ?: ""
-            }")
-        // @Column 無、フィールド名をスネークケースに変換
-            ?: prop.name.toSnakeCase()
-        // entityDefinitionMap[entityClass]?.columnInfo は、必ず存在すること
-        entityDefinitionMap[entityClass]?.columnInfo?.also {
-            it[prop] = columnName
-        } ?: error("Initialization required for ${entityClass.simpleName}.")
-        val sqlType = mapKotlinTypeToSqlType(prop.returnType)
-        columnName to sqlType
+    fun <T : Entity> getColumnNames(entityClass: KClass<T>): List<Pair<String, String>> {
+        val alias = getAlias(entityClass)
+
+        return entityClass.memberProperties.map { prop ->
+            // カラム名のベース（@Column.name or プロパティ名）
+            val baseName = prop.findAnnotation<Column>()
+                ?.name
+                ?.takeIf { it.isNotBlank() }
+                ?: prop.name.toSnakeCase()
+
+            val columnName = "$alias.$baseName"
+
+            // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
+            entityDefinitionMap[entityClass]?.columnInfo?.also {
+                it[prop] = columnName
+            } ?: error("Initialization required for ${entityClass.simpleName}.")
+
+            val sqlType = mapKotlinTypeToSqlType(prop.returnType)
+            columnName to sqlType
+        }
     }
-    // 既存の EntityDefinitionManager, entityDefinitionMap, Table アノテーション等はそのまま
 
     /**
-     * ## エンティティのエイリアス取得
-     * @param entityClass エンティティクラス
-     * @return テーブルエイリアス（Table.annotation.alias が空なら、クラス名をスネークケースに変換したもの）
+     * ## 定義順カラム取得
+     * ### カラム定義をコンストラクタ順に取得
+     * @param [T] Entity インターフェイスの実装型
+     * @param entityClass 対象のエンティティクラス
+     * @return 定義順に並んだカラム名のリスト
+     */
+    fun <T : Entity> getColumnDefinitions(entityClass: KClass<T>): List<Pair<String, String>> {
+        val alias = getAlias(entityClass)
+        // 1) プライマリコンストラクタがないときはエラー
+        val constructor = entityClass.primaryConstructor
+            ?: error("No primary constructor for ${entityClass.simpleName}")
+
+        // 2) コンストラクタパラメータ順でプロパティをマッピング
+        return constructor.parameters.map { param ->
+            // プロパティ名と対応づけ
+            val prop = entityClass.memberProperties
+                .first { it.name == param.name }
+            // @Column の name/alias を取得
+            val colAnno = prop.findAnnotation<Column>()
+            val baseName = colAnno?.name
+                .takeIf { !it.isNullOrBlank() }
+                ?: prop.name.toSnakeCase()
+            val columnName = "$alias.$baseName"
+            // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
+            entityDefinitionMap[entityClass]?.columnInfo?.also {
+                it[prop] = columnName
+            } ?: error("Initialization required for ${entityClass.simpleName}.")
+            // SQL 型マッピング（既存関数を呼び出し）
+            val sqlType = mapKotlinTypeToSqlType(prop.returnType)
+            // 結果をペアで返却
+            columnName to sqlType
+        }
+    }
+
+    /**
+     * ## エイリアス取得
+     * ### エンティティクラスからエイリアスを取得する
+     * @param entityClass エンティティクラスを指定
+     * @return 取得したエイリアス
      */
     fun <T : Entity> getAlias(entityClass: KClass<T>): String =
-        // Map に登録されているか？
         entityDefinitionMap[entityClass]
-            // テーブル名からエイリアスを取得
             ?.tableName
+            // tableName を２分割する
             ?.split(" ", limit = 2)
+            // 分割した２つ目を取得
             ?.getOrNull(1)
-            // テーブル名が未登録（事実上あり得ない）かエイリアスが未登録
-            ?: ""
+            // 取得した内容が空欄か？
+            ?.takeIf { it.isNotBlank() }
+            // 空欄の場合、クラス名をスネークケースに変換
+            ?: entityClass.simpleNameToSnakeCase()
+
+    /**
+     * ## テーブル名とエイリアスを分離
+     * @param tableName "users u" のような形式
+     * @return Pair(テーブル名, エイリアス). エイリアスがない場合は ""。
+     */
+    fun splitTableNameAndAlias(tableName: String): Pair<String, String> {
+        val parts = tableName.split(" ", limit = 2)
+        return parts[0] to (parts.getOrNull(1) ?: "")
+    }
+
+    /**
+     * ## クラス名をスネークケースに変換
+     * @return スネークケースに変換されたクラス名（nullなら例外）
+     */
+    public fun KClass<*>.simpleNameToSnakeCase(): String =
+        this.simpleName?.toSnakeCase()
+            ?: error("Could not determine class name for ${this.qualifiedName}")
+
+    /**
+     * ## プロパティ名をスネークケースに変換
+     * @return スネークケースに変換されたクラス名（nullなら例外）
+     */
+    public fun KProperty1<*, *>.simpleNameToSnakeCase(): String =
+        this.name.toSnakeCase()
 }

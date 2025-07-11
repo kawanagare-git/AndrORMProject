@@ -3,9 +3,9 @@ package jp.pgw.lab78.androrm.utility
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-import kotlin.reflect.full.createType
 
 /**
  * UtilityFunction オブジェクトクラス
@@ -17,7 +17,7 @@ object Functions {
      */
     fun String.toSnakeCase(): String {
         return this.replace(Regex("([a-z])([A-Z])")) { "${it.groupValues[1]}_${it.groupValues[2]}" }
-            .uppercase()
+            .uppercase(Locale.ROOT)
     }
 
     /** ## 型変換用マップ */

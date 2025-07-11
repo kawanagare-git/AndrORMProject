@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.annotations.Entity
+import jp.pgw.lab78.androrm.database.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 
-data class TestEntity(val id :Int,val name :String,val address: String,val birthday :LocalDate,) : Entity
+data class TestEntity(val id :Int,val name :String,val address: String,val birthday :LocalDate,) :
+    TableDefinitionEntity

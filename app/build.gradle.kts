@@ -28,6 +28,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // ここを true に
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -60,7 +62,10 @@ dependencies {
     // Android UI テスト（必要なら）
     androidTestImplementation(libs.espresso.core)
 }
-
+// JSR-310（ThreeTen） API 対応
+dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+}
 // build.gradle.kts の末尾付近に追加
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
