@@ -26,8 +26,11 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
     /** 抽出カラムリスト */
     private val selectColumnList = mutableListOf<Pair<String, String>>()
 
-    /**  */
+    /** 検索条件リスト */
     private val whereConditions = mutableListOf<Condition>()
+
+    /** 関数結果検索条件リスト */
+    private val havingConditions = mutableListOf<Condition>()
 
     /**
      * ## select 文を構成要素列挙クラス
@@ -57,8 +60,8 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
      */
     init {
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        val mainColumns = getColumnDefinitions(entityClass)
-        selectColumnList += mainColumns
+        val columns = getColumnDefinitions(entityClass)
+        selectColumnList += columns
         // from 句とテーブル名の定義を設定
         queryStructureMap[SelectIdentifier.SELECT] = mutableListOf(" from $mainTableName")
     }
@@ -68,29 +71,23 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
      * ### テーブル結合を指定する
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
      * @param joinedEntityClass 結合するエンティティクラス（副クラス）
-     * @param mainColumn 結合条件の主カラム
-     * @param operator 結合演算子
-     * @param joinedColumn 結合条件の副カラム
+     * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      */
     fun <TJ : SelectEntity> join(joinType: JoinType
                                  , joinedEntityClass: KClass<TJ>
-                                 , mainColumn: KProperty1<T, *>
-                                 , operator: ComparisonOperator
-                                 , joinedColumn: KProperty1<TJ, *>
+                                 , block: ConditionBuilder.() -> Unit
     ): Select<T> {
         // 結合テーブル名取得
         val joinedTableName = getTableName(joinedEntityClass).trim()
-        // 主テーブルのカラム名
-        val columnString = generateColumn(mainColumn)
-        // 副テーブルのカラム名
-        val joinedColumnString = generateColumn(joinedColumn)
-        queryStructureMap[SelectIdentifier.JOIN] =
-            mutableListOf("${joinType.name.lowercase(Locale.ROOT)} "
-                    + "join $joinedTableName on $columnString ${operator.symbol} $joinedColumnString"
+        val joinCondition = ConditionBuilder().apply(block).buildList()
+        queryStructureMap.getOrPut(SelectIdentifier.JOIN) { mutableListOf() }
+            .add("${joinType.name.lowercase(Locale.ROOT)} "
+                    + "join $joinedTableName on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
-        val joinedColumns = getColumnDefinitions(joinedEntityClass)
-        selectColumnList += joinedColumns
+        // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
+        val columns = getColumnDefinitions(entityClass)
+        selectColumnList += columns
         return this
     }
 
@@ -135,10 +132,14 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
     /**
      * ## having メソッド
      * ### 集計結果検索条件を指定する
+     * @param block 条件を構築するための DSL ブロック。`HavingConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      */
-    fun having() {}
-
+    fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
+        val builder = HavingConditionBuilder().apply(block)
+        havingConditions += builder.buildList()
+        return this
+    }
     /**
      * ## order メソッド
      * ### 集計結果検索条件を指定する
@@ -189,6 +190,7 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
      * @param column 生成するカラム
      * @return 生成されたカラム名、エイリアス設定が有れば付与される
      */
+    @Suppress("UNCHECKED_CAST")
     private fun <T : SelectEntity> generateColumn(column: KProperty1<T, *>): String {
         // エンティティクラスの取得
         val entityClass = (column.parameters.first().type.classifier as? KClass<T>)

@@ -7,6 +7,8 @@ import jp.pgw.lab78.androrm.database.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -177,6 +179,8 @@ object SupportFunction {
     fun formatValue(value: Any): String = when (value) {
         is String -> "'$value'"
         is LocalDate -> "'$value'"
+        is LocalDateTime -> "'$value'"
+        is LocalTime -> "'$value'"
         else -> value.toString()
     }
 
