@@ -30,10 +30,7 @@ class SelectTest {
                                 condition(TestSelectEntityWithAlias::id, ComparisonOperator.EQUALS, TestSelectEntity::id)
                             })
                     .where {
-                        and{
                             condition(TestSelectEntity::name, ComparisonOperator.LIKE, "kawanagare%")
-                            condition(TestSelectEntity::id, ComparisonOperator.EQUALS, "0078" )
-                        }
                     }
         println(SELECT.build())
         SELECT = Select(TestSelectEntityWithAlias::class)
@@ -57,7 +54,6 @@ class SelectTest {
                 }
             }
         println(SELECT.build())
-        // 最終TEST
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(Select.JoinType.INNER, TestSelectEntity::class,{
                 and{
@@ -81,6 +77,36 @@ class SelectTest {
                                 , ComparisonOperator.LESS_THAN
                                 , LocalDate.parse("2025-07-01"))
                 }
+            }
+        println(SELECT.build())
+        // 最終TEST
+        SELECT = Select(TestSelectEntityWithAlias::class)
+            .join(Select.JoinType.INNER, TestSelectEntity::class,{
+                and{
+                    condition(TestSelectEntityWithAlias::id, ComparisonOperator.EQUALS, TestSelectEntity::id)
+                    condition(TestSelectEntityWithAlias::name, ComparisonOperator.EQUALS, TestSelectEntity::name)
+                }
+            })
+            .join(Select.JoinType.LEFT, TestAllEntity::class,{
+                condition(TestSelectEntityWithAlias::birthday, ComparisonOperator.GREATER_THAN_OR_EQUALS, TestAllEntity::birthday)
+            })
+            .where {
+                and {
+                    condition(TestSelectEntityWithAlias::name, ComparisonOperator.EQUALS, "川流")
+                    condition(TestSelectEntity::address, ComparisonOperator.LIKE, "%Shinjuku%")
+                }
+                or {
+                    condition(TestAllEntity::insertDateTime
+                        , ComparisonOperator.GREATER_THAN
+                        , LocalDateTime.parse("2025-01-01T00:00:00.000"))
+                    condition(TestAllEntity::updateDate
+                        , ComparisonOperator.LESS_THAN
+                        , LocalDate.parse("2025-07-01"))
+                }
+            }
+            .having {
+
+
             }
         println(SELECT.build())
 

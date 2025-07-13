@@ -5,7 +5,6 @@ import jp.pgw.lab78.androrm.database.SupportFunction.getColumnDefinitions
 import jp.pgw.lab78.androrm.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.database.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.sealed.Compare
 import jp.pgw.lab78.androrm.database.sealed.Condition
 import java.util.EnumMap
 import java.util.Locale
@@ -86,7 +85,7 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
                     + "join $joinedTableName on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        val columns = getColumnDefinitions(entityClass)
+        val columns = getColumnDefinitions(joinedEntityClass)
         selectColumnList += columns
         return this
     }
@@ -94,13 +93,11 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
     /**
      * ## where メソッド
      * ### テーブル検索条件を指定する
-     * @param lhsProperty 検索条件のカラム
-     * @param operator 検索演算子
-     * @param value 検索値
+     * @param condition 条件を構築されたインスタンス
      * @return 自身のインスタンス(this)
      */
-    fun <TX : SelectEntity>where(lhsProperty: KProperty1<TX, *>, operator: ComparisonOperator, value: Any): Select<T> {
-        whereConditions += mutableListOf(Compare.Value(lhsProperty, operator, value))
+    fun <TX : SelectEntity>where(condition: ConditionBuilder): Select<T> {
+        whereConditions += condition.buildList()
         return this
     }
 
@@ -132,6 +129,17 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
     /**
      * ## having メソッド
      * ### 集計結果検索条件を指定する
+     * @param condition 条件を構築されたインスタンス
+     * @return 自身のインスタンス(this)
+     */
+    fun <TX : SelectEntity>having(condition: HavingConditionBuilder): Select<T> {
+        havingConditions += HavingConditionBuilder().buildList()
+        return this
+    }
+
+    /**
+     * ## having メソッド
+     * ### 集計結果検索条件を指定する
      * @param block 条件を構築するための DSL ブロック。`HavingConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      */
@@ -140,6 +148,7 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
         havingConditions += builder.buildList()
         return this
     }
+
     /**
      * ## order メソッド
      * ### 集計結果検索条件を指定する
@@ -167,6 +176,10 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
         if (whereConditions.isNotEmpty()) {
             val whereClause = whereConditions.joinToString(" AND ") { it.build() }
             queryStructureMap[SelectIdentifier.WHERE] = mutableListOf("where $whereClause")
+        }
+        if (havingConditions.isNotEmpty()) {
+            val havingClause = whereConditions.joinToString(" AND ") { it.build() }
+            queryStructureMap[SelectIdentifier.WHERE] = mutableListOf("having by $havingClause")
         }
         val clauses = SelectIdentifier.entries.joinToString(" ") { identifier ->
                             queryStructureMap[identifier]?.joinToString(" ") ?: ""

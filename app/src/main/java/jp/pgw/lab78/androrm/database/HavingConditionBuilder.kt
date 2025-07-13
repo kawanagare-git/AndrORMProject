@@ -2,14 +2,13 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
 import jp.pgw.lab78.androrm.database.interfaces.Entity
-import jp.pgw.lab78.androrm.database.sealed.Compare
 import jp.pgw.lab78.androrm.database.sealed.Condition
 import jp.pgw.lab78.androrm.database.sealed.HavingCompare
 import jp.pgw.lab78.androrm.database.sealed.LogicalCondition
 import kotlin.reflect.KProperty1
 
 class HavingConditionBuilder : ConditionBuilderLike {
-    private val list = mutableListOf<HavingConditionBuilder>()
+    private val list = mutableListOf<Condition>()
 
     fun <T : Entity> condition(
         function: AggregateFunction,
@@ -21,11 +20,13 @@ class HavingConditionBuilder : ConditionBuilderLike {
     }
 
     fun <T1 : Entity ,T2 : Entity> condition(
-        left: KProperty1<T1, *>,
+        leftFunction: AggregateFunction,
+        leftProperty: KProperty1<T1, *>,
         operator: ComparisonOperator,
-        right: KProperty1<T2, *>,
+        rightFunction: AggregateFunction,
+        rightProperty: KProperty1<T1, *>,
     ) {
-        list +=  HavingCompare.Column(left, operator, right)
+        list +=  HavingCompare.Function(leftFunction, leftProperty, operator, rightFunction, rightProperty)
     }
 
     fun and(block: HavingConditionBuilder.() -> Unit) {
