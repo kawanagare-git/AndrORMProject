@@ -6,6 +6,7 @@ import jp.pgw.lab78.androrm.database.interfaces.Entity
 import jp.pgw.lab78.androrm.database.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
+import java.time.LocalDate
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
@@ -112,7 +113,7 @@ object SupportFunction {
             val baseName = colAnno?.name
                 .takeIf { !it.isNullOrBlank() }
                 ?: prop.name.toSnakeCase()
-            val columnName = "$alias.$baseName"
+            val columnName = "$alias$baseName"
             // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
             entityDefinitionMap[entityClass]?.columnInfo?.also {
                 it[prop] = columnName
@@ -130,7 +131,7 @@ object SupportFunction {
      * @param entityClass エンティティクラスを指定
      * @return 取得したエイリアス
      */
-    fun <T : Entity> getAlias(entityClass: KClass<T>): String =
+    fun <T : Entity> getAlias(entityClass: KClass<T>): String = (
         entityDefinitionMap[entityClass]
             ?.tableName
             // tableName を２分割する
@@ -140,7 +141,7 @@ object SupportFunction {
             // 取得した内容が空欄か？
             ?.takeIf { it.isNotBlank() }
             // 空欄の場合、クラス名をスネークケースに変換
-            ?: entityClass.simpleNameToSnakeCase()
+            ?: entityClass.simpleNameToSnakeCase()) + "."
 
     /**
      * ## テーブル名とエイリアスを分離
@@ -164,6 +165,30 @@ object SupportFunction {
      * ## プロパティ名をスネークケースに変換
      * @return スネークケースに変換されたクラス名（nullなら例外）
      */
-    public fun KProperty1<*, *>.simpleNameToSnakeCase(): String =
+    fun KProperty1<*, *>.simpleNameToSnakeCase(): String =
         this.name.toSnakeCase()
+
+    /**
+     * ## 値の文字列化
+     * ### 指定された値を文字列化する
+     * @param value 変換元の値
+     * @return 文字列化された値
+     */
+    fun formatValue(value: Any): String = when (value) {
+        is String -> "'$value'"
+        is LocalDate -> "'$value'"
+        else -> value.toString()
+    }
+
+    /**
+     * ## クラス取得
+     * ### KProperty1<T, *> からクラス名を取得する
+     * @param property KProperty1<T, *> プロパティ
+     * @return 取得したクラスの型
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <T : Entity> extractClassFromProperty(property: KProperty1<T, *>): KClass<T>? =
+        // property.parameters[0] はレシーバー（=宣言元）に対応する
+        property.parameters.firstOrNull()?.type?.classifier as? KClass<T>
+
 }
