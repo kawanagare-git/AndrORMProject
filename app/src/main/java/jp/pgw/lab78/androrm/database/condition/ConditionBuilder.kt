@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.interfaces.Entity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
 import jp.pgw.lab78.androrm.database.sealed.Compare
 import jp.pgw.lab78.androrm.database.sealed.Condition
 import jp.pgw.lab78.androrm.database.sealed.LogicalCondition
@@ -18,7 +18,7 @@ class ConditionBuilder : ConditionBuilderLike {
         list +=  Compare.Value(property, operator, value)
     }
 
-    fun <T1 : Entity ,T2 : Entity> condition(
+    fun <T1 : Entity,T2 : Entity> condition(
         left: KProperty1<T1, *>,
         operator: ComparisonOperator,
         right: KProperty1<T2, *>,

@@ -1,11 +1,12 @@
-package jp.pgw.lab78.androrm.database.entities.select
+package jp.pgw.lab78.entities.select
 
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity
 import java.time.LocalDate
 
 /**
  * テスト用 data クラス
  */
 @Table(alias = "TSEA")
-data class TestSelectEntityWithAlias(val id :Int, val name :String, val address: String, val birthday :LocalDate,) : SelectEntity
+data class TestSelectEntityWithAlias(val id :Int, val name :String, val address: String, val birthday :LocalDate,) :
+    SelectEntity

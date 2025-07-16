@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.database.SupportFunction.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
 import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.database.interfaces.Entity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -18,8 +18,9 @@ enum class AggregateFunction(val sql: String, val supportedInSQLite: Boolean
     GROUP_CONCAT("group_concat", true, false, true),
     STRING_AGG("string_agg", false, true, false);
 
-    fun <T : Entity>create(column: KProperty1<T, *>, isDistinct: Boolean = false)
-                    = "${this.sql}(${if (isDistinct) "DISTINCT " else ""}" +
-                        " ${getAlias(extractClassFromProperty(column) as KClass<out Entity>)}" +
-                        "${column.simpleNameToSnakeCase()})"
+    fun <T : Entity>create(column: KProperty1<T, *>, isDistinct: Boolean = false): String {
+        val distinct = if (isDistinct) "DISTINCT " else ""
+        val alias = getAlias(extractClassFromProperty(column) as KClass<out Entity>)
+        return "${this.sql}($distinct$alias${column.simpleNameToSnakeCase()})"
+    }
 }

@@ -6,7 +6,7 @@ import jp.pgw.lab78.androrm.database.SupportFunction.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.SupportFunction.formatValue
 import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
 import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.database.interfaces.Entity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
