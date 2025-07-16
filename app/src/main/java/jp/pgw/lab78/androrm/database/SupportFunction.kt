@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.annotation.Column
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.interfaces.Entity
-import jp.pgw.lab78.androrm.database.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import java.time.LocalDate

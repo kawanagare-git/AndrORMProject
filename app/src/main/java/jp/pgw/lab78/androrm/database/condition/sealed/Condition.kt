@@ -1,7 +1,7 @@
-package jp.pgw.lab78.androrm.database.sealed
+package jp.pgw.lab78.androrm.database.condition.sealed
 
-import jp.pgw.lab78.androrm.database.AggregateFunction
-import jp.pgw.lab78.androrm.database.ComparisonOperator
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.SupportFunction.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.SupportFunction.formatValue
 import jp.pgw.lab78.androrm.database.SupportFunction.getAlias

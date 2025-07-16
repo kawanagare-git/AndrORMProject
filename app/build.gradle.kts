@@ -1,7 +1,9 @@
+// app/build.gradle.kts
 plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
+    id("com.google.devtools.ksp") version "1.9.0-1.0.13"
 }
 
 android {
@@ -48,11 +50,17 @@ dependencies {
     implementation(libs.material)
 
     // ==== 単体テスト（JVM 上で動作） ====
+    // JUnit 5
+    testImplementation(libs.junit.jupiter)
     testImplementation(libs.junit.jupiter.api)      // JUnit 5 API
     testImplementation(libs.junit.jupiter.params)   // パラメータ化テスト用
     testRuntimeOnly(libs.junit.jupiter.engine)      // JUnit 5 Engine
     // Mockito for unit tests
     testImplementation(libs.mockito.core)
+    // JUnit 4
+    testImplementation(libs.junit)
+    // JUnit Vintage (JUnit4互換モード)
+    testRuntimeOnly(libs.junit.vintage.engine)
 
     // ==== インストルメンテーションテスト（Android） ====
     androidTestImplementation(libs.junit)           // JUnit 4 本体 :contentReference[oaicite:2]{index=2}
@@ -66,7 +74,16 @@ dependencies {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
+
+dependencies {
+    implementation(project(":androrm-generator-ksp"))
+    add("ksp", project(":androrm-generator-ksp"))
+}
+
 // build.gradle.kts の末尾付近に追加
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須
 }

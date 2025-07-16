@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.androrm.database.function
 
 import jp.pgw.lab78.androrm.database.SupportFunction.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
@@ -7,9 +7,10 @@ import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
-enum class AggregateFunction(val sql: String, val supportedInSQLite: Boolean
-                                            , val supportedInPostgres: Boolean
-                                            , val supportedInMySQL: Boolean) {
+enum class AggregateFunction(
+    val sql: String, val supportedInSQLite: Boolean
+    , val supportedInPostgres: Boolean
+    , val supportedInMySQL: Boolean) {
     COUNT("count", true, true, true),
     SUM("sum", true, true, true),
     AVG("avg", true, true, true),

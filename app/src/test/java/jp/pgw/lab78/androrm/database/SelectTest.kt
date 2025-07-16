@@ -3,6 +3,8 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -34,7 +36,7 @@ class SelectTest {
                     }
         println(SELECT.build())
         SELECT = Select(TestSelectEntityWithAlias::class)
-                    .where {condition(TestSelectEntity::name,ComparisonOperator.LIKE,"%kawanagare")}
+                    .where {condition(TestSelectEntity::name, ComparisonOperator.LIKE,"%kawanagare")}
                     .join(Select.JoinType.LEFT, TestSelectEntity::class,{
                             and{
                                 condition(TestSelectEntityWithAlias::id, ComparisonOperator.EQUALS, TestSelectEntity::id)
@@ -70,10 +72,12 @@ class SelectTest {
                     condition(TestSelectEntity::address, ComparisonOperator.LIKE, "%Shinjuku%")
                 }
                 or {
-                    condition(TestAllEntity::insertDateTime
+                    condition(
+                        TestAllEntity::insertDateTime
                                 , ComparisonOperator.GREATER_THAN
                                 , LocalDateTime.parse("2025-01-01T00:00:00.000"))
-                    condition(TestAllEntity::updateDate
+                    condition(
+                        TestAllEntity::updateDate
                                 , ComparisonOperator.LESS_THAN
                                 , LocalDate.parse("2025-07-01"))
                 }
@@ -96,19 +100,24 @@ class SelectTest {
                     condition(TestSelectEntity::address, ComparisonOperator.LIKE, "%Shinjuku%")
                 }
                 or {
-                    condition(TestAllEntity::insertDateTime
+                    condition(
+                        TestAllEntity::insertDateTime
                         , ComparisonOperator.GREATER_THAN
                         , LocalDateTime.parse("2025-01-01T00:00:00.000"))
-                    condition(TestAllEntity::updateDate
+                    condition(
+                        TestAllEntity::updateDate
                         , ComparisonOperator.LESS_THAN
                         , LocalDate.parse("2025-07-01"))
                 }
             }
             .having {
-
-
+                condition(
+                    AggregateFunction.SUM, TestSelectEntity::birthday
+                            , ComparisonOperator.LESS_THAN, LocalDate.parse("2025-07-01"))
             }
         println(SELECT.build())
+        // 新エンティティクラス
+//        SELECT = Select(EmployeeEntity::class)
 
     }
 }

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.entities.select
+package jp.pgw.lab78.androrm.database.entities.select
 
 import jp.pgw.lab78.androrm.annotation.Table
 import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.entities.define
+package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.annotation.Column
 import jp.pgw.lab78.androrm.annotation.Table

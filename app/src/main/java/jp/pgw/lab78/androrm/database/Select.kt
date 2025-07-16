@@ -4,8 +4,10 @@ import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
 import jp.pgw.lab78.androrm.database.SupportFunction.getColumnDefinitions
 import jp.pgw.lab78.androrm.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.database.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.sealed.Condition
+import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
+import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
+import jp.pgw.lab78.androrm.database.condition.sealed.Condition
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -15,7 +17,7 @@ import kotlin.reflect.KProperty1
  * ## Select 文生成クラス
  * ### select 句を構成する要素を基に select 文を生成します
  */
-class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val isDistinct : Boolean = false) {
+class Select<T : SelectEntity>(private val entityClass: KClass<T>, private val isDistinct : Boolean = false) {
     /** テーブル名：クラス名をスネークケース（大文字）に変換 */
     private val mainTableName = SupportFunction.getTableName(entityClass)
 
@@ -178,8 +180,8 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>,private val is
             queryStructureMap[SelectIdentifier.WHERE] = mutableListOf("where $whereClause")
         }
         if (havingConditions.isNotEmpty()) {
-            val havingClause = whereConditions.joinToString(" AND ") { it.build() }
-            queryStructureMap[SelectIdentifier.WHERE] = mutableListOf("having by $havingClause")
+            val havingClause = havingConditions.joinToString(" AND ") { it.build() }
+            queryStructureMap[SelectIdentifier.HAVING] = mutableListOf("having by $havingClause")
         }
         val clauses = SelectIdentifier.entries.joinToString(" ") { identifier ->
                             queryStructureMap[identifier]?.joinToString(" ") ?: ""

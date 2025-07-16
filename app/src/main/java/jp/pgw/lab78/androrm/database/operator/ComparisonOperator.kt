@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.androrm.database.operator
 
 /**
  * ## 比較演算子列挙型

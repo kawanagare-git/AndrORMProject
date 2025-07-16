@@ -1,4 +1,4 @@
-package jp.pgw.lab78.entities.define
+package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.ComprehensiveEntity
 import java.time.LocalDate

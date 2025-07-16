@@ -5,8 +5,8 @@ import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.insert.TestInsertEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
-import jp.pgw.lab78.androrm.database.interfaces.Entity
-import jp.pgw.lab78.androrm.database.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
+import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

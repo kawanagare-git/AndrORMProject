@@ -11,6 +11,7 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
@@ -21,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndrORM"
 include(":app")
+include(":androrm-generator-ksp")

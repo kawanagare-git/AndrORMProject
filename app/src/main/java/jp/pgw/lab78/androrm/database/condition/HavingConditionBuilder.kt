@@ -1,10 +1,12 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.androrm.database.condition
 
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
 import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
-import jp.pgw.lab78.androrm.database.sealed.Condition
-import jp.pgw.lab78.androrm.database.sealed.HavingCompare
-import jp.pgw.lab78.androrm.database.sealed.LogicalCondition
+import jp.pgw.lab78.androrm.database.condition.sealed.Condition
+import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
+import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
 import kotlin.reflect.KProperty1
 
 class HavingConditionBuilder : ConditionBuilderLike {
