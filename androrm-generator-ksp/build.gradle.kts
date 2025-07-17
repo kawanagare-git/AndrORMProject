@@ -10,6 +10,9 @@ dependencies {
     implementation(libs.kotlinpoet.ksp)
 }
 
+dependencies {
+    implementation(project(":androrm-common"))
+}
 kotlin {
     jvmToolchain(17)
 }

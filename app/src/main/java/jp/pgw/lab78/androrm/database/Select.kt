@@ -1,13 +1,13 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
-import jp.pgw.lab78.androrm.database.SupportFunction.getColumnDefinitions
-import jp.pgw.lab78.androrm.database.SupportFunction.getTableName
-import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity
+import jp.pgw.lab78.androrm.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.utility.Functions.getColumnDefinitions
+import jp.pgw.lab78.androrm.utility.Functions.getTableName
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -135,7 +135,7 @@ class Select<T : SelectEntity>(private val entityClass: KClass<T>, private val i
      * @return 自身のインスタンス(this)
      */
     fun <TX : SelectEntity>having(condition: HavingConditionBuilder): Select<T> {
-        havingConditions += HavingConditionBuilder().buildList()
+        havingConditions += condition.buildList()
         return this
     }
 

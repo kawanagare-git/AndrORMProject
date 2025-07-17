@@ -1,9 +1,9 @@
 package jp.pgw.lab78.androrm.database.function
 
-import jp.pgw.lab78.androrm.database.SupportFunction.extractClassFromProperty
-import jp.pgw.lab78.androrm.database.SupportFunction.getAlias
-import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
+import jp.pgw.lab78.androrm.utility.Functions.extractClassFromProperty
+import jp.pgw.lab78.androrm.utility.Functions.getAlias
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 

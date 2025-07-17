@@ -76,14 +76,12 @@ dependencies {
 }
 
 dependencies {
+    implementation(project(":androrm-common"))
     implementation(project(":androrm-generator-ksp"))
     add("ksp", project(":androrm-generator-ksp"))
 }
 
 // build.gradle.kts の末尾付近に追加
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-}
 tasks.withType<Test>().configureEach {
     useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須
 }

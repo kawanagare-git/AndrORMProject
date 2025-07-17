@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "AndrORM"
 include(":app")
 include(":androrm-generator-ksp")
+include(":androrm-common")

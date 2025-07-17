@@ -4,9 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.SupportFunction.generateTableCreationQuery
+import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.database.interfaces.entity.TableDefinitionEntity
-import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
+import jp.pgw.lab78.androrm.utility.Functions.generateTableCreationQuery
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 

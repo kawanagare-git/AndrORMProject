@@ -1,9 +1,11 @@
 package jp.pgw.lab78.androrm.utility
 
+import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
-import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
+import jp.pgw.lab78.androrm.utility.Functions.splitTableNameAndAlias
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvFileSource
 import java.time.LocalDate
@@ -12,6 +14,20 @@ import java.time.LocalTime
 import kotlin.reflect.full.createType
 
 class FunctionsTest {
+
+    @Test
+    fun `splitTableNameAndAlias should split correctly`() {
+        val (table, alias) = splitTableNameAndAlias("users u")
+        assertEquals("users", table)
+        assertEquals("u", alias)
+    }
+
+    @Test
+    fun `splitTableNameAndAlias should return empty alias when none`() {
+        val (table, alias) = splitTableNameAndAlias("products")
+        assertEquals("products", table)
+        assertEquals("", alias)
+    }
 
     @ParameterizedTest(name = "No{index} (testData,expected) -> ({arguments})")
     @CsvFileSource(resources = ["/TestToSnakeCaseData.csv"], numLinesToSkip = 1)

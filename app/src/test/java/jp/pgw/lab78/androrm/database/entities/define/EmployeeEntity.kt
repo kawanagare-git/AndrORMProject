@@ -4,10 +4,13 @@ import jp.pgw.lab78.androrm.annotation.Column
 import jp.pgw.lab78.androrm.annotation.Table
 import jp.pgw.lab78.androrm.database.interfaces.entity.TableDefinitionEntity
 import jp.pgw.lab78.androrm.ksp.annotation.GenerateProps
+import jp.pgw.lab78.androrm.ksp.annotation.Projection
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 @GenerateProps
+@Projection(entityNameExtend = "SelectEmployeeIdEntity", fields = [EmployeeProps.EMPLOYEE_ID]
+    , implementsInterface = "jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity")
 @Table("EMPLOYEE",alias = "EMP")
 data class EmployeeEntity(
     val employeeId: String,

@@ -1,12 +1,12 @@
 package jp.pgw.lab78.androrm.database.condition
 
-import jp.pgw.lab78.androrm.database.function.AggregateFunction
-import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
-import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
 import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
+import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
+import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import kotlin.reflect.KProperty1
 
 class HavingConditionBuilder : ConditionBuilderLike {
@@ -26,7 +26,7 @@ class HavingConditionBuilder : ConditionBuilderLike {
         leftProperty: KProperty1<T1, *>,
         operator: ComparisonOperator,
         rightFunction: AggregateFunction,
-        rightProperty: KProperty1<T1, *>,
+        rightProperty: KProperty1<T2, *>,
     ) {
         list +=  HavingCompare.Function(leftFunction, leftProperty, operator, rightFunction, rightProperty)
     }
