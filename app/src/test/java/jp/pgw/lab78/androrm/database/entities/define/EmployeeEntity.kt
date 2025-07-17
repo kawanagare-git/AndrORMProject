@@ -2,7 +2,7 @@ package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.annotation.Column
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.interfaces.entity.TableDefinitionEntity
 import jp.pgw.lab78.androrm.ksp.annotation.GenerateProps
 import java.time.LocalDate
 import java.time.LocalDateTime

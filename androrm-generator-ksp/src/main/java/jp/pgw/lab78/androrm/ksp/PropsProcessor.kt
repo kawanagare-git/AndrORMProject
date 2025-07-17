@@ -29,7 +29,7 @@ class PropsProcessor(
             // Props 生成
             generateProps(classDecl)
 
-            // Projection 生成 ← ここを追加！
+            // Projection 生成
             generateProjections(classDecl)
         }
         return emptyList()
@@ -63,7 +63,8 @@ class PropsProcessor(
                     }
                 }.build()
             ).build()
-        fileSpec.writeTo(codeGenerator, Dependencies(false))
+        val fileDependency = classDecl.containingFile?.let { Dependencies(true, it) } ?: Dependencies(false)
+        fileSpec.writeTo(codeGenerator, fileDependency)
     }
 
     /**
@@ -89,10 +90,12 @@ class PropsProcessor(
                 projections.add(name to selectedProps)
             }
             if (annotationName == "jp.pgw.lab78.androrm.ksp.annotation.Projections") {
-                val value = ann.arguments.find { it.name?.asString() == "value" }?.value as? List<KSAnnotation> ?: return@forEach
-                value.forEach {
-                    val name = it.arguments.find { it.name?.asString() == "name" }?.value as? String ?: return@forEach
-                    val fields = (it.arguments.find { it.name?.asString() == "fields" }?.value as? List<*>)
+                val value = ann.arguments.find { it.name?.asString() == "value" }?.value
+                val projectionAnnotations = (value as? List<*>)?.mapNotNull { it as? KSAnnotation } ?: return@forEach
+
+                projectionAnnotations.forEach { projectionAnn ->
+                    val name = projectionAnn.arguments.find { arg -> arg.name?.asString() == "name" }?.value as? String ?: return@forEach
+                    val fields = (projectionAnn.arguments.find { arg -> arg.name?.asString() == "fields" }?.value as? List<*>)
                         ?.mapNotNull { it as? String } ?: return@forEach
 
                     val selectedProps = classDecl.getAllProperties()
@@ -137,8 +140,8 @@ class PropsProcessor(
             val fileSpec = FileSpec.builder(pkg, projectionClassName)
                 .addType(typeSpec)
                 .build()
-
-            fileSpec.writeTo(codeGenerator, Dependencies(false))
+            val fileDependency = classDecl.containingFile?.let { Dependencies(true, it) } ?: Dependencies(false)
+            fileSpec.writeTo(codeGenerator, fileDependency)
             logger.warn(">>> Generated Projection Class: $projectionClassName")
         }
     }

@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.database.condition
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
+import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
 import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition

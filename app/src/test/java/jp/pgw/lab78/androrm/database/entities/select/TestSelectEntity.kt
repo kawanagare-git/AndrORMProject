@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database.entities.select
 
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity
+import jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity
 import java.time.LocalDate
 
 /**

@@ -5,4 +5,4 @@ package jp.pgw.lab78.androrm.annotation
  */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class PrimaryKey()
+annotation class PrimaryKey

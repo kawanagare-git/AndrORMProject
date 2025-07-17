@@ -7,7 +7,7 @@ import jp.pgw.lab78.androrm.database.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.SelectEntity
+import jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -19,7 +19,7 @@ import kotlin.reflect.KProperty1
  */
 class Select<T : SelectEntity>(private val entityClass: KClass<T>, private val isDistinct : Boolean = false) {
     /** テーブル名：クラス名をスネークケース（大文字）に変換 */
-    private val mainTableName = SupportFunction.getTableName(entityClass)
+    private val mainTableName = getTableName(entityClass)
 
     /** クエリの構文を管理するマップ */
     private val queryStructureMap = enumMapOf<SelectIdentifier, MutableList<String>>()

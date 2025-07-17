@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.annotation.Column
 import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.Entity
-import jp.pgw.lab78.androrm.database.interfaces.orm.entity.query.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
+import jp.pgw.lab78.androrm.database.interfaces.entity.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.toSnakeCase
 import java.time.LocalDate
@@ -159,7 +159,7 @@ object SupportFunction {
      * ## クラス名をスネークケースに変換
      * @return スネークケースに変換されたクラス名（nullなら例外）
      */
-    public fun KClass<*>.simpleNameToSnakeCase(): String =
+    fun KClass<*>.simpleNameToSnakeCase(): String =
         this.simpleName?.toSnakeCase()
             ?: error("Could not determine class name for ${this.qualifiedName}")
 
