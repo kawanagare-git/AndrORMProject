@@ -1,6 +1,6 @@
-package jp.pgw.lab78.androrm.database.interfaces
+package jp.pgw.lab78.generated.database.interfaces
 
-import jp.pgw.lab78.androrm.database.condition.sealed.Condition
+import jp.pgw.lab78.generated.database.condition.sealed.Condition
 
 interface ConditionBuilderLike {
     fun buildList(): List<Condition>

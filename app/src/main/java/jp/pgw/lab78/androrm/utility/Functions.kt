@@ -1,11 +1,11 @@
-package jp.pgw.lab78.androrm.utility
+package jp.pgw.lab78.generated.utility
 
-import jp.pgw.lab78.androrm.annotation.Column
-import jp.pgw.lab78.androrm.annotation.Table
-import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
-import jp.pgw.lab78.androrm.database.interfaces.entity.Entity
-import jp.pgw.lab78.androrm.database.interfaces.entity.TableDefinitionEntity
+import jp.pgw.lab78.generated.annotation.Column
+import jp.pgw.lab78.generated.annotation.Table
+import jp.pgw.lab78.generated.common.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.generated.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
+import jp.pgw.lab78.generated.ksp.interfaces.entity.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.annotation
+package jp.pgw.lab78.generated.annotation
 
 /**
  * ## Table アノテーション

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.database.interfaces.entity
+package jp.pgw.lab78.androrm.ksp.interfaces.entity
 
 
 /**

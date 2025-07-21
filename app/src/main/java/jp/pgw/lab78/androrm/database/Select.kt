@@ -1,13 +1,13 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.generated.database
 
-import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.sealed.Condition
-import jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity
-import jp.pgw.lab78.androrm.utility.Functions.getAlias
-import jp.pgw.lab78.androrm.utility.Functions.getColumnDefinitions
-import jp.pgw.lab78.androrm.utility.Functions.getTableName
+import jp.pgw.lab78.generated.common.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.generated.database.condition.ConditionBuilder
+import jp.pgw.lab78.generated.database.condition.HavingConditionBuilder
+import jp.pgw.lab78.generated.database.condition.sealed.Condition
+import jp.pgw.lab78.generated.ksp.interfaces.entity.SelectEntity
+import jp.pgw.lab78.generated.utility.Functions.getAlias
+import jp.pgw.lab78.generated.utility.Functions.getColumnDefinitions
+import jp.pgw.lab78.generated.utility.Functions.getTableName
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
