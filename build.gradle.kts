@@ -5,4 +5,10 @@ plugins {
     kotlin("kapt") version "1.9.0" apply false
     kotlin("jvm")  version "1.9.0" apply false
     alias(libs.plugins.android.library) apply false
+    id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+}
+buildscript {
+    dependencies {
+        classpath(libs.symbol.processing.gradle.plugin)
+    }
 }

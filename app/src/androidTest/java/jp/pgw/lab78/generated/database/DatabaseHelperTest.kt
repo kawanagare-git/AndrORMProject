@@ -1,8 +1,9 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.generated.database
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
+import jp.pgw.lab78.androrm.database.DatabaseHelper
 import org.junit.*
 import org.junit.Assert.assertNotNull
 import org.mockito.Mockito.mock

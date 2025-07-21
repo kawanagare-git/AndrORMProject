@@ -11,6 +11,9 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.annotation.Projections
 import kotlin.reflect.KClass
 
 /**
@@ -51,7 +54,9 @@ class PropsProcessor(
         /** @GenerateProps */
         val GENERATE_PROPS = GenerateProps::class.qualifiedName.toString()
         /** @Projection */
-        val PROJECTION = Projection::class.qualifiedName.toString()
+        val PROJECTION_FQN = Projection::class.qualifiedName.toString()
+        /** @Projection */
+        val PROJECTION = Projection::class.simpleName.toString()
         /** @Projections */
         val PROJECTIONS = Projections::class.qualifiedName.toString()
     }
@@ -67,8 +72,10 @@ class PropsProcessor(
     override fun process(resolver: Resolver): List<KSAnnotated> {
         // Props 生成
         generateProps(resolver)
+        // Projection の検査
+        checkProjectionFields(resolver)
         // Projection 生成
-        generateProjections(resolver)
+        generateProjectionDataClass(resolver)
         return emptyList()
     }
 
@@ -124,20 +131,53 @@ class PropsProcessor(
     }
 
     /**
+     * ## プロジェクションフィールド配列検査メソッド
+     * ### @Projection と @Projections を抽出し定義されている fields 内の
+     * ### 文字列が @Projection 適用クラスに存在するプロパティ名か判定する。
+     * ### １つでも存在していないプロパティ名が見つかったら、ビルドエラーとして処理する。
+     * @param resolver アノテーション解析機能を提供
+     */
+    private fun checkProjectionFields(resolver: Resolver) {
+        // @Projection が付与されたクラスの抽出
+        val symbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN)
+        // @Projection
+        symbols
+            .filterIsInstance<KSClassDeclaration>()
+            .forEach { classDecl ->
+                val annotation = classDecl.annotations.firstOrNull {
+                    val annotationType = it.annotationType.resolve().declaration
+                    annotationType.simpleName.asString() == PROJECTION &&
+                    annotationType.qualifiedName?.asString() == PROJECTION_FQN
+                } ?: return@forEach
+
+                val fieldsValues = (collectFields(annotation)[FIELDS] as? List<*>)
+                                ?.filterIsInstance<String>() ?: emptyList()
+                val declaredPropertyNames = classDecl.getAllProperties().map { it.simpleName.asString() }.toSet()
+
+                fieldsValues.forEach { field ->
+                    if (!declaredPropertyNames.contains(field)) {
+                        logger.error("> Field '$field' is not declared in class '${classDecl.simpleName.asString()}'.", classDecl)
+                    }
+                }
+            }
+    }
+
+
+    /**
      * ## データクラス生成メソッド
      * ### @Projection と @Projections を抽出しデータクラスを
      * ### Kotlin ファイルとして出力する
      * @param resolver アノテーション解析機能を提供
      */
-    private fun generateProjections(resolver: Resolver) {
+    private fun generateProjectionDataClass(resolver: Resolver) {
         val dataClassMaterialMap = mutableMapOf<KClass<*>, Map<String,Any>>()
-        val symbols = resolver.getSymbolsWithAnnotation(PROJECTION,false)
+        val symbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN,false)
         symbols.filterIsInstance<KSClassDeclaration>()
             .map { classDecl ->
                 val annotation = classDecl.annotations
                     .firstOrNull {
                         it.shortName.asString() == Projection::class.simpleName &&
-                        it.annotationType.resolve().declaration.qualifiedName?.asString() == Projection::class.qualifiedName
+                        it.annotationType.resolve().declaration.qualifiedName?.asString() == PROJECTION_FQN
                 }
                 logger.warn(">>> Processing classDecl -> annotation:$classDecl to $annotation / ${annotation?.arguments?.size}")
                 classDecl to annotation

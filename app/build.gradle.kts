@@ -6,12 +6,26 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
 }
 
+dependencies {
+    implementation(project(":androrm-common"))
+    implementation(project(":androrm-generated"))
+
+    implementation(libs.core.ktx.v1131)
+    implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.compose.ui:ui:1.6.7")
+    implementation("androidx.compose.material3:material3:1.2.1")
+
+    ksp(project(":androrm-generator-ksp"))
+
+    testImplementation(libs.junit.jupiter.v5102)
+}
+
 android {
-    namespace = "jp.pgw.lab78"
+    namespace = "jp.pgw.lab78.androrm"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "jp.pgw.lab78"
+        applicationId = "jp.pgw.lab78.androrm"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -36,6 +50,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+    buildFeatures {
+        compose = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1"
     }
 }
 
@@ -77,6 +98,7 @@ dependencies {
 
 dependencies {
     implementation(project(":androrm-common"))
+    implementation(project(":androrm-generated"))
     implementation(project(":androrm-generator-ksp"))
     add("ksp", project(":androrm-generator-ksp"))
 }

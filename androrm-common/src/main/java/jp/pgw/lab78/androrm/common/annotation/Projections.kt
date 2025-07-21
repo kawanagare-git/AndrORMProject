@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.ksp.annotation
+package jp.pgw.lab78.androrm.common.annotation
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)

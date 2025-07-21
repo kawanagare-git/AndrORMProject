@@ -1,26 +1,21 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
-        mavenCentral()
         gradlePluginPortal()
+        google()
+        mavenCentral()
     }
 }
 
 dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
     }
 }
 
-rootProject.name = "AndrORM"
+rootProject.name = "AndrORMProject"
+
 include(":app")
-include(":androrm-generator-ksp")
 include(":androrm-common")
+include(":androrm-generator-ksp")
+include(":androrm-generated")

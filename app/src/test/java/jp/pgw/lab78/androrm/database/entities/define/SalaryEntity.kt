@@ -1,15 +1,15 @@
-package jp.pgw.lab78.generated.database.entities.define
+package jp.pgw.lab78.androrm.database.entities.define
 
-import jp.pgw.lab78.generated.annotation.Column
+import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.database.annotation.Column
 import jp.pgw.lab78.androrm.database.annotation.Table
-import jp.pgw.lab78.generated.ksp.annotation.GenerateProps
-import jp.pgw.lab78.androrm.common.annotation.Projection1
 import jp.pgw.lab78.generated.ksp.interfaces.entity.TableDefinitionEntity
 import java.time.LocalDateTime
 
 @GenerateProps
-@Projection1(entityNameExtend = "IdSelection"
-    , fields = ["employeeId_SalaryEntity_jp_pgw_lab78_androrm_database_entities_define"]
+@Projection(entityNameExtend = "IdSelection"
+    , fields = ["employeeId","payMonth"]
     , implementsInterface = "jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity")
 @Table("SALARY",alias = "SAL")
 data class SalaryEntity(

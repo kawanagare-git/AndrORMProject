@@ -1,13 +1,13 @@
-package jp.pgw.lab78.generated.database.condition.sealed
+package jp.pgw.lab78.androrm.database.condition.sealed
 
-import jp.pgw.lab78.generated.database.function.AggregateFunction
-import jp.pgw.lab78.generated.database.operator.ComparisonOperator
-import jp.pgw.lab78.generated.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.generated.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.utility.Functions.extractClassFromProperty
+import jp.pgw.lab78.androrm.utility.Functions.formatValue
+import jp.pgw.lab78.androrm.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
 import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
-import jp.pgw.lab78.generated.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.generated.utility.Functions.formatValue
-import jp.pgw.lab78.generated.utility.Functions.getAlias
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 

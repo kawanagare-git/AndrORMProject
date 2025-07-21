@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.common
+package jp.pgw.lab78.generated.common
 
 class SupportFunctionTest {
 

@@ -1,10 +1,11 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.generated.database
 
+import jp.pgw.lab78.androrm.database.Select
+import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
-import jp.pgw.lab78.androrm.database.operator.ComparisonOperator
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -14,7 +15,6 @@ class SelectTest {
     companion object {
         @JvmStatic
         lateinit var SELECT: Select<*>
-
     }
 
     @Test
@@ -26,7 +26,8 @@ class SelectTest {
         SELECT = Select(TestSelectEntity::class, isDistinct = true)
         println(SELECT.build())
         SELECT = Select(TestSelectEntityWithAlias::class)
-                    .join(Select.JoinType.LEFT
+                    .join(
+                        Select.JoinType.LEFT
                             , TestSelectEntity::class
                             , {
                                 condition(TestSelectEntityWithAlias::id, ComparisonOperator.EQUALS, TestSelectEntity::id)

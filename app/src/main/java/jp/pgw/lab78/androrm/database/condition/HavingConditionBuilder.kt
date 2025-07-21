@@ -1,13 +1,14 @@
-package jp.pgw.lab78.generated.database.condition
+package jp.pgw.lab78.androrm.database.condition
 
-import jp.pgw.lab78.generated.database.condition.sealed.Condition
-import jp.pgw.lab78.generated.database.condition.sealed.HavingCompare
-import jp.pgw.lab78.generated.database.condition.sealed.LogicalCondition
-import jp.pgw.lab78.generated.database.function.AggregateFunction
-import jp.pgw.lab78.generated.database.interfaces.ConditionBuilderLike
+import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
+import jp.pgw.lab78.androrm.database.condition.sealed.Condition
+import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
+import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
+import jp.pgw.lab78.androrm.database.function.AggregateFunction
+import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
 import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
-import jp.pgw.lab78.generated.database.operator.ComparisonOperator
 import kotlin.reflect.KProperty1
+
 
 class HavingConditionBuilder : ConditionBuilderLike {
     private val list = mutableListOf<Condition>()

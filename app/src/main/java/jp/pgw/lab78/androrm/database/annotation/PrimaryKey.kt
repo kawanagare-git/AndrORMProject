@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.annotation
+package jp.pgw.lab78.androrm.database.annotation
 
 /**
  * ## PrimaryKey アノテーション

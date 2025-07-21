@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities.select
+package jp.pgw.lab78.androrm.database.entities.select
 
 import jp.pgw.lab78.androrm.database.annotation.Table
 import jp.pgw.lab78.generated.ksp.interfaces.entity.SelectEntity

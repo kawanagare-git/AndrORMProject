@@ -1,8 +1,8 @@
-package jp.pgw.lab78.generated.utility
+package jp.pgw.lab78.androrm.utility
 
 import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
-import jp.pgw.lab78.generated.utility.Functions.mapKotlinTypeToSqlType
-import jp.pgw.lab78.generated.utility.Functions.splitTableNameAndAlias
+import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
+import jp.pgw.lab78.androrm.utility.Functions.splitTableNameAndAlias
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -12,6 +12,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import kotlin.reflect.full.createType
+
 
 class FunctionsTest {
 

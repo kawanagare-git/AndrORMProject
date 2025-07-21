@@ -5,6 +5,12 @@ plugins {
 }
 
 dependencies {
+    implementation(kotlin("stdlib"))
+    implementation(project(":androrm-common"))
+    implementation(libs.ksp.symbol.processing.api)
+}
+
+dependencies {
     implementation(libs.symbol.processing.api)
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
@@ -12,7 +18,9 @@ dependencies {
 
 dependencies {
     implementation(project(":androrm-common"))
+    implementation(project(":androrm-generated"))
 }
+
 kotlin {
     jvmToolchain(17)
 }
@@ -44,4 +52,8 @@ tasks.register("generateKspMeta") {
 // 依存関係として `generateKspMeta` をビルド前に走らせる
 tasks.named("compileKotlin").configure {
     dependsOn("generateKspMeta")
+}
+
+kotlin {
+    sourceSets["main"].kotlin.srcDir("build/generated/ksp/main/kotlin")
 }

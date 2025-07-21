@@ -1,14 +1,17 @@
 [versions]
 androidxJunit = "1.2.1"
+coreKtxVersion = "1.13.1"
 desugar_jdk_libs = "2.1.5"
 espressoCore = "3.6.1"
 junitJupiter = "5.11.4"
+junitJupiterVersion = "5.10.2"
 junitVersion = "4.13.2"
 junitVintageEngine = "5.10.1"
 kotlin = "1.9.0"
 agp = "8.3.0"
 junit = "5.10.0"
 kotlinpoet = "1.15.1"
+kotlinpoetVersion = "1.15.0"
 material = "1.12.0"
 mockitoAndroid = "5.12.0"
 mockitoCore = "5.15.2"
@@ -25,6 +28,7 @@ kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 
 [libraries]
+core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
 ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
@@ -32,11 +36,14 @@ junit = { module = "junit:junit", version.ref = "junitVersion" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiter" }
 junit-jupiter-api = { group = "org.junit.jupiter", name = "junit-jupiter-api", version.ref = "junit" }
 junit-jupiter-engine = { group = "org.junit.jupiter", name = "junit-jupiter-engine", version.ref = "junit" }
+junit-jupiter-v5102 = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junitJupiterVersion" }
 junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junitVintageEngine" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 junit-jupiter-params = { group = "org.junit.jupiter", name = "junit-jupiter-params", version.ref = "junit" }
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
+kotlinpoet-v1150 = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoetVersion" }
+ksp-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
@@ -45,3 +52,4 @@ runner = { module = "androidx.test:runner", version.ref = "runner" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "symbolProcessingApi" }
+symbol-processing-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin" }

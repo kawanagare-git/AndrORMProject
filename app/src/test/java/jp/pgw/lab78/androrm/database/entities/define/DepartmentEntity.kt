@@ -1,10 +1,11 @@
-package jp.pgw.lab78.generated.database.entities.define
+package jp.pgw.lab78.androrm.database.entities.define
 
-import jp.pgw.lab78.generated.annotation.Column
+import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.database.annotation.Column
 import jp.pgw.lab78.androrm.database.annotation.Table
-import jp.pgw.lab78.generated.ksp.annotation.GenerateProps
 import jp.pgw.lab78.generated.ksp.interfaces.entity.TableDefinitionEntity
 import java.time.LocalDateTime
+
 
 @GenerateProps
 @Table("DEPARTMENT", alias = "DEP")
