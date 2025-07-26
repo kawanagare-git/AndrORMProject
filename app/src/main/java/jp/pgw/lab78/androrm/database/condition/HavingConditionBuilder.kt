@@ -6,7 +6,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
 import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import kotlin.reflect.KProperty1
 
 

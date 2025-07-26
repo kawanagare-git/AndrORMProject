@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.ksp.dmlinterface
+package jp.pgw.lab78.androrm.common.dml.interfaces
 
 /**
  * ## Select 文生成限定 マーカーインターフェース

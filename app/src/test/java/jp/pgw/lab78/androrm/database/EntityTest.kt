@@ -8,8 +8,8 @@ import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.insert.TestInsertEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
-import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
-import jp.pgw.lab78.generated.ksp.interfaces.entity.SelectEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

@@ -7,7 +7,7 @@ import jp.pgw.lab78.androrm.utility.Functions.getAlias
 import jp.pgw.lab78.androrm.utility.Functions.getColumnDefinitions
 import jp.pgw.lab78.androrm.utility.Functions.getTableName
 import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.generated.ksp.interfaces.entity.SelectEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass

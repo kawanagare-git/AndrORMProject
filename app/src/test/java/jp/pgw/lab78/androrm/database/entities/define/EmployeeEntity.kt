@@ -2,16 +2,19 @@ package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.annotation.Column
 import jp.pgw.lab78.androrm.database.annotation.Table
-import jp.pgw.lab78.generated.ksp.interfaces.entity.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+
 @GenerateProps
 @Projection(entityNameExtend = "IdSelection"
-    , fields = ["employeeId"]
-    , implementsInterface = "jp.pgw.lab78.androrm.database.interfaces.entity.SelectEntity")
+    , properties = ["employeeId"]
+    , commonInterface = DMLInterfaceEnum.SELECT
+)
 @Table("EMPLOYEE",alias = "EMP")
 data class EmployeeEntity(
     val employeeId: String,

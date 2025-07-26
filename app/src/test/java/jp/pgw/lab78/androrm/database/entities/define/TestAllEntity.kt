@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
-import jp.pgw.lab78.generated.ksp.interfaces.entity.ComprehensiveEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.ComprehensiveEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 

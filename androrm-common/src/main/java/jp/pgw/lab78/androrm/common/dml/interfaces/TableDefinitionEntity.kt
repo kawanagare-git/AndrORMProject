@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.ksp.dmlinterface
+package jp.pgw.lab78.androrm.common.dml.interfaces
 
 /**
  * ## テーブル定義限定 マーカーインターフェース

@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.database.function
 import jp.pgw.lab78.androrm.utility.Functions.extractClassFromProperty
 import jp.pgw.lab78.androrm.utility.Functions.getAlias
 import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 

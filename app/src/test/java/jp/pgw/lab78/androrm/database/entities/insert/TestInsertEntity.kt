@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.database.entities.insert
 
-import jp.pgw.lab78.generated.ksp.interfaces.entity.InsertEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 

@@ -1,6 +1,5 @@
-package jp.pgw.lab78.generated.database
+package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity

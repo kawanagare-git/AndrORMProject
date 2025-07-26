@@ -4,8 +4,8 @@ import jp.pgw.lab78.androrm.database.annotation.Column
 import jp.pgw.lab78.androrm.database.annotation.Table
 import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
-import jp.pgw.lab78.generated.ksp.interfaces.entity.Entity
-import jp.pgw.lab78.generated.ksp.interfaces.entity.TableDefinitionEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime

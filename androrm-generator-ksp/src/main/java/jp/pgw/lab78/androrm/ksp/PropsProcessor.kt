@@ -10,10 +10,20 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
+import com.squareup.kotlinpoet.KModifier
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.ksp.writeTo
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
+import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import kotlin.reflect.KClass
 
 /**
@@ -40,7 +50,7 @@ class PropsProcessor(
         /** @Projection の変数名定義（implementsInterface） */
         const val IMPLEMENTS_INTERFACE = "implementsInterface"
         /** @Projection の変数名定義（fields） */
-        const val FIELDS = "fields"
+        const val PROPERTIES = "properties"
 
 
         /** 出力先パッケージ */
@@ -60,6 +70,9 @@ class PropsProcessor(
         /** @Projections */
         val PROJECTIONS = Projections::class.qualifiedName.toString()
     }
+
+    val allClassProperties = mutableMapOf<String,List<String>>()
+
     /**
      * ## AndrORM アノテーションプロセスメソッド
      * ### AndrORM で定義されているアノテーションを解析し
@@ -83,6 +96,9 @@ class PropsProcessor(
      * ## プロパティ一覧生成メソッド
      * ### @GenerateProps を抽出しプロパティ一覧を
      * ### Kotlin ファイルとして出力する
+     * ### 2025/07/31 KSP 上でアノテーション変数に配列を指定しても正しく取得できない
+     * ### 加えて、モジュール間の参照の関係で、循環してしまうので、
+     * ### 下記の enum クラスの生成は意味をなさない。
      * @param resolver アノテーション解析機能を提供
      */
     private fun generateProps(resolver: Resolver) {
@@ -96,17 +112,15 @@ class PropsProcessor(
 
             classDecl.getAllProperties().forEach { property ->
                 val propName = property.simpleName.asString()
-//                val entryName = "${propName}_${className}_${packageName}"
-//                    .replace(".", "_") // パッケージ名に含まれる . を _ に変換
-                val entryName = "${propName}_${className}"
-                val entry = "$entryName(\"$propName\", \"$className\")"
+                val entryName = "${propName}_${className}_${packageName}"
+                    .replace(".", "_") // パッケージ名に含まれる . を _ に変換
+                val entry = "$entryName(\"$propName\", \"${packageName}.$className\")"
                 enumEntries += entry
             }
         }
         val uniqueEnumEntries = enumEntries.distinct()
-
-        if (enumEntries.isEmpty()) return // 空なら出力しない
-
+        // 空なら出力しない
+        if (enumEntries.isEmpty()) return
         val fileSpec = """
         |package $GENERATED_PACKAGE
         |
@@ -120,7 +134,7 @@ class PropsProcessor(
         |    ${uniqueEnumEntries.joinToString(",\n    ")};
         |}
     """.trimMargin()
-
+        // enum クラスの生成
         codeGenerator.createNewFile(
             dependencies = Dependencies(false),
             packageName = GENERATED_PACKAGE,
@@ -141,22 +155,35 @@ class PropsProcessor(
         // @Projection が付与されたクラスの抽出
         val symbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN)
         // @Projection
-        symbols
-            .filterIsInstance<KSClassDeclaration>()
+        symbols.filterIsInstance<KSClassDeclaration>()
             .forEach { classDecl ->
                 val annotation = classDecl.annotations.firstOrNull {
+                    // KSP のバグのため再度 クラス名と クラス FQN でフィルタをかける
                     val annotationType = it.annotationType.resolve().declaration
                     annotationType.simpleName.asString() == PROJECTION &&
                     annotationType.qualifiedName?.asString() == PROJECTION_FQN
                 } ?: return@forEach
-
-                val fieldsValues = (collectFields(annotation)[FIELDS] as? List<*>)
-                                ?.filterIsInstance<String>() ?: emptyList()
-                val declaredPropertyNames = classDecl.getAllProperties().map { it.simpleName.asString() }.toSet()
-
+                // リスト化された fields の値
+                val fieldsValues = collectFields(annotation)[PROPERTIES] as? List<*> ?: emptyList<String>()
+                logger.info("> Fields is '$fieldsValues'.")
+                // @Projection が適用されたクラスのプロパティ名一覧を取得
+                // ただし、allClassProperties に登録済みならば、allClassProperties からプロパティ名一覧を取得
+                val fqn = classDecl.qualifiedName?.asString()
+                if (fqn == null){
+                    logger.error("Annotation target class is null.")
+                    return@forEach
+                }
+                val properties = allClassProperties[fqn]
+                    ?: classDecl.getAllProperties().map {
+                        // プロパティ名を取得
+                        it.simpleName.asString()
+                    }.toList()
+                // allClassProperties[fqn] が、null 時の再代入
+                allClassProperties[fqn] = properties
+                // fields に指定されたプロパティ名の検査
                 fieldsValues.forEach { field ->
-                    if (!declaredPropertyNames.contains(field)) {
-                        logger.error("> Field '$field' is not declared in class '${classDecl.simpleName.asString()}'.", classDecl)
+                    if (!properties.contains(field)) {
+                        logger.error(">>>> Field '$field' is not declared in class '${classDecl.simpleName.asString()}'.", classDecl)
                     }
                 }
             }
@@ -164,86 +191,88 @@ class PropsProcessor(
 
 
     /**
-     * ## データクラス生成メソッド
-     * ### @Projection と @Projections を抽出しデータクラスを
+     * ## @Projection によるデータクラス生成メソッド
+     * ### @Projection が付与されているクラスの情報を基に
+     * ### 新たに data class を生成し、
      * ### Kotlin ファイルとして出力する
      * @param resolver アノテーション解析機能を提供
      */
     private fun generateProjectionDataClass(resolver: Resolver) {
-        val dataClassMaterialMap = mutableMapOf<KClass<*>, Map<String,Any>>()
-        val symbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN,false)
+        // @Projection が付与されたクラスを抽出
+        val symbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false)
+        // 抽出した Sequence<KSAnnotated> を基に data class 生成に必要な情報を取得
         symbols.filterIsInstance<KSClassDeclaration>()
-            .map { classDecl ->
-                val annotation = classDecl.annotations
-                    .firstOrNull {
-                        it.shortName.asString() == Projection::class.simpleName &&
+                // @Projection がトップレベルに付与されたクラスを抽出（KSP のバグ対策）
+                .mapNotNull { classDecl ->
+                    val annotation = classDecl.annotations.firstOrNull {
+                        it.shortName.asString() == PROJECTION &&
                         it.annotationType.resolve().declaration.qualifiedName?.asString() == PROJECTION_FQN
+                    } ?: return@mapNotNull null
+                    // クラス情報とアノテーション情報を戻す（次工程の forEach に譲渡）
+                    classDecl to annotation
                 }
-                logger.warn(">>> Processing classDecl -> annotation:$classDecl to $annotation / ${annotation?.arguments?.size}")
-                classDecl to annotation
-            }
-            .forEach { (classDecl, annotation) ->
-                logger.warn(">>> Processing $classDecl: $annotation /  ${annotation?.arguments?.size}")
-                dataClassMaterialMap[Projection::class] = collectFields(annotation!!)
-            }
-//            if (annotationName == "jp.pgw.lab78.androrm.ksp.annotation.Projections") {
-//                val value = ann.arguments.find { it.name?.asString() == "value" }?.value
-//                val projectionAnnotations = (value as? List<*>)?.mapNotNull { it as? KSAnnotation } ?: continue
-//
-//                for (projectionAnn in projectionAnnotations) {
-//                    val name = projectionAnn.arguments.find { arg -> arg.name?.asString() == "entityNameExtend" }?.value as? String ?: continue
-//                    val fields = (projectionAnn.arguments.find { arg -> arg.name?.asString() == "fields" }?.value as? List<*>)
-//                        ?.mapNotNull { it as? String } ?: continue
-//
-//                    val selectedProps = classDecl.getAllProperties()
-//                        .filter { fields.contains(it.simpleName.asString()) }
-//                        .toList()
-//                    logger.info(">>> Processing class: $name in $selectedProps")
-//                    projections.add(name to selectedProps)
-//                }
-//            }
-        }
+                // クラス情報とアノテーション情報をを基にdata class 生成に必要な情報を取得
+                .forEach { (classDecl, annotation) ->
+                    // data class の素材情報を格納するマップ
+                    val dataClassMaterialMap = collectFields(annotation).toMutableMap()
+                    // パッケージ名を取得
+                    val packageName = classDecl.packageName.asString()
+                    // クラス名の生成（@Projection 付与クラス名 + @Projection の派生名）
+                    val createClassName = classDecl.simpleName.asString() +
+                            dataClassMaterialMap[EXTEND_NAME].toString()
+                    // @Projection に定義してあるプロパティ名を付与クラスのプロパティ名から抽出
+                    val selectedProps = classDecl.getAllProperties()
+                        .filter { (dataClassMaterialMap[PROPERTIES] as List<*>)
+                                    .contains(it.simpleName.asString())
+                        }
+                        .toList()
+                    // date class 生成（ファイルを書き出せる状態にする）
+                    val fileSpec = createDataClassFile(ClassName( packageName, createClassName), selectedProps)
+                    val fileDependency = classDecl.containingFile
+                                        ?.let { Dependencies(true, it) }
+                                        ?: Dependencies(false)
+                    // date class kt ファイル生成
+                    fileSpec.writeTo(codeGenerator, fileDependency)
+                    logger.info(">>> Generated Projection Class: $createClassName")
+                }
+    }
 
-//        val pkg = classDecl.packageName.asString()
-//        val originalName = classDecl.simpleName.asString()
-//
-//        for ((name, props) in projections) {
-//            val projectionClassName = "${originalName}${name}"
-//            logger.info(">>> Processing class: $projectionClassName")
-//            val typeSpec = TypeSpec.classBuilder(projectionClassName)
-//                .addModifiers(KModifier.DATA)
-//                .primaryConstructor(
-//                    FunSpec.constructorBuilder()
-//                        .apply {
-//                            logger.info(">>> Processing class: $projectionClassName in $props")
-//                            for (prop in props) {
-//                                val type = prop.type.resolve().toTypeName()
-//                                addParameter(prop.simpleName.asString(), type)
-//                            }
-//                        }
-//                        .build()
-//                )
-//                .apply {
-//                    logger.info(">>> Processing class: $projectionClassName in $props")
-//                    for (prop in props) {
-//                        val type = prop.type.resolve().toTypeName()
-//                        addProperty(
-//                            PropertySpec.builder(prop.simpleName.asString(), type)
-//                                .initializer(prop.simpleName.asString())
-//                                .build()
-//                        )
-//                    }
-//                }
-//                .build()
-//
-//            val fileSpec = FileSpec.builder(pkg, projectionClassName)
-//                .addType(typeSpec)
-//                .build()
-//            val fileDependency = classDecl.containingFile?.let { Dependencies(true, it) } ?: Dependencies(false)
-//            fileSpec.writeTo(codeGenerator, fileDependency)
-//            logger.info(">>> Generated Projection Class: $projectionClassName")
-//        }
-//    }
+    /**
+     * ## データクラス生成メソッド
+     * ### 指定されたクラスから、指定されたプロパティのみを含む
+     * ### データクラスを KotlinPoet で生成する
+     * @param packageName 出力パッケージ
+     * @param className 生成するクラス名
+     * @param selectedProps プロパティ一覧（KSP の KSPropertyDeclaration）
+     * @return FileSpec（Kotlin ファイル）
+     */
+    private fun createDataClassFile(
+        classNameFQN: ClassName,
+        selectedProps: List<KSPropertyDeclaration>
+    ): FileSpec {
+        // クラスビルダー
+        val classBuilder = TypeSpec.classBuilder(classNameFQN)
+            .addModifiers(KModifier.DATA)
+        // コンストラクタビルダー
+        val constructorBuilder = FunSpec.constructorBuilder()
+        // プロパティ一覧からプロパティ名とプロパティ型を取得し data class の構成要素にする
+        selectedProps.forEach { prop ->
+            val name = prop.simpleName.asString()
+            val type = prop.type.resolve().toTypeName()
+            constructorBuilder.addParameter(name, type)
+            classBuilder.addProperty(
+                PropertySpec.builder(name, type)
+                    .initializer(name)
+                    .build()
+            )
+        }
+        // クラスビルダーにプライマリィコンストラクタの構成を追加する
+        classBuilder.primaryConstructor(constructorBuilder.build())
+        // ファイルの構成要素としてクラスを追加し呼び出し元へ戻す
+        return FileSpec.builder(classNameFQN)
+            .addType(classBuilder.build())
+            .build()
+    }
 
     /**
      * ## プロジェクトアノテーション解析処理
@@ -256,16 +285,21 @@ class PropsProcessor(
         val result = mutableMapOf<String, Any>()
         val annotationFQN = annotation.annotationType.resolve().declaration.qualifiedName?.asString()
         logger.warn(">>> Processing collectFields in with $annotationFQN")
+        // アノテーションの引数を取得し加工
         annotation.arguments.forEach {
             val argName = it.name?.asString()
-            if (it.value is List<*> ) {
+            val value = it.value
+            if (value is List<*> ) {
                 val castedValue = it.value as List<*>
-                logger.warn(">>> Processing Projection list ${argName to castedValue}")
+                logger.warn(">>> Processing collectFields Projection list" +
+                                    " ${argName to castedValue}")
                 val firstElement = castedValue.firstOrNull()
-                logger.warn(">>> Processing Projection list firstElement $firstElement")
+                logger.warn(">>> Processing collectFields Projection list" +
+                                    " firstElement $firstElement")
                 val fieldList: List<Any> = when (firstElement) {
                     is KSType -> {
-                        logger.warn(">>> Processing Projection list type for ${argName to firstElement}")
+                        logger.warn(">>> Processing collectFields Projection list" +
+                                            " type for ${argName to firstElement}")
                         castedValue.mapNotNull { geneType ->
                             (geneType as KSType).declaration.simpleName.asString()
                         }
@@ -282,11 +316,12 @@ class PropsProcessor(
                         emptyList()
                     }
                 }
-                logger.warn(">>> Processing Projection list type for ${argName to fieldList}")
-                result[argName] to fieldList
+                logger.warn(">>> Processing Projection collectFields list" +
+                                    " type for ${argName to fieldList}")
+                argName?.let { result[it] = fieldList }
             } else {
-                logger.warn(">>> Processing Projection type for ${argName to it.value}")
-                result[argName] to it.value
+                logger.warn(">>> Processing Projection collectFields ${argName to it.value}")
+                argName?.let {key -> result[key] = value?: EMPTY_STRING }
             }
         }
         return result
@@ -310,4 +345,15 @@ class PropsProcessorProvider : SymbolProcessorProvider {
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
         return PropsProcessor(environment.codeGenerator, environment.logger)
     }
+}
+
+/**
+ * ## パッケージとインターフェースのリレーションクラス
+ * ###
+ */
+enum class PackageInterfaceRelation(private val relation: Pair<KClass<out DMLInterfaceEnum>, String>){
+    SELECT(DMLInterfaceEnum.SELECT::class to "selectPackage"),
+    INSERT(DMLInterfaceEnum.INSERT::class to "insertPackage"),
+    UPDATE(DMLInterfaceEnum.UPDATE::class to "updatePackage"),
+    UPSERT(DMLInterfaceEnum.UPSERT::class to "upsertPackage"),
 }
