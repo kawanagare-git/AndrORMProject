@@ -10,6 +10,7 @@ import com.google.devtools.ksp.processing.SymbolProcessorProvider
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import com.squareup.kotlinpoet.ClassName
@@ -17,14 +18,16 @@ import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
+import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
-import kotlin.reflect.KClass
 
 /**
  * ## AndrORM プロパティプロセッサクラス
@@ -40,35 +43,40 @@ class PropsProcessor(
 ) : SymbolProcessor {
 
     companion object  {
-        /** アノテーション完全修飾名 */
-        const val ANNOTATION_FQN = "annotationFQN"
-        /** アノテーション完全修飾名 */
-        const val EMPTY_STRING = ""
-
         /** @Projection の変数名定義（entityNameExtend） */
         const val EXTEND_NAME = "entityNameExtend"
         /** @Projection の変数名定義（implementsInterface） */
         const val IMPLEMENTS_INTERFACE = "implementsInterface"
-        /** @Projection の変数名定義（fields） */
+        /** @Projection の変数名定義（properties） */
         const val PROPERTIES = "properties"
+        /** @Projection の変数名定義（commonInterface） */
+        const val COMMON_INTERFACE = "commonInterface"
+        /** @Projection の変数名定義（customInterface） */
+        const val CUSTOM_INTERFACE = "customInterface"
 
-
-        /** 出力先パッケージ */
+        /** プロパティ名一覧出力先パッケージ */
         const val GENERATED_PACKAGE = "jp.pgw.lab78.androrm.ksp.generated"
         /** プロパティ名一覧 Enum 名 */
         const val GENERATED_PROPERTIES = "AllClassProperties"
+
+        /** @EntityPackageInfo の変数名定義（basePackage） */
+        const val BASE_PACKAGE = "basePackage"
 
         /** 不明 */
         const val UNKNOWN = "Unknown"
 
         /** @GenerateProps */
-        val GENERATE_PROPS = GenerateProps::class.qualifiedName.toString()
+        val GENERATE_PROPS = GenerateProps::class.qualifiedName!!
+        /** @EntityPackageInfo */
+        val ENTITY_PACKAGE_INFO = EntityPackageInfo::class.simpleName!!
+        /** @EntityPackageInfo */
+        val ENTITY_PACKAGE_INFO_FQN = EntityPackageInfo::class.qualifiedName!!
+        /** @Projection(FQN) */
+        val PROJECTION_FQN = Projection::class.qualifiedName!!
         /** @Projection */
-        val PROJECTION_FQN = Projection::class.qualifiedName.toString()
-        /** @Projection */
-        val PROJECTION = Projection::class.simpleName.toString()
+        val PROJECTION = Projection::class.simpleName!!
         /** @Projections */
-        val PROJECTIONS = Projections::class.qualifiedName.toString()
+        val PROJECTIONS = Projections::class.qualifiedName!!
     }
 
     val allClassProperties = mutableMapOf<String,List<String>>()
@@ -165,12 +173,12 @@ class PropsProcessor(
                 } ?: return@forEach
                 // リスト化された fields の値
                 val fieldsValues = collectFields(annotation)[PROPERTIES] as? List<*> ?: emptyList<String>()
-                logger.info("> Fields is '$fieldsValues'.")
+                logger.info(">>>> Fields is '$fieldsValues'.")
                 // @Projection が適用されたクラスのプロパティ名一覧を取得
                 // ただし、allClassProperties に登録済みならば、allClassProperties からプロパティ名一覧を取得
                 val fqn = classDecl.qualifiedName?.asString()
                 if (fqn == null){
-                    logger.error("Annotation target class is null.")
+                    logger.error(">> Annotation target class is null.")
                     return@forEach
                 }
                 val properties = allClassProperties[fqn]
@@ -183,7 +191,7 @@ class PropsProcessor(
                 // fields に指定されたプロパティ名の検査
                 fieldsValues.forEach { field ->
                     if (!properties.contains(field)) {
-                        logger.error(">>>> Field '$field' is not declared in class '${classDecl.simpleName.asString()}'.", classDecl)
+                        logger.error(">> Field '$field' is not declared in class '${classDecl.simpleName.asString()}'.", classDecl)
                     }
                 }
             }
@@ -216,7 +224,12 @@ class PropsProcessor(
                     // data class の素材情報を格納するマップ
                     val dataClassMaterialMap = collectFields(annotation).toMutableMap()
                     // パッケージ名を取得
-                    val packageName = classDecl.packageName.asString()
+                    logger.warn(">>> Generated Projection generateProjectionDataClass: $dataClassMaterialMap")
+                    val packageName = generatedPackageNameFromAnnotation(classDecl,
+                                            resolver,
+                                            resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
+                                            dataClassMaterialMap[COMMON_INTERFACE].toString())
+                        // classDecl.packageName.asString()
                     // クラス名の生成（@Projection 付与クラス名 + @Projection の派生名）
                     val createClassName = classDecl.simpleName.asString() +
                             dataClassMaterialMap[EXTEND_NAME].toString()
@@ -226,8 +239,24 @@ class PropsProcessor(
                                     .contains(it.simpleName.asString())
                         }
                         .toList()
+                    val interfaces = buildList<TypeName> {
+                        // commonInterface の取得
+                        (dataClassMaterialMap[COMMON_INTERFACE]).toString()
+                            .let {
+                                logger.warn(">>> Generated Projection generateProjectionDataClass common interface : $it")
+                                add(ClassName.bestGuess(DMLInterfaceEnum.valueOf(ClassName.bestGuess(it)
+                                                                                            .simpleName)
+                                                                        .interfaceFQN))
+                            }
+                        // customInterface の取得
+                        (dataClassMaterialMap[CUSTOM_INTERFACE] as? String)
+                            ?.takeIf { it.isNotBlank() }
+                            ?.let { add(ClassName.bestGuess(it)) }
+                    }
                     // date class 生成（ファイルを書き出せる状態にする）
-                    val fileSpec = createDataClassFile(ClassName( packageName, createClassName), selectedProps)
+                    val fileSpec = createDataClassFile(ClassName(packageName, createClassName),
+                                                        selectedProps,
+                                                        interfaces)
                     val fileDependency = classDecl.containingFile
                                         ?.let { Dependencies(true, it) }
                                         ?: Dependencies(false)
@@ -238,23 +267,87 @@ class PropsProcessor(
     }
 
     /**
+     * ## パッケージ名生成メソッド
+     * ### @EntityPackageInfo と @Projection の commonInterface を
+     * ### 基にパッケージ名を生成
+     * ### ただし、@EntityPackageInfo や @Projection の commonInterface が
+     * ### 定義されていない場合 @Projection が付与されたクラスのパッケージ名を返す
+     */
+    private fun generatedPackageNameFromAnnotation(
+        classDeclaration: KSClassDeclaration,
+        resolver: Resolver,
+        symbols: Sequence<KSAnnotated>,
+        commonInterface: String
+    ): String {
+        logger.warn(">>> Generated Projection generatedPackageNameFromAnnotation in" +
+                                " : ${classDeclaration} ,${symbols.count()} ,$commonInterface")
+        if (commonInterface.isBlank() || symbols.count() == 0) {
+            return classDeclaration.packageName.asString()
+        }
+        val common = generateCommonInterFace(commonInterface)
+        logger.warn(">>> Generated Projection generatedPackageNameFromAnnotation : $common")
+        // パッケージアノテーションの抽出
+        symbols.filterIsInstance<KSFile>().forEach {
+            // @EntityPackageInfo の単純名で抽出
+            symbol ->
+            val annotation = symbol.annotations.firstOrNull{
+                it.shortName.asString() == ENTITY_PACKAGE_INFO
+            }
+            // @@EntityPackageInfo を FQN で検証
+            if (annotation?.let{
+                    it.annotationType.resolve().declaration.qualifiedName?.asString() == ENTITY_PACKAGE_INFO_FQN
+                }?: false) {
+                val base = annotation?.arguments?.firstOrNull {
+                    it.name?.asString() == BASE_PACKAGE
+                }?.value?.let {
+                    logger.warn(">>> Generated Projection generatedPackageNameFromAnnotation base: $it")
+                    it.toString()
+                }
+                // サブパッケージの取得
+                // PackageInterfaceRelation から common.canonicalName に該当するものを抽出
+                val sub = PackageInterfaceRelation.values().firstOrNull(){
+                    DMLInterfaceEnum.valueOf(it.name).interfaceFQN == common.canonicalName
+                }
+                // DMLInterfaceEnum から取得した列挙子の relation の値を取得
+                .let {it?.relation}
+                // EntityPackageInfo の列挙子からサブパッケージを取得
+                .let {
+                    argument -> annotation?.arguments?.firstOrNull() {
+                        it.name?.asString() == argument
+                    }
+                }
+                .let {
+                    logger.warn(">>> Generated Projection generatedPackageNameFromAnnotation sub last : ${it?.value}")
+                    it?.value
+                }
+                return "$base.$sub"
+            }
+        }
+        return common.packageName
+    }
+
+    /**
      * ## データクラス生成メソッド
      * ### 指定されたクラスから、指定されたプロパティのみを含む
      * ### データクラスを KotlinPoet で生成する
-     * @param packageName 出力パッケージ
-     * @param className 生成するクラス名
+     * @param classNameFQN 生成するクラス名（FQN）
      * @param selectedProps プロパティ一覧（KSP の KSPropertyDeclaration）
+     * @param interfaces 実装するインターフェス
      * @return FileSpec（Kotlin ファイル）
      */
     private fun createDataClassFile(
         classNameFQN: ClassName,
-        selectedProps: List<KSPropertyDeclaration>
+        selectedProps: List<KSPropertyDeclaration>,
+        interfaces: List<TypeName>
     ): FileSpec {
+        logger.warn(">>> Generated Projection createDataClassFile: $interfaces")
         // クラスビルダー
         val classBuilder = TypeSpec.classBuilder(classNameFQN)
-            .addModifiers(KModifier.DATA)
+                                    .addModifiers(KModifier.DATA)
+                                    .addSuperinterfaces(interfaces)
         // コンストラクタビルダー
         val constructorBuilder = FunSpec.constructorBuilder()
+
         // プロパティ一覧からプロパティ名とプロパティ型を取得し data class の構成要素にする
         selectedProps.forEach { prop ->
             val name = prop.simpleName.asString()
@@ -289,42 +382,62 @@ class PropsProcessor(
         annotation.arguments.forEach {
             val argName = it.name?.asString()
             val value = it.value
-            if (value is List<*> ) {
-                val castedValue = it.value as List<*>
-                logger.warn(">>> Processing collectFields Projection list" +
-                                    " ${argName to castedValue}")
-                val firstElement = castedValue.firstOrNull()
-                logger.warn(">>> Processing collectFields Projection list" +
-                                    " firstElement $firstElement")
-                val fieldList: List<Any> = when (firstElement) {
-                    is KSType -> {
-                        logger.warn(">>> Processing collectFields Projection list" +
-                                            " type for ${argName to firstElement}")
-                        castedValue.mapNotNull { geneType ->
-                            (geneType as KSType).declaration.simpleName.asString()
+            when (value) {
+                // アノテーション変数が配列
+                is List<*> -> {
+                    val castedValue = it.value as List<*>
+                    logger.warn(">>> Processing collectFields Projection list" +
+                                        " ${argName to castedValue}")
+                    val firstElement = castedValue.firstOrNull()
+                    logger.warn(">>> Processing collectFields Projection list" +
+                                        " firstElement $firstElement")
+                    val fieldList: List<Any> = when (firstElement) {
+                        // KSType から変数型を取得
+                        is KSType -> {
+                            logger.warn(">>> Processing collectFields Projection list" +
+                                                " type for ${argName to firstElement}")
+                            castedValue.mapNotNull { geneType ->
+                                (geneType as KSType).declaration.simpleName.asString()
+                            }
+                        }
+                        // 変数型を文字列に変換
+                        is String -> {
+                            castedValue.filterIsInstance<String>()
+                        }
+                        // 変数型を Int に変換
+                        is Int -> {
+                            castedValue.filterIsInstance<Int>()
+                        }
+                        else -> {
+                            logger.warn(">>> Processing Unexpected type for " +
+                                                "Projection ${firstElement?.javaClass?.name}")
+                            emptyList()
                         }
                     }
-                    is String -> {
-                        castedValue.filterIsInstance<String>()
-                    }
-                    is Int -> {
-                        castedValue.filterIsInstance<Int>()
-                    }
-                    else -> {
-                        logger.warn(">>> Processing Unexpected type for " +
-                                            "Projection ${firstElement?.javaClass?.name}")
-                        emptyList()
-                    }
+                    logger.warn(">>> Processing Projection collectFields list" +
+                                        " type for ${argName to fieldList}")
+                    argName?.let { result[it] = fieldList }
                 }
-                logger.warn(">>> Processing Projection collectFields list" +
-                                    " type for ${argName to fieldList}")
-                argName?.let { result[it] = fieldList }
-            } else {
-                logger.warn(">>> Processing Projection collectFields ${argName to it.value}")
-                argName?.let {key -> result[key] = value?: EMPTY_STRING }
+                // アノテーション変数が上記に当てはまらない
+                else -> {
+                    logger.warn(">>> Processing Projection collectFields else ${argName to it.value}}")
+                    argName?.let { key -> result[key] = it.value ?: EMPTY_STRING }
+                }
             }
         }
         return result
+    }
+
+    /**
+     * ## 共通インターフェースの生成
+     * ### @Projection の commonInterface の値から
+     * ### 共通インターフェースの FQN を取得する
+     * @param commonInterface 共通インターフェースを文字列化した値
+     */
+    private fun generateCommonInterFace(commonInterface: String) : ClassName {
+        return ClassName.bestGuess((DMLInterfaceEnum.valueOf(ClassName.bestGuess(commonInterface)
+                                                                        .simpleName))
+                                                    .interfaceFQN)
     }
 }
 
@@ -349,11 +462,12 @@ class PropsProcessorProvider : SymbolProcessorProvider {
 
 /**
  * ## パッケージとインターフェースのリレーションクラス
- * ###
+ * ### 標準インターフェースと出力先パッケージを紐づける
+ * @param relation インターフェースと @EntityPackageInfo の変数の組み合わせ
  */
-enum class PackageInterfaceRelation(private val relation: Pair<KClass<out DMLInterfaceEnum>, String>){
-    SELECT(DMLInterfaceEnum.SELECT::class to "selectPackage"),
-    INSERT(DMLInterfaceEnum.INSERT::class to "insertPackage"),
-    UPDATE(DMLInterfaceEnum.UPDATE::class to "updatePackage"),
-    UPSERT(DMLInterfaceEnum.UPSERT::class to "upsertPackage"),
+enum class PackageInterfaceRelation(val relation: String){
+    SELECT("selectPackage"),
+    INSERT("insertPackage"),
+    UPDATE("updatePackage"),
+    UPSERT("upsertPackage"),
 }

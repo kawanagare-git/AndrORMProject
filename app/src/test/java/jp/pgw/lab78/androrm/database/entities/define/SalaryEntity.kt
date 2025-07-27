@@ -9,9 +9,9 @@ import jp.pgw.lab78.androrm.database.annotation.Table
 import java.time.LocalDateTime
 
 @GenerateProps
-@Projection(entityNameExtend = "Tester"
+@Projection(entityNameExtend = "Upsert"
     , properties = ["employeeId","payMonth","createdAt"]
-    , commonInterface = DMLInterfaceEnum.SELECT)
+    , commonInterface = DMLInterfaceEnum.UPSERT)
 @Table("SALARY",alias = "SAL")
 data class SalaryEntity(
     val employeeId: String,
