@@ -3,8 +3,8 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import jp.pgw.lab78.androrm.database.annotation.Table
 import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.generateTableCreationQuery
 import kotlin.reflect.KClass
