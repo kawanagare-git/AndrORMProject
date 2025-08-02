@@ -2,16 +2,17 @@ package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.database.annotation.Column
-import jp.pgw.lab78.androrm.database.annotation.Table
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 
 @GenerateProps
 @Projection(entityNameExtend = "IdSelection"
+    , aliasExtend = "ID"
     , properties = ["employeeId"]
     , commonInterface = DMLInterfaceEnum.SELECT
 )

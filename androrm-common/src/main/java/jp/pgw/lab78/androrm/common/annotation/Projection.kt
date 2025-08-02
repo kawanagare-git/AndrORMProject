@@ -11,6 +11,8 @@ import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
  * @param properties クラスに定義するプロパティ名
  * @param commonInterface 共通インターフェース
  * @param customInterface 独自インターフェース
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
@@ -18,6 +20,8 @@ import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 annotation class Projection(
     /** エンティティ派生名 */
     val entityNameExtend: String,
+    /** テーブルエイリアス */
+    val aliasExtend: String = "",
     /** クラスに定義するプロパティ名 */
     val properties: Array<String>,
     /** 共通インターフェス */

@@ -11,6 +11,8 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.UpsertEntity
  * ### AndrORM のインターフェース列挙型
  * ### @Projection.DMLInterfaceEnum に指定する
  * @param interfaceFQN 共通インターフェスの FQN
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
 public enum class DMLInterfaceEnum(
     /** 共通インターフェスの FQN */

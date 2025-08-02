@@ -2,16 +2,24 @@ package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.annotation.Projections
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.database.annotation.Column
-import jp.pgw.lab78.androrm.database.annotation.Table
 import java.time.LocalDateTime
 
 @GenerateProps
-@Projection(entityNameExtend = "Upsert"
-    , properties = ["employeeId","payMonth","createdAt"]
-    , commonInterface = DMLInterfaceEnum.UPSERT)
+@Projections(
+    [
+        Projection(entityNameExtend = "Upsert"
+        , properties = ["employeeId","payMonth","createdAt"]
+        , commonInterface = DMLInterfaceEnum.UPSERT),
+        Projection(entityNameExtend = "Insert"
+        , properties = ["employeeId","payMonth","gross","updatedAt","updatedBy"]
+        , commonInterface = DMLInterfaceEnum.INSERT)
+    ]
+)
 @Table("SALARY",alias = "SAL")
 data class SalaryEntity(
     val employeeId: String,

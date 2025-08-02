@@ -3,8 +3,9 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.utility.Functions.generateTableCreationQuery
 import kotlin.reflect.KClass
@@ -19,7 +20,7 @@ import kotlin.reflect.full.findAnnotation
  * @param entities データベースにテーブルとして配置する Entity クラス
  * @see SQLiteOpenHelper
  */
-class DatabaseHelper(
+class AndrOrmDatabaseHelper(
     context: Context,
     val name: String = "app.db",
     version: Int,
@@ -58,4 +59,46 @@ class DatabaseHelper(
         }
         onCreate(db)
     }
+
+    fun getDatabase(): SQLiteOpenHelper {
+        return this
+    }
+
+    inline fun <reified T:SelectEntity>exec(query: Select<out T>): T {
+        val cursor = readableDatabase.rawQuery(query.build(),null)
+
+        cursor.use {
+            if (cursor.moveToFirst()) {
+                return T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
+            } else {
+                throw IllegalStateException("No data found for ${T::class.simpleName}")
+            }
+        }
+    }
+
+//    fun <T : InsertEntity> execInsert(entity: T, vararg entities: T) {
+//        val allEntities = listOf(entity) + entities
+//
+//        val insertResult = Insert.build(allEntities) // insertResult.query: String, insertResult.binds: List<Map<String, Any>>
+//
+//        writableDatabase.beginTransaction()
+//        try {
+//            val stmt = writableDatabase.compileStatement(insertResult.query)
+//            for (bindMap in insertResult.binds) {
+//                bindMap.entries.forEachIndexed { index, (_, value) ->
+//                    stmt.bindObject(index + 1, value)
+//                }
+//                stmt.executeInsert()
+//                stmt.clearBindings()
+//            }
+//            writableDatabase.setTransactionSuccessful()
+//        } finally {
+//            writableDatabase.endTransaction()
+//        }
+//    }
+
+    public data class InsertResult(
+        val query: String,  // 例: INSERT INTO EMPLOYEE (ID, NAME) VALUES (?, ?)
+        val binds: List<Map<String, Any>> // 各行に対する値マップ
+    )
 }

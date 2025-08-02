@@ -16,6 +16,9 @@ dependencies {
     testRuntimeOnly(libs.junit.jupiter.engine)      // JUnit 5 Engine
     // Mockito for unit tests
     testImplementation(libs.mockito.core)
+
+    // リフレクション（必要に応じて）
+    implementation(libs.kotlin.reflect)
 }
 dependencies {
     implementation(kotlin("stdlib"))

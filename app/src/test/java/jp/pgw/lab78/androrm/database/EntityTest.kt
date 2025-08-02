@@ -1,15 +1,15 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.annotation.Table
-import jp.pgw.lab78.androrm.utility.Functions
-import jp.pgw.lab78.androrm.utility.Functions.entityDefinitionMap
-import jp.pgw.lab78.androrm.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.insert.TestInsertEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
-import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
-import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.utility.Functions
+import jp.pgw.lab78.androrm.utility.Functions.entityDefinitionMap
+import jp.pgw.lab78.androrm.utility.Functions.getAlias
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

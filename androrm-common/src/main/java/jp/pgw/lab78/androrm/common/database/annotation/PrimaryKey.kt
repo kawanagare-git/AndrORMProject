@@ -1,7 +1,9 @@
-package jp.pgw.lab78.androrm.database.annotation
+package jp.pgw.lab78.androrm.common.database.annotation
 
 /**
  * ## PrimaryKey アノテーション
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
 @Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)

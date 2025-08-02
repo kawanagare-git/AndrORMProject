@@ -3,7 +3,7 @@ package jp.pgw.lab78.generated.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
-import jp.pgw.lab78.androrm.database.DatabaseHelper
+import jp.pgw.lab78.androrm.database.AndrOrmDatabaseHelper
 import org.junit.*
 import org.junit.Assert.assertNotNull
 import org.mockito.Mockito.mock
@@ -11,9 +11,9 @@ import org.mockito.Mockito.spy
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 
-class DatabaseHelperTest {
+class AndrOrmDatabaseHelperTest {
 
-    private lateinit var dbHelper: DatabaseHelper
+    private lateinit var dbHelper: AndrOrmDatabaseHelper
     private lateinit var context: Context
     private lateinit var mockDb: SQLiteDatabase
 
@@ -23,7 +23,7 @@ class DatabaseHelperTest {
         context = ApplicationProvider.getApplicationContext()
 
         // DatabaseHelper を作成
-        dbHelper = spy(DatabaseHelper(context, version = 1, entities = arrayOf(TestEntity::class)))
+        dbHelper = spy(AndrOrmDatabaseHelper(context, version = 1, entities = arrayOf(TestEntity::class)))
 
         // SQLiteDatabase をモック
         mockDb = mock(SQLiteDatabase::class.java)

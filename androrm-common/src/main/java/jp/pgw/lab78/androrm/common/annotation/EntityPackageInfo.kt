@@ -1,5 +1,10 @@
 package jp.pgw.lab78.androrm.common.annotation
 
+/**
+ * 出力先パッケージ指定アノテーション
+ * @author Masahiro Inoue
+ * @since 2025-08-01
+ */
 @Target(AnnotationTarget.FILE)
 @Retention(AnnotationRetention.SOURCE)
 annotation class EntityPackageInfo(

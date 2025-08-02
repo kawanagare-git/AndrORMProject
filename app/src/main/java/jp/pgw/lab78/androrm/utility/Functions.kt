@@ -1,9 +1,11 @@
 package jp.pgw.lab78.androrm.utility
 
-import jp.pgw.lab78.androrm.database.annotation.Column
-import jp.pgw.lab78.androrm.database.annotation.Table
-import jp.pgw.lab78.androrm.common.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
@@ -18,7 +20,9 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * UtilityFunction オブジェクトクラス
+ * ## UtilityFunction オブジェクトクラス
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
 object Functions {
 
@@ -27,6 +31,8 @@ object Functions {
      * ### エンティティの定義（構造）を管理
      * @param tableName テーブル名
      * @param columnInfo テーブルに定義してあるカラムの情報 キー:entity クラスの フィールド value:カラム名
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     data class EntityDefinitionManager(
         var tableName: String, var columnInfo: MutableMap<KProperty<*>, String>
@@ -39,6 +45,8 @@ object Functions {
      * ## generateTableCreationQuery 関数
      * ### テーブルを作成するクエリを生成する
      * @param entityClass TableDefinitionEntity クラスのインスタンスを指定
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun <T : TableDefinitionEntity> generateTableCreationQuery(entityClass: KClass<T>): String {
         /** テーブル名の生成 */
@@ -54,6 +62,8 @@ object Functions {
      * ### KProperty1<T, *> からクラス名を取得する
      * @param property KProperty1<T, *> プロパティ
      * @return 取得したクラスの型
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     @Suppress("UNCHECKED_CAST")
     fun <T : Entity> extractClassFromProperty(property: KProperty1<T, *>): KClass<T>? =
@@ -65,6 +75,8 @@ object Functions {
      * ### エンティティクラスからテーブル名を取得する
      * @param entityClass エンティティクラスを指定
      * @return 取得したテーブル名
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun <T : Entity> getTableName(entityClass: KClass<T>): String =
         entityDefinitionMap.getOrPut(entityClass) {
@@ -81,6 +93,8 @@ object Functions {
      * ### エンティティクラスからカラム名のリストを取得する
      * @param entityClass エンティティクラスを指定
      * @return 取得したカラム名のリスト
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun <T : Entity> getColumnNames(entityClass: KClass<T>): List<Pair<String, String>> {
         val alias = getAlias(entityClass)
@@ -110,6 +124,8 @@ object Functions {
      * @param [T] Entity インターフェイスの実装型
      * @param entityClass 対象のエンティティクラス
      * @return 定義順に並んだカラム名のリスト
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun <T : Entity> getColumnDefinitions(entityClass: KClass<T>): List<Pair<String, String>> {
         val alias = getAlias(entityClass)
@@ -126,8 +142,12 @@ object Functions {
             val colAnno = prop.findAnnotation<Column>()
             val baseName = colAnno?.name
                 .takeIf { !it.isNullOrBlank() }
-                ?: prop.name.toSnakeCase()
-            val columnName = "$alias$baseName"
+                ?: prop.getColumn()
+            val columnAlias = colAnno?.alias
+                .takeIf { !it.isNullOrBlank() }
+                ?.let { "as ${prop.getColumnAlias()}" }
+                ?: ""
+            val columnName = "$alias$baseName $columnAlias"
             // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
             entityDefinitionMap[entityClass]?.columnInfo?.also {
                 it[prop] = columnName
@@ -144,6 +164,8 @@ object Functions {
      * ### エンティティクラスからエイリアスを取得する
      * @param entityClass エンティティクラスを指定
      * @return 取得したエイリアス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun <T : Entity> getAlias(entityClass: KClass<T>): String = (
             entityDefinitionMap[entityClass]
@@ -161,6 +183,8 @@ object Functions {
      * ## テーブル名とエイリアスを分離
      * @param tableName "users u" のような形式
      * @return Pair(テーブル名, エイリアス). エイリアスがない場合は ""。
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun splitTableNameAndAlias(tableName: String): Pair<String, String> {
         val parts = tableName.split(" ", limit = 2)
@@ -184,6 +208,8 @@ object Functions {
      * ## mapKotlinTypeToSqlType 関数
      * ### クラスのフィールド型をデータベースのカラム型に変換
      * @param field 変換対象のフィールドを指定
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun mapKotlinTypeToSqlType(field : Any): String {
         val valueForJudgment = when (field) {
@@ -204,6 +230,8 @@ object Functions {
      * ### 指定された値を文字列化する
      * @param value 変換元の値
      * @return 文字列化された値
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     fun formatValue(value: Any): String = when (value) {
         is String -> "'$value'"

@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.utility
 
-import jp.pgw.lab78.androrm.common.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.utility.Functions.mapKotlinTypeToSqlType
 import jp.pgw.lab78.androrm.utility.Functions.splitTableNameAndAlias
 import org.junit.jupiter.api.Assertions.assertEquals
