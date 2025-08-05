@@ -5,6 +5,8 @@ import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.GREAT
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.GREATER_THAN_OR_EQUALS
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.LESS_THAN
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.LIKE
+import jp.pgw.lab78.androrm.database.entities.condition.DepartmentEntityCondition
+import jp.pgw.lab78.androrm.database.entities.condition.EmployeeEntityCondition
 import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.DepartmentEntityInfo
@@ -155,6 +157,48 @@ class SelectTest {
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(Select.JoinType.INNER, DepartmentEntityInfo::class,{
                 condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+            })
+            .order{column(DepartmentEntityInfo::department)}
+        println(SELECT.build())
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .join(Select.JoinType.INNER, DepartmentEntityInfo::class,{
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+            })
+            .where({condition(EmployeeEntityIdSelection::employeeId,EQUALS,EmployeeEntityCondition::employeeId)})
+            .order{column(DepartmentEntityInfo::department)}
+        println(SELECT.build())
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .join(Select.JoinType.INNER, DepartmentEntityInfo::class,{
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+            })
+            .where({condition(EmployeeEntityIdSelection::employeeId,
+                EQUALS,
+                DepartmentEntityInfo::employeeId)})
+            .order{column(DepartmentEntityInfo::department)}
+        println(SELECT.build())
+    }
+
+    @Test
+    fun build4() {
+        // 最終TEST
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .join(Select.JoinType.INNER, DepartmentEntityInfo::class,{
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+            })
+            .order{column(DepartmentEntityInfo::department)}
+        println(SELECT.build())
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .join(Select.JoinType.INNER, DepartmentEntityInfo::class,{
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityInfo::employeeId)
+                condition(EmployeeEntityIdSelection::employeeId, EQUALS, DepartmentEntityCondition::employeeId)
+            })
+            .where({
+                condition(DepartmentEntityInfo::department,EQUALS, DepartmentEntityCondition::department)
+                    or{
+                        condition(DepartmentEntityInfo::section,EQUALS, "10")
+                        condition(DepartmentEntityInfo::section,EQUALS, "20")
+                    }
             })
             .order{column(DepartmentEntityInfo::department)}
         println(SELECT.build())

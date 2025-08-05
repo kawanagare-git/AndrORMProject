@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.database.function
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
-import jp.pgw.lab78.androrm.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.androrm.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 

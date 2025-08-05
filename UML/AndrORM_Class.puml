@@ -1,27 +1,98 @@
 @startuml
 'https://plantuml.com/class-diagram
 
-abstract class AbstractList
-abstract AbstractCollection
-interface List
-interface Collection
+@startuml
+skinparam classAttributeIconSize 0
 
-List <|-- AbstractList
-Collection <|-- AbstractCollection
+folder  androrm-common {
+    package jp.pgw.lab78.androrm.common {
+        object Constants {
+            {static} + EMPTY_STRING : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common.dml {
+        enum DMLInterfaceEnum {
+            + NOT_USE
+            + SELECT
+            + INSERT
+            + UPDATE
+            + UPSERT
+            --
+            + interfaceFQN : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common.database {
+        object SupportFunction {
+            + KClass<*>.simpleNameToSnakeCase() : String
+            + KProperty1<*, *>.getColumn() : String
+            + KProperty1<*, *>.getColumnAlias() : String
+            + KProperty1<*, *>.simpleNameToSnakeCase() : String
+            + String.toSnakeCase() : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common.annotation {
+        annotation EntityPackageInfo {
+            + basePackage : String
+            + selectPackage : String
+            + insertPackage : String
+            + updatePackage : String
+            + upsertPackage : String
+            + conditionPackage : String
+        }
+        annotation GenerateProps {
+        }
+        annotation Projection {
+            + entityNameExtend : String
+            + aliasExtend : String
+            + properties : Array<String>
+            + commonInterface : DMLInterfaceEnum
+            + customInterface : String
+        }
+        annotation Projections {
+            + value : Array<Projection>
+        }
+    }
+    package jp.pgw.lab78.androrm.common.database.annotation {
+        annotation Column {
+            + name : String
+            + alias : String
+        }
+        annotation PrimaryKey {
+        }
+        annotation Table {
+            + name : String
+            + alias : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common.dml.interfaces{
+        interface ComprehensiveEntity
+        interface ConditionEntity
+        interface Entity
+        interface InsertEntity
+        interface SelectEntity
+        interface TableDefinitionEntity
+        interface UpdateEntity
+        interface UpsertEntity
 
-Collection <|- List
-AbstractCollection <|- AbstractList
-AbstractList <|-- ArrayList
-
-class ArrayList {
-Object[] elementData
-size()
+        ConditionEntity ..|> Entity
+        InsertEntity ..|> Entity
+        SelectEntity ..|> Entity
+        TableDefinitionEntity ..|> Entity
+        UpdateEntity ..|> Entity
+        UpsertEntity ..|> Entity
+        ComprehensiveEntity ..|> ConditionEntity
+        ComprehensiveEntity ..|> InsertEntity
+        ComprehensiveEntity ..|> SelectEntity
+        ComprehensiveEntity ..|> UpdateEntity
+        ComprehensiveEntity ..|> UpsertEntity
+    }
+    ' 関連（DMLInterfaceEnum が定数を参照）
+    DMLInterfaceEnum --> Constants : uses
 }
 
-enum TimeUnit {
-DAYS
-HOURS
-MINUTES
-}
+package "jp.pgw.lab78.androrm.ksp" {
+    class PropsProcessor {
+    }
 
+}
 @enduml

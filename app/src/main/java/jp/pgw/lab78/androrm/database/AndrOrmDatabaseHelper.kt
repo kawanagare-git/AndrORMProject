@@ -5,9 +5,12 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.utility.Functions.generateTableCreationQuery
+import jp.pgw.lab78.androrm.database.utility.Functions.bindPlaceholders
+import jp.pgw.lab78.androrm.database.utility.Functions.generateTableCreationQuery
+import jp.pgw.lab78.androrm.database.utility.Functions.getValueFromEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -18,6 +21,8 @@ import kotlin.reflect.full.findAnnotation
  * @param name データベースファイル名（省略時 app.db）
  * @param version データベース改変バージョン
  * @param entities データベースにテーブルとして配置する Entity クラス
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  * @see SQLiteOpenHelper
  */
 class AndrOrmDatabaseHelper(
@@ -31,6 +36,8 @@ class AndrOrmDatabaseHelper(
      * override
      * スーパークラスの onCreate メソッドをオーバーライドします。
      * 設定された entities を基に Create 文を生成し、テーブルを作成する
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      * @see android.database.sqlite.SQLiteDatabase
      */
     override fun onCreate(db: SQLiteDatabase) {
@@ -45,6 +52,8 @@ class AndrOrmDatabaseHelper(
      * override
      * スーパークラスの onUpgrade メソッドをオーバーライドします。
      * 設定された entities を基に Drop 文を作成し、テーブルを削除する
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      * @see android.database.sqlite.SQLiteDatabase
      */
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -60,20 +69,42 @@ class AndrOrmDatabaseHelper(
         onCreate(db)
     }
 
+    /**
+     * ## AndrORM データベースヘルパ取得メソッド
+     * @return AndrORM データベースヘルパを返す
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     fun getDatabase(): SQLiteOpenHelper {
         return this
     }
 
-    inline fun <reified T:SelectEntity>exec(query: Select<out T>): T {
-        val cursor = readableDatabase.rawQuery(query.build(),null)
-
+    /**
+     * ## AndrORM データベース実行メソッド
+     * ### 引数で渡されたクエリを実行する（select 文用）
+     * @param query 実行する Select クラスのインスタンス
+     * @param entities 条件エンティティクラスのインスタンス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    inline fun <reified T:SelectEntity,reified TC:ConditionEntity>exec(
+        query: Select<out T>,
+        entities: TC
+    ): List<T> {
+        // 条件値を格納したエンティティから値を取り出す
+        val valuesMap = getValueFromEntity(entities)
+        // 一致したプレースホルダー名を「?」に変更し、プレースホルダー名の値を定義順に取り出す
+        val (newQuery,values) = bindPlaceholders(query.build(),valuesMap)
+        // select の実行（values.firstOrNull() は、values が空の時は null を返す）
+        val cursor = readableDatabase.rawQuery(newQuery,values.firstOrNull())
+        val result = mutableListOf<T>()
         cursor.use {
-            if (cursor.moveToFirst()) {
-                return T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
-            } else {
-                throw IllegalStateException("No data found for ${T::class.simpleName}")
+            while (it.moveToFirst()) {
+                it.columnNames
+                result += T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
             }
         }
+        return result
     }
 
 //    fun <T : InsertEntity> execInsert(entity: T, vararg entities: T) {

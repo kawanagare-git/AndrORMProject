@@ -1,14 +1,16 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
-import jp.pgw.lab78.androrm.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.androrm.utility.Functions.formatValue
-import jp.pgw.lab78.androrm.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.Functions.formatValue
+import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.superclasses
 
 /**
  * ## SQL 条件基底クラス
@@ -35,6 +37,9 @@ sealed class Condition {
  */
 sealed class Compare : Condition() {
 
+    companion object {
+        val CONDITION_CLASS = ConditionEntity::class
+    }
     /**
      * ## 結合条件記述用クラス
      * ### join に使用する単一条件を指定
@@ -60,9 +65,16 @@ sealed class Compare : Condition() {
         override fun build(): String {
             val mainAlias = getAlias(extractClassFromProperty(mainProperty) as KClass<out Entity>)
             val mainColumn = mainProperty.getColumn()
-            val joinedAlias = getAlias(extractClassFromProperty(joinedProperty) as KClass<out Entity>)
-            val joinedColumn = mainProperty.getColumn()
-            return "$mainAlias$mainColumn ${operator.symbol} $joinedAlias$joinedColumn"
+            val declaringClass = extractClassFromProperty(joinedProperty)
+                                ?: error("Couldn't determine declaring class")
+            val joined = if (declaringClass.superclasses.contains(CONDITION_CLASS)) {
+                ":${joinedProperty.getColumn()}"
+            } else {
+                val joinedAlias = getAlias(extractClassFromProperty(joinedProperty) as KClass<out Entity>)
+                val joinedColumn = joinedProperty.getColumn()
+                "$joinedAlias$joinedColumn"
+            }
+            return "$mainAlias$mainColumn ${operator.symbol} $joined"
         }
     }
 

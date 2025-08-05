@@ -49,66 +49,63 @@ class PropsProcessor(
 
     companion object  {
         /** @Projection の変数名定義（entityNameExtend） */
-        const val EXTEND_NAME = "entityNameExtend"
+        private const val EXTEND_NAME = "entityNameExtend"
         /** @Projection の変数名定義（aliasExtend） */
-        const val EXTEND_ALIAS = "aliasExtend"
+        private const val EXTEND_ALIAS = "aliasExtend"
         /** @Projection の変数名定義（implementsInterface） */
-        const val IMPLEMENTS_INTERFACE = "implementsInterface"
+        private const val IMPLEMENTS_INTERFACE = "implementsInterface"
         /** @Projection の変数名定義（properties） */
-        const val PROPERTIES = "properties"
+        private const val PROPERTIES = "properties"
         /** @Projection の変数名定義（commonInterface） */
-        const val COMMON_INTERFACE = "commonInterface"
+        private const val COMMON_INTERFACE = "commonInterface"
         /** @Projection の変数名定義（customInterface） */
-        const val CUSTOM_INTERFACE = "customInterface"
+        private const val CUSTOM_INTERFACE = "customInterface"
 
         /** プロパティ名一覧出力先パッケージ */
-        const val GENERATED_PACKAGE = "jp.pgw.lab78.androrm.ksp.generated"
+        private const val GENERATED_PACKAGE = "jp.pgw.lab78.androrm.ksp.generated"
         /** プロパティ名一覧 Enum 名 */
-        const val GENERATED_PROPERTIES = "AllClassProperties"
+        private const val GENERATED_PROPERTIES = "AllClassProperties"
 
         /** @Table の変数名定義（alias） */
-        const val TABLE_ALIAS = "alias"
+        private const val TABLE_ALIAS = "alias"
 
         /** @Column の変数名定義（name） */
-        const val COLUMN_NAME = "name"
+        private const val COLUMN_NAME = "name"
         /** @Column の変数名定義（alias） */
-        const val COLUMN_ALIAS = "alias"
+        private const val COLUMN_ALIAS = "alias"
 
         /** @EntityPackageInfo の変数名定義（basePackage） */
-        const val BASE_PACKAGE = "basePackage"
-
-        /** 不明 */
-        const val UNKNOWN = "Unknown"
+        private const val BASE_PACKAGE = "basePackage"
 
         /** @GenerateProps */
-        val GENERATE_PROPS = GenerateProps::class.qualifiedName!!
+        private val GENERATE_PROPS = GenerateProps::class.qualifiedName!!
         /** @EntityPackageInfo */
-        val ENTITY_PACKAGE_INFO = EntityPackageInfo::class.simpleName!!
+        private val ENTITY_PACKAGE_INFO = EntityPackageInfo::class.simpleName!!
         /** @EntityPackageInfo */
-        val ENTITY_PACKAGE_INFO_FQN = EntityPackageInfo::class.qualifiedName!!
+        private val ENTITY_PACKAGE_INFO_FQN = EntityPackageInfo::class.qualifiedName!!
         /** @Projection */
-        val PROJECTION = Projection::class.simpleName!!
+        private val PROJECTION = Projection::class.simpleName!!
         /** @Projection(FQN) */
-        val PROJECTION_FQN = Projection::class.qualifiedName!!
+        private val PROJECTION_FQN = Projection::class.qualifiedName!!
         /** @Projections */
-        val PROJECTIONS = Projections::class.simpleName!!
+        private val PROJECTIONS = Projections::class.simpleName!!
         /** @Projections(FQN) */
-        val PROJECTIONS_FQN = Projections::class.qualifiedName!!
+        private val PROJECTIONS_FQN = Projections::class.qualifiedName!!
         /** @Table */
-        val TABLE = Table::class.simpleName!!
+        private val TABLE = Table::class.simpleName!!
         /** @Table(FQN) */
-        val TABLE_FQN = Table::class.qualifiedName!!
+        private val TABLE_FQN = Table::class.qualifiedName!!
         /** @Column */
-        val COLUMN = Column::class.simpleName!!
+        private val COLUMN = Column::class.simpleName!!
         /** @Column(FQN) */
-        val COLUMN_FQN = Column::class.qualifiedName!!
+        private val COLUMN_FQN = Column::class.qualifiedName!!
     }
 
     /** 自動生成するために必要な全プロパティ名 */
-    val allClassProperties = mutableMapOf<String,List<String>>()
+    private val allClassProperties = mutableMapOf<String,List<String>>()
 
     /** 生成 @Table */
-    lateinit var tableAnnotationSpec: AnnotationSpec
+    private lateinit var tableAnnotationSpec: AnnotationSpec
 
     /**
      * ## AndrORM アノテーションプロセスメソッド
@@ -623,4 +620,5 @@ enum class PackageInterfaceRelation(val relation: String){
     INSERT("insertPackage"),
     UPDATE("updatePackage"),
     UPSERT("upsertPackage"),
+    CONDITION("conditionPackage"),
 }

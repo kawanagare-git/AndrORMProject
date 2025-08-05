@@ -1,9 +1,8 @@
-package jp.pgw.lab78.androrm.utility
+package jp.pgw.lab78.androrm.database.utility
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
@@ -20,12 +19,12 @@ import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
 /**
- * ## UtilityFunction オブジェクトクラス
+ * ## ユーティリティ関数オブジェクトクラス
+ * ### データベースヘルパーで使用する関数群
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
 object Functions {
-
     /**
      * ## エンティティ定義管理クラス
      * ### エンティティの定義（構造）を管理
@@ -38,23 +37,28 @@ object Functions {
         var tableName: String, var columnInfo: MutableMap<KProperty<*>, String>
     )
 
+    /** プレースホルダー名正規表現 */
+    val PLACE_HOLDER_REGEX = Regex(""":(\w+)""")
+
+    /** エンティティクラス定義管理マップ */
     @JvmStatic
     val entityDefinitionMap = mutableMapOf<KClass<*>, EntityDefinitionManager>()
 
     /**
-     * ## generateTableCreationQuery 関数
+     * ## CREATE 文文字列生成関数
      * ### テーブルを作成するクエリを生成する
      * @param entityClass TableDefinitionEntity クラスのインスタンスを指定
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : TableDefinitionEntity> generateTableCreationQuery(entityClass: KClass<T>): String {
+    fun <T : TableDefinitionEntity> generateTableCreationQuery(entityClass: KClass<out T>): String {
         /** テーブル名の生成 */
         val tableName = getTableName(entityClass)
-
         /** カラム定義の生成 */
-        val columnList = getColumnNames(entityClass)
-        return "CREATE TABLE $tableName (${columnList.joinToString(", ") { (columnName, sqlType) -> "$columnName $sqlType" }})"
+        val columnList = getColumnDefinitions(entityClass)
+        return "CREATE TABLE $tableName (${columnList.joinToString(", ") {
+                                                (columnName, sqlType) -> "$columnName $sqlType"
+                                            }})"
     }
 
     /**
@@ -89,37 +93,7 @@ object Functions {
         }.tableName//.let { splitTableNameAndAlias(it).first } // ← パースして「テーブル名」だけ返す
 
     /**
-     * ## カラム名取得
-     * ### エンティティクラスからカラム名のリストを取得する
-     * @param entityClass エンティティクラスを指定
-     * @return 取得したカラム名のリスト
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun <T : Entity> getColumnNames(entityClass: KClass<T>): List<Pair<String, String>> {
-        val alias = getAlias(entityClass)
-
-        return entityClass.memberProperties.map { prop ->
-            // カラム名のベース（@Column.name or プロパティ名）
-            val baseName = prop.findAnnotation<Column>()
-                ?.name
-                ?.takeIf { it.isNotBlank() }
-                ?: prop.name.toSnakeCase()
-
-            val columnName = "$alias.$baseName"
-
-            // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
-            entityDefinitionMap[entityClass]?.columnInfo?.also {
-                it[prop] = columnName
-            } ?: error("Initialization required for ${entityClass.simpleName}.")
-
-            val sqlType = mapKotlinTypeToSqlType(prop.returnType)
-            columnName to sqlType
-        }
-    }
-
-    /**
-     * ## 定義順カラム取得
+     * ## 定義順カラム情報取得
      * ### カラム定義をコンストラクタ順に取得
      * @param [T] Entity インターフェイスの実装型
      * @param entityClass 対象のエンティティクラス
@@ -129,11 +103,10 @@ object Functions {
      */
     fun <T : Entity> getColumnDefinitions(entityClass: KClass<T>): List<Pair<String, String>> {
         val alias = getAlias(entityClass)
-        // 1) プライマリコンストラクタがないときはエラー
+        // プライマリコンストラクタがないときはエラー
         val constructor = entityClass.primaryConstructor
             ?: error("No primary constructor for ${entityClass.simpleName}")
-
-        // 2) コンストラクタパラメータ順でプロパティをマッピング
+        // コンストラクタパラメータ順でプロパティをマッピング
         return constructor.parameters.map { param ->
             // プロパティ名と対応づけ
             val prop = entityClass.memberProperties
@@ -176,7 +149,7 @@ object Functions {
                 ?.getOrNull(1)
                 // 取得した内容が空欄か？
                 ?.takeIf { it.isNotBlank() }
-            // 空欄の場合、クラス名をスネークケースに変換
+                // 空欄の場合、クラス名をスネークケースに変換
                 ?: entityClass.simpleNameToSnakeCase()) + "."
 
     /**
@@ -191,7 +164,55 @@ object Functions {
         return parts[0] to (parts.getOrNull(1) ?: "")
     }
 
-    /** ## 型変換用マップ */
+    /**
+     * ## エンティティクラス値マップ生成
+     * ### 複数のエンティティインスタンスを受け取り
+     * ### エンティティプロパティ名と値のマップをリストとして生成
+     * @param entities 複数のエンティティインスタンス
+     * @return エンティティプロパティ名と値のマップのリスト
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    inline fun <reified T: Entity>getValueFromEntity(vararg entities: T) : List<Map<String, Any>> {
+        val entityList = listOf(*entities)
+        val result : MutableList<Map<String, Any>> = mutableListOf()
+        entityList.forEach { entity ->
+            val map: MutableMap<String, Any> = mutableMapOf()
+            T::class.memberProperties.forEach { property ->
+                val value = property.get(entity)
+                map[property.getColumn()] = value as Any
+            }
+            result.add(map)
+        }
+        return result
+    }
+
+    /**
+     * ## プレースホルダーバインド
+     * ### クエリに設定されたプレースホルダー名のバインド値を取得
+     * ### 更にクエリのプレースホルダー名を「?」に変更する
+     * @param query クエリ文字列
+     * @param valuesMap バインド値のマップ
+     * @return クエリのプレースホルダー名を「?」に変更した文字列 と バインド値のリスト（Pair）
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun bindPlaceholders(query: String, valuesMap: List<Map<String, Any>>): Pair<String, List<Array<String>>> {
+        val argNames = mutableListOf<String>()
+        val queryWithPlaceholders = PLACE_HOLDER_REGEX.replace(query) {
+            argNames += it.groupValues[1]
+            "?"
+        }
+        val args = argNames.map { key ->
+            valuesMap.map {
+                it[key]?.toString() ?: error("Missing bind value for :$it")
+            }
+            .toTypedArray()
+        }
+        return queryWithPlaceholders to args
+    }
+
+    /** 型変換用マップ */
     private val fieldToColumnMap = mapOf(
         Int::class to "INTEGER"
         ,Long::class to "INTEGER"
@@ -205,7 +226,7 @@ object Functions {
     )
 
     /**
-     * ## mapKotlinTypeToSqlType 関数
+     * ## Kotlin 型 SQL 型変換関数
      * ### クラスのフィールド型をデータベースのカラム型に変換
      * @param field 変換対象のフィールドを指定
      * @author Masahiro Inoue

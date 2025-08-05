@@ -77,6 +77,8 @@ class ConditionBuilder: ConditionBuilderLike,LogicalConditionSupport<ConditionBu
     /**
      * ## 論理積メソッド
      * @param block 検索条件の記述
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     override fun and(block: ConditionBuilder.() -> Unit) {
         delegate.and(block)
@@ -85,6 +87,8 @@ class ConditionBuilder: ConditionBuilderLike,LogicalConditionSupport<ConditionBu
     /**
      * ## 論理和メソッド
      * @param block 検索条件の記述
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     override fun or(block: ConditionBuilder.() -> Unit) {
         delegate.or(block)

@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.common.dml
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.UpdateEntity
@@ -22,4 +23,5 @@ public enum class DMLInterfaceEnum(
     INSERT(InsertEntity::class.qualifiedName.toString()),
     UPDATE(UpdateEntity::class.qualifiedName.toString()),
     UPSERT(UpsertEntity::class.qualifiedName.toString()),
+    CONDITION(ConditionEntity::class.qualifiedName.toString()),
 }

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.database
+package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.sealed.ColumnOrder

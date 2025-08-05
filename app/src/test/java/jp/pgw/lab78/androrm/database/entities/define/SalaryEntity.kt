@@ -12,12 +12,40 @@ import java.time.LocalDateTime
 @GenerateProps
 @Projections(
     [
-        Projection(entityNameExtend = "Upsert"
-        , properties = ["employeeId","payMonth","createdAt"]
-        , commonInterface = DMLInterfaceEnum.UPSERT),
-        Projection(entityNameExtend = "Insert"
-        , properties = ["employeeId","payMonth","gross","updatedAt","updatedBy"]
-        , commonInterface = DMLInterfaceEnum.INSERT)
+        Projection(
+            entityNameExtend = "Upsert"
+            , properties = [
+                            "employeeId",
+                            "payMonth",
+                            "createdAt"
+                           ]
+            , commonInterface = DMLInterfaceEnum.UPSERT),
+        Projection(
+            entityNameExtend = "Insert"
+            , properties = [
+                            "employeeId",
+                            "payMonth",
+                            "gross",
+                            "updatedAt",
+                            "updatedBy"
+                           ]
+            , commonInterface = DMLInterfaceEnum.INSERT),
+        Projection(
+            entityNameExtend = "Selective"
+            , properties = [
+                "employeeId",
+                "payMonth",
+                "gross",
+            ]
+            , commonInterface = DMLInterfaceEnum.SELECT),
+        Projection(
+            entityNameExtend = "Condition"
+            , properties = [
+                "employeeId",
+                "payMonth",
+                "gross",
+            ]
+            , commonInterface = DMLInterfaceEnum.CONDITION)
     ]
 )
 @Table("SALARY",alias = "SAL")

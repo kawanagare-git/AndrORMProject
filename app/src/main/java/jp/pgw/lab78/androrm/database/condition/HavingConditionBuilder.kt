@@ -4,7 +4,6 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
-import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
 import jp.pgw.lab78.androrm.database.interfaces.LogicalConditionSupport
@@ -65,28 +64,6 @@ class HavingConditionBuilder: ConditionBuilderLike,LogicalConditionSupport<Condi
     }
 
     /**
-     * ## 複数条件用関数（論理積）
-     * @param block 検索条件の記述
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun and(block: HavingConditionBuilder.() -> Unit) {
-        val inner = HavingConditionBuilder().apply(block)
-        list += LogicalCondition("AND", inner.buildList())
-    }
-
-    /**
-     * ## 複数条件用関数（論理和）
-     * @param block 検索条件の記述
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun or(block: HavingConditionBuilder.() -> Unit) {
-        val inner = HavingConditionBuilder().apply(block)
-        list += LogicalCondition("OR", inner.buildList())
-    }
-
-    /**
      * ## 条件生成メソッド
      * @return 生成された条件
      * @author Masahiro Inoue
@@ -97,6 +74,8 @@ class HavingConditionBuilder: ConditionBuilderLike,LogicalConditionSupport<Condi
     /**
      * ## 論理積メソッド
      * @param block 検索条件の記述
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     override fun and(block: ConditionBuilder.() -> Unit) {
         delegate.and(block)
@@ -105,6 +84,8 @@ class HavingConditionBuilder: ConditionBuilderLike,LogicalConditionSupport<Condi
     /**
      * ## 論理和メソッド
      * @param block 検索条件の記述
+     * @author Masahiro Inoue
+     * @since 2025-08-01
      */
     override fun or(block: ConditionBuilder.() -> Unit) {
         delegate.or(block)

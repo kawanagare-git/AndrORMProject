@@ -14,18 +14,31 @@ import java.time.LocalDateTime
     [
         Projection(entityNameExtend = "Info"
             , aliasExtend = "INF"
-            , properties = ["employeeId",
+            , properties = [
+                            "employeeId",
                             "department",
-                            "section"]
+                            "section"
+                           ]
             , commonInterface = DMLInterfaceEnum.SELECT
         ),
         Projection(entityNameExtend = "Insert"
-            , properties = ["employeeId",
-                            "payMonth",
-                            "gross",
+            , properties = [
+                            "employeeId",
+                            "department",
+                            "section",
+                            "createdAt",
+                            "createdBy",
                             "updatedAt",
-                            "updatedBy"]
-            , commonInterface = DMLInterfaceEnum.INSERT)
+                            "updatedBy"
+                           ]
+            , commonInterface = DMLInterfaceEnum.INSERT),
+        Projection(entityNameExtend = "Condition"
+            , properties = [
+                            "employeeId",
+                            "department",
+                            "section",
+                           ]
+        , commonInterface = DMLInterfaceEnum.CONDITION)
     ]
 )
 @Table("DEPARTMENT", alias = "DEP")

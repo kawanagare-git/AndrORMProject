@@ -4,11 +4,13 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCas
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
+import jp.pgw.lab78.androrm.database.condition.OrderBuilder
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.utility.Functions.getAlias
-import jp.pgw.lab78.androrm.utility.Functions.getColumnDefinitions
-import jp.pgw.lab78.androrm.utility.Functions.getTableName
+import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.database.utility.Functions.getColumnDefinitions
+import jp.pgw.lab78.androrm.database.utility.Functions.getTableName
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -238,11 +240,9 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    @Suppress("UNCHECKED_CAST")
     private fun <T : SelectEntity> generateColumn(column: KProperty1<out T, *>): String {
         // エンティティクラスの取得
-        val entityClass = (column.parameters.first().type.classifier as? KClass<T>)
-            ?: error("Could not infer entity class")
+        val entityClass = extractClassFromProperty(column)?: error("Could not infer entity class")
         // エイリアスの生成
         val alias = getAlias(entityClass)
         val columnName = column.simpleNameToSnakeCase()
