@@ -59,7 +59,7 @@ object Functions {
 
     /**
      * ## クラス取得
-     * ### KProperty1<T, *> からクラス名を取得する
+     * ### KProperty1<T, *> からクラスを取得する
      * @param property KProperty1<T, *> プロパティ
      * @return 取得したクラスの型
      * @author Masahiro Inoue
