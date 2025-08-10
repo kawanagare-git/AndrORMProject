@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.database.utility
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table
@@ -29,20 +30,22 @@ object Functions {
      * ## エンティティ定義管理クラス
      * ### エンティティの定義（構造）を管理
      * @param tableName テーブル名
-     * @param columnInfo テーブルに定義してあるカラムの情報 キー:entity クラスの フィールド value:カラム名
+     * @param columnInfo テーブルに定義してあるカラムの情報 キー:entity クラスのフィールド value:カラム名
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    data class EntityDefinitionManager(
-        var tableName: String, var columnInfo: MutableMap<KProperty<*>, String>
+    private data class EntityDefinitionManager(
+        var tableName: String,
+        var columnInfo: MutableMap<KProperty<*>, String>,
+        var tableAlias: String,
+        var columnAliasMap: MutableMap<KProperty<*>, String>
     )
 
     /** プレースホルダー名正規表現 */
-    val PLACE_HOLDER_REGEX = Regex(""":(\w+)""")
+    private val PLACE_HOLDER_REGEX = Regex(""":(\w+)""")
 
     /** エンティティクラス定義管理マップ */
-    @JvmStatic
-    val entityDefinitionMap = mutableMapOf<KClass<*>, EntityDefinitionManager>()
+    private val entityDefinitionMap = mutableMapOf<KClass<*>, EntityDefinitionManager>()
 
     /**
      * ## CREATE 文文字列生成関数
@@ -85,12 +88,22 @@ object Functions {
     fun <T : Entity> getTableName(entityClass: KClass<T>): String =
         entityDefinitionMap.getOrPut(entityClass) {
             val tableAnnotation = entityClass.findAnnotation<Table>()
-            val computedTableName = tableAnnotation?.name
+            // テーブル名の生成
+            val baseName = tableAnnotation?.name
                 ?.ifBlank { entityClass.simpleNameToSnakeCase() }
-                ?.plus(" ${tableAnnotation.alias}")
-                ?: (entityClass.simpleNameToSnakeCase())
-            EntityDefinitionManager(computedTableName, mutableMapOf())
-        }.tableName//.let { splitTableNameAndAlias(it).first } // ← パースして「テーブル名」だけ返す
+                ?: entityClass.simpleNameToSnakeCase()
+            // エイリアスの生成
+            val alias = tableAnnotation?.alias
+                ?.takeIf { it.isNotBlank() }
+                ?: baseName
+
+            EntityDefinitionManager(
+                tableName = "$baseName $alias",
+                columnInfo = mutableMapOf(),
+                tableAlias = alias,
+                columnAliasMap = mutableMapOf()
+            )
+        }.tableName
 
     /**
      * ## 定義順カラム情報取得
@@ -118,9 +131,9 @@ object Functions {
                 ?: prop.getColumn()
             val columnAlias = colAnno?.alias
                 .takeIf { !it.isNullOrBlank() }
-                ?.let { "as ${prop.getColumnAlias()}" }
-                ?: ""
-            val columnName = "$alias$baseName $columnAlias"
+                ?.let { prop.getColumnAlias() }
+                ?: baseName
+            val columnName = "${alias}.$baseName as ${alias}_$columnAlias"
             // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
             entityDefinitionMap[entityClass]?.columnInfo?.also {
                 it[prop] = columnName
@@ -150,7 +163,7 @@ object Functions {
                 // 取得した内容が空欄か？
                 ?.takeIf { it.isNotBlank() }
                 // 空欄の場合、クラス名をスネークケースに変換
-                ?: entityClass.simpleNameToSnakeCase()) + "."
+                ?: entityClass.getTableAlias())
 
     /**
      * ## テーブル名とエイリアスを分離
@@ -173,7 +186,7 @@ object Functions {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    inline fun <reified T: Entity>getValueFromEntity(vararg entities: T) : List<Map<String, Any>> {
+    inline fun <reified T: Entity> getValueFromEntity(vararg entities: T) : List<Map<String, Any>> {
         val entityList = listOf(*entities)
         val result : MutableList<Map<String, Any>> = mutableListOf()
         entityList.forEach { entity ->
@@ -210,6 +223,10 @@ object Functions {
             .toTypedArray()
         }
         return queryWithPlaceholders to args
+    }
+
+    fun convertToEntity(columnNames: Array<String>, kClass: KClass<*>) {
+
     }
 
     /** 型変換用マップ */

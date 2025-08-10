@@ -1,9 +1,9 @@
 package jp.pgw.lab78.androrm.database.condition
 
+import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
+import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupport
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
-import jp.pgw.lab78.androrm.database.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.interfaces.LogicalConditionSupport
 import kotlin.reflect.KProperty
 
 /**
