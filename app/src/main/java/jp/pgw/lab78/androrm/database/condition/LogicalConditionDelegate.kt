@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupport
+import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupportLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.LogicalCondition
 import kotlin.reflect.KProperty
@@ -17,7 +17,7 @@ import kotlin.reflect.KProperty
 class LogicalConditionDelegate<T : ConditionBuilderLike>(
     private val ownerFactory: () -> T,
     private val targetList:  MutableList<Condition>
-) : LogicalConditionSupport<T> {
+) : LogicalConditionSupportLike<T> {
     /**
      * ## 委譲プロパティ
      * ### 論理条件生成移譲クラスのインスタンスを移譲元に渡す

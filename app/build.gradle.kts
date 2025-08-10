@@ -4,6 +4,7 @@ plugins {
     kotlin("android")
     kotlin("kapt")
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    id("io.freefair.aspectj.post-compile-weaving") version "6.4.3"
 }
 
 dependencies {
@@ -95,6 +96,15 @@ dependencies {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
+// ログ出力用依存関係
+dependencies {
+    implementation(libs.slf4j.api.v2013)
+    implementation(libs.logback.android)
+}
+// AOP(AspectJ)陽男依存関係
+dependencies {
+    implementation(libs.aspectjrt)
+}
 
 dependencies {
     implementation(project(":androrm-common"))
@@ -102,7 +112,6 @@ dependencies {
     implementation(project(":androrm-generator-ksp"))
     add("ksp", project(":androrm-generator-ksp"))
 }
-
 // build.gradle.kts の末尾付近に追加
 tasks.withType<Test>().configureEach {
     useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須

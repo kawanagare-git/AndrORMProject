@@ -1,14 +1,14 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
-import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
+import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum.CONDITION
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
-import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.androrm.database.utility.Functions.formatValue
-import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
-import kotlin.reflect.KClass
+import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.superclasses
 
@@ -18,7 +18,7 @@ import kotlin.reflect.full.superclasses
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-sealed class Condition {
+sealed class Condition : QueryStructureLike {
     /**
      * ## 条件生成メソッド
      * ### 定義された条件から文字列を生成する
@@ -26,7 +26,7 @@ sealed class Condition {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    abstract fun build(): String
+    abstract override fun build(): String
 }
 
 /**
@@ -38,7 +38,8 @@ sealed class Condition {
 sealed class Compare : Condition() {
 
     companion object {
-        val CONDITION_CLASS = ConditionEntity::class
+        /** 条件エンティティのクラス型 */
+        private val CONDITION_CLASS = CONDITION.kClass
     }
     /**
      * ## 結合条件記述用クラス
@@ -63,18 +64,17 @@ sealed class Compare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String {
-            val mainAlias = getAlias(extractClassFromProperty(mainProperty) as KClass<out Entity>)
+            val mainAlias = getAlias(mainProperty.extractClassFromProperty())
             val mainColumn = mainProperty.getColumn()
-            val declaringClass = extractClassFromProperty(joinedProperty)
-                                ?: error("Couldn't determine declaring class")
+            val declaringClass = joinedProperty.extractClassFromProperty()
             val joined = if (declaringClass.superclasses.contains(CONDITION_CLASS)) {
                 ":${joinedProperty.getColumn()}"
             } else {
-                val joinedAlias = getAlias(extractClassFromProperty(joinedProperty) as KClass<out Entity>)
+                val joinedAlias = getAlias(joinedProperty.extractClassFromProperty())
                 val joinedColumn = joinedProperty.getColumn()
-                "$joinedAlias$joinedColumn"
+                "${joinedAlias}.$joinedColumn"
             }
-            return "$mainAlias$mainColumn ${operator.symbol} $joined"
+            return "${mainAlias}.$mainColumn ${operator.symbol} $joined"
         }
     }
 
@@ -101,9 +101,9 @@ sealed class Compare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String {
-            val alias = getAlias(extractClassFromProperty(lhsProperty) as KClass<out Entity>)
+            val alias = getAlias(lhsProperty.extractClassFromProperty())
             val column = lhsProperty.getColumn()
-            return "$alias$column ${operator.symbol} ${formatValue(value)}"
+            return "${alias}.$column ${operator.symbol} ${formatValue(value)}"
         }
     }
 }
@@ -141,8 +141,8 @@ sealed class HavingCompare : Condition() {
          * @author Masahiro Inoue
          * @since 2025-08-01
          */
-        override fun build(): String = "${leftFunction.create(leftProperty)} " +
-                                        "${operator.symbol} ${rightFunction.create(rightProperty)}"
+        override fun build(): String = "${leftFunction.build(leftProperty)} " +
+                                        "${operator.symbol} ${rightFunction.build(rightProperty)}"
     }
 
     /**
@@ -169,7 +169,7 @@ sealed class HavingCompare : Condition() {
          * @author Masahiro Inoue
          * @since 2025-08-01
          */
-        override fun build(): String = "${function.create(property)} " +
+        override fun build(): String = "${function.build(property)} " +
                                         "${operator.symbol} ${formatValue(value)}"
     }
 
@@ -197,7 +197,7 @@ sealed class HavingCompare : Condition() {
          * @author Masahiro Inoue
          * @since 2025-08-01
          */
-        override fun build(): String = "${function.create(property)} " +
+        override fun build(): String = "${function.build(property)} " +
                 "${operator.symbol} ${expression.joinToString(" ")}"
     }
 }
@@ -205,31 +205,23 @@ sealed class HavingCompare : Condition() {
 /**
  * ## 条件定義クラス
  * ### join や where で使用する条件の基底クラス
+ * @param text 自由記述した検索条件
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-sealed class FreeText : Condition() {
+data class FreeText(
+    val text: String
+) : Condition() {
+
     /**
-     * ## 結合条件記述用クラス
-     * ### join に使用する単一条件を指定
-     * @param text 自由記述した検索条件
+     * ## 単一条件生成メソッド
+     * ### 定義された条件から文字列を生成する
+     * @return 生成された文字列
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    data class FreeCondition(
-        val text: String
-    ) : Condition() {
+    override fun build(): String = text
 
-        /**
-         * ## 単一条件生成メソッド
-         * ### 定義された条件から文字列を生成する
-         * @return 生成された文字列
-         * @author Masahiro Inoue
-         * @since 2025-08-01
-         */
-        override fun build(): String = text
-
-    }
 }
 
 /**
@@ -255,5 +247,4 @@ data class LogicalCondition(
     override fun build(): String {
         return conditions.joinToString(" $operator ", "(", ")") { it.build() }
     }
-
 }

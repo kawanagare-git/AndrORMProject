@@ -6,7 +6,7 @@ package jp.pgw.lab78.androrm.database.condition.interfaces
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-interface QueryStructure {
+interface QueryStructureLike {
     /**
      * ## 条件生成メソッド
      * ### 定義された条件から文字列を生成する

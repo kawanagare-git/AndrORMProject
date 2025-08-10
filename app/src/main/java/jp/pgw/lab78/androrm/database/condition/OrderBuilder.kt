@@ -1,9 +1,9 @@
 package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.database.condition.interfaces.OrderBuilderLike
 import jp.pgw.lab78.androrm.database.condition.sealed.ColumnOrder
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.database.interfaces.OrderBuilderLike
 import kotlin.reflect.KProperty1
 
 /**

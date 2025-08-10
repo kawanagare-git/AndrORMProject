@@ -2,10 +2,12 @@ package jp.pgw.lab78.androrm.common.dml
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.UpdateEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.UpsertEntity
+import kotlin.reflect.KClass
 
 /**
  * ## 共通インターフェス定義列挙型
@@ -15,13 +17,15 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.UpsertEntity
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-public enum class DMLInterfaceEnum(
+enum class DMLInterfaceEnum(
+    val kClass: KClass<out Entity>,
     /** 共通インターフェスの FQN */
-    public  val interfaceFQN: String) {
-    NOT_USE(EMPTY_STRING),
-    SELECT(SelectEntity::class.qualifiedName.toString()),
-    INSERT(InsertEntity::class.qualifiedName.toString()),
-    UPDATE(UpdateEntity::class.qualifiedName.toString()),
-    UPSERT(UpsertEntity::class.qualifiedName.toString()),
-    CONDITION(ConditionEntity::class.qualifiedName.toString()),
+    val interfaceFQN: String = kClass.qualifiedName!!
+    ) {
+    NOT_USE(Entity::class,EMPTY_STRING),
+    SELECT(SelectEntity::class),
+    INSERT(InsertEntity::class),
+    UPDATE(UpdateEntity::class),
+    UPSERT(UpsertEntity::class),
+    CONDITION(ConditionEntity::class),;
 }

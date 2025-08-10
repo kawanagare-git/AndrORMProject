@@ -1,8 +1,9 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
-import jp.pgw.lab78.androrm.database.utility.Functions.getColumnDefinitions
-import jp.pgw.lab78.androrm.database.utility.Functions.getTableName
+import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
 import kotlin.reflect.KClass
 
 /**
@@ -13,9 +14,9 @@ import kotlin.reflect.KClass
  */
 class Insert<T: InsertEntity>(
     private val entityClass: KClass<out T>
-) {
+): QueryBuilderLike<T> {
     /** テーブル名：クラス名をスネークケース（大文字）に変換 */
-    private val tableName = getTableName(entityClass)
+    private val tableName = entityClass.getTableName()
 
     /** 挿入カラムリスト */
     private val insertColumnList = mutableListOf<Pair<String, String>>()
@@ -33,10 +34,9 @@ class Insert<T: InsertEntity>(
      */
     init {
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        val columns = getColumnDefinitions(entityClass)
-        insertColumnList += columns
-        columnDefine = insertColumnList.joinToString(", ", "(", ")")
-        placeholders = insertColumnList.joinToString(", ", "(", ")") { ":$it" }
+        val columns = entityClass.getColumns()
+        columnDefine = columns.joinToString(", ", "(", ")")
+        placeholders = columns.joinToString(", ", "(", ")") { ":$it" }
     }
 
     /**
@@ -46,7 +46,7 @@ class Insert<T: InsertEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun build() =
+    override fun build() =
         "insert into $tableName $columnDefine values $placeholders"
 
     /**

@@ -1,0 +1,13 @@
+<configuration>
+    <!-- 共通設定をインポート -->
+    <include resource="logback-base.xml"/>
+
+    <!-- テスト時は全体を DEBUG に -->
+    <root level="DEBUG">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!-- 例: SQL ログを有効化 -->
+    <logger name="org.hibernate.SQL" level="DEBUG"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="TRACE"/>
+</configuration>

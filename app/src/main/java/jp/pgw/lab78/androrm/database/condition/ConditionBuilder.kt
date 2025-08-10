@@ -2,7 +2,7 @@ package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupport
+import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupportLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.sealed.Compare
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
@@ -16,13 +16,13 @@ import kotlin.reflect.KProperty1
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-class ConditionBuilder: ConditionBuilderLike, LogicalConditionSupport<ConditionBuilder>
+class ConditionBuilder: ConditionBuilderLike, LogicalConditionSupportLike<ConditionBuilder>
 {
     /** 条件管理リスト */
     private val list  = mutableListOf<Condition>()
 
     /** LogicalConditionSupport インターフェースのデリゲート */
-    private val delegate by LogicalConditionDelegate({ ConditionBuilder() }, list)
+    private val delegate by LogicalConditionDelegate({ this }, list)
 
     /**
      * ## 単一条件用関数

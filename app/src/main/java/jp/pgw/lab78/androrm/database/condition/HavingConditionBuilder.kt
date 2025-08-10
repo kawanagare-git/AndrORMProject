@@ -2,7 +2,7 @@ package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
-import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupport
+import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupportLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.HavingCompare
@@ -17,13 +17,13 @@ import kotlin.reflect.KProperty1
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-class HavingConditionBuilder: ConditionBuilderLike, LogicalConditionSupport<ConditionBuilder> {
+class HavingConditionBuilder: ConditionBuilderLike, LogicalConditionSupportLike<HavingConditionBuilder> {
 
     /** 条件管理リスト */
     private val list  = mutableListOf<Condition>()
 
     /** LogicalConditionSupport インターフェースのデリゲート */
-    private val delegate by LogicalConditionDelegate({ ConditionBuilder() }, list)
+    private val delegate by LogicalConditionDelegate({ this }, list)
 
     /**
      * ## 単一条件用関数
@@ -77,7 +77,7 @@ class HavingConditionBuilder: ConditionBuilderLike, LogicalConditionSupport<Cond
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    override fun and(block: ConditionBuilder.() -> Unit) {
+    override fun and(block: HavingConditionBuilder.() -> Unit) {
         delegate.and(block)
     }
 
@@ -87,7 +87,7 @@ class HavingConditionBuilder: ConditionBuilderLike, LogicalConditionSupport<Cond
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    override fun or(block: ConditionBuilder.() -> Unit) {
+    override fun or(block: HavingConditionBuilder.() -> Unit) {
         delegate.or(block)
     }
 }

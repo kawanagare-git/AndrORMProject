@@ -7,14 +7,10 @@ import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.insert.TestInsertEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
-import jp.pgw.lab78.androrm.database.utility.Functions
-import jp.pgw.lab78.androrm.database.utility.Functions.entityDefinitionMap
-import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
+import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -39,29 +35,6 @@ class EntityTest {
         )
     }
 
-    @Test
-    fun `getAlias should return alias from annotation`() {
-        // テスト用 Entity を登録
-        val entityClass = AliasTestEntity::class
-        entityDefinitionMap[entityClass] =
-            Functions.EntityDefinitionManager("test_table t", mutableMapOf())
-
-        val alias = getAlias(entityClass)
-        assertEquals("t", alias)
-    }
-
-    @Test
-    fun `getAlias should fallback to class name when no alias`() {
-        // テスト用 Entity を登録（alias なし）
-        val entityClass = FallbackEntity::class
-        entityDefinitionMap[entityClass] =
-            Functions.EntityDefinitionManager("fallback_entity", mutableMapOf())
-
-        val alias = getAlias(entityClass)
-        assertEquals("fallback_entity".uppercase(Locale.ROOT), alias)
-    }
-
-
     @ParameterizedTest
     @MethodSource("propertyProvider")
     fun `extractClassFromProperty should return correct KClass`(
@@ -70,8 +43,8 @@ class EntityTest {
         val (property, expectedClass) = testData
 
         // 安全キャストするために明示的な関数呼び出し（ジェネリクス警告防止）
-        @Suppress("UNCHECKED_CAST")
-        val actual = Functions.extractClassFromProperty(property as KProperty1<Entity, *>)
+        val actual = property.extractClassFromProperty()
 
         assertEquals(expectedClass, actual)
-    }}
+    }
+}

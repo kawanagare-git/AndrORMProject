@@ -2,6 +2,8 @@ package jp.pgw.lab78.androrm.common.database
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -15,7 +17,73 @@ import kotlin.reflect.full.findAnnotation
  */
 object SupportFunction {
     /**
-     * ## クラス名をスネークケースに変換
+     * ## テーブルアノテーション取得メソッド
+     * ### 指定されたエンティティクラスから
+     * ### `@Table`アノテーションを取得します。
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return `KClass` に付与された `@Table` アノテーション
+     *         / アノテーションが付与されていない場合 IllegalStateException をスロー。
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T: Entity> KClass<out T>.getTableAnnotation() =
+        this.findAnnotation<Table>()
+            ?: error("Cannot be constructed using an entity(${this.qualifiedName})" +
+                    " that does not have the `@Table` annotation.")
+
+    /**
+     * ## テーブル名取得
+     * ### エンティティクラスからテーブル名を取得する
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return 取得したテーブル名
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T : Entity> KClass<out T>.getTableName() =
+        this.getTableAnnotation().name
+
+    /**
+     * ## テーブルエイリアス取得
+     * ### 指定されたエンティティクラスから
+     * ### `@Table`アノテーションに定義されているテーブルエイリアスを取得
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return `KClass` に付与された `@Table` アノテーションのテーブルエイリアス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T: Entity> KClass<out T>.getTableAlias() =
+        this.getTableAnnotation().alias
+
+    /**
+     * ## カラム名の取得
+     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return プロパティに付与された @Column アノテーションからカラム名を取得
+     *          / 取得できない場合、プロパティ名をスネークケースに変換
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T: Entity> KProperty1<out T, *>.getColumn(): String =
+        this.findAnnotation<Column>()?.name?.takeIf { it.isNotBlank() }
+            ?: this.simpleNameToSnakeCase()
+
+    /**
+     * ## カラム名のエイリアスを取得
+     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return プロパティに付与された @Column アノテーションからカラムのエイリアスを取得
+     *          / 取得できない場合、空文字列
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T: Entity> KProperty1<out T, *>.getColumnAlias() =
+        this.findAnnotation<Column>()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
+    /**
+     * ## クラスをスネークケースに変換
+     * @receiver [KClass] インスタンス。
      * @return スネークケースに変換されたクラス名（nullなら例外）
      * @author Masahiro Inoue
      * @since 2025-08-01
@@ -23,27 +91,6 @@ object SupportFunction {
     fun KClass<*>.simpleNameToSnakeCase(): String =
         this.simpleName?.toSnakeCase()
             ?: error("Could not determine class name for ${this.qualifiedName}")
-
-    /**
-     * ## カラム名の取得
-     * @return プロパティに付与された @Column アノテーションからカラム名を取得
-     *          、取得できない場合、プロパティ名をスネークケースに変換
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun KProperty1<*, *>.getColumn(): String =
-        this.findAnnotation<Column>()?.name?.takeIf { it.isNotBlank() }
-                                        ?: this.simpleNameToSnakeCase()
-
-    /**
-     * ## カラム名のエイリアスを取得
-     * @return プロパティに付与された @Column アノテーションからカラムのエイリアスを取得
-     *          、取得できない場合、空文字列
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun KProperty1<*, *>.getColumnAlias(): String =
-        this.findAnnotation<Column>()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
 
     /**
      * ## プロパティ名をスネークケースに変換
@@ -55,14 +102,38 @@ object SupportFunction {
         this.name.toSnakeCase()
 
     /**
-     * ## toSnakeCase 関数
+     * ## エイリアス生成
+     * ### テーブルのエイリアスと拡張エイリアスで、目的のエイリアスを生成
+     * @param tableAlias テーブルのエイリアス
+     * @param extendAlias 拡張エイリアス
+     * @return 生成したエイリアス
+     * @author Masahiro Inoue
+     * @since 2025-08-08
+     */
+    fun buildAlias(tableAlias: String?, extendAlias: String?) =
+        if (tableAlias.hasText()) {
+            "${tableAlias}_${extendAlias.orEmpty()}".removeSuffix("_")
+        } else {
+            null
+        }
+
+    /**
+     * ## スネークケース変換関数
      * ### キャメルケースの文字列をスネークケースに変換
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun String.toSnakeCase(): String {
+    fun CharSequence.toSnakeCase(): String {
         return this.replace(Regex("([a-z])([A-Z])")) { "${it.groupValues[1]}_${it.groupValues[2]}" }
             .uppercase(Locale.ROOT)
     }
 
+    /**
+     * ## 文字列存在判定
+     * ### 文字列変数に何かしら設定（null でもなく 空白でもない）
+     * @return true 文字列変数に何かしら設定（null でもなく 空白でもない） / false null または 空白
+     * @author Masahiro Inoue
+     * @since 2025-08-08
+     */
+    fun  CharSequence?.hasText() = !this.isNullOrBlank()
 }

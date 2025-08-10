@@ -4,32 +4,7 @@
 @startuml
 skinparam classAttributeIconSize 0
 
-folder  androrm-common {
-    package jp.pgw.lab78.androrm.common {
-        object Constants {
-            {static} + EMPTY_STRING : String
-        }
-    }
-    package jp.pgw.lab78.androrm.common.dml {
-        enum DMLInterfaceEnum {
-            + NOT_USE
-            + SELECT
-            + INSERT
-            + UPDATE
-            + UPSERT
-            --
-            + interfaceFQN : String
-        }
-    }
-    package jp.pgw.lab78.androrm.common.database {
-        object SupportFunction {
-            + KClass<*>.simpleNameToSnakeCase() : String
-            + KProperty1<*, *>.getColumn() : String
-            + KProperty1<*, *>.getColumnAlias() : String
-            + KProperty1<*, *>.simpleNameToSnakeCase() : String
-            + String.toSnakeCase() : String
-        }
-    }
+folder androrm-common #Aquamarine {
     package jp.pgw.lab78.androrm.common.annotation {
         annotation EntityPackageInfo {
             + basePackage : String
@@ -74,25 +49,290 @@ folder  androrm-common {
         interface UpdateEntity
         interface UpsertEntity
 
+        TableDefinitionEntity .|> Entity
         ConditionEntity ..|> Entity
         InsertEntity ..|> Entity
-        SelectEntity ..|> Entity
-        TableDefinitionEntity ..|> Entity
-        UpdateEntity ..|> Entity
-        UpsertEntity ..|> Entity
-        ComprehensiveEntity ..|> ConditionEntity
-        ComprehensiveEntity ..|> InsertEntity
-        ComprehensiveEntity ..|> SelectEntity
-        ComprehensiveEntity ..|> UpdateEntity
-        ComprehensiveEntity ..|> UpsertEntity
+        SelectEntity .|> Entity
+        UpdateEntity .|> Entity
+        UpsertEntity .|> Entity
+        ComprehensiveEntity .|> InsertEntity
+        ComprehensiveEntity .|> SelectEntity
+        ComprehensiveEntity .|> UpdateEntity
+        ComprehensiveEntity .|> UpsertEntity
+    }
+    package jp.pgw.lab78.androrm.common.dml {
+        enum DMLInterfaceEnum {
+            + NOT_USE
+            + SELECT
+            + INSERT
+            + UPDATE
+            + UPSERT
+            --
+            + kClass: KClass<out Entity>
+            + interfaceFQN : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common.database {
+        object SupportFunction {
+            + KClass<*>.simpleNameToSnakeCase() : String
+            + KProperty1<*, *>.getColumn() : String
+            + KProperty1<*, *>.getColumnAlias() : String
+            + KProperty1<*, *>.simpleNameToSnakeCase() : String
+            + String.toSnakeCase() : String
+        }
+    }
+    package jp.pgw.lab78.androrm.common {
+        object Constants {
+            {static} + EMPTY_STRING : String
+            {static} + UNKNOWN = "Unknown"
+        }
     }
     ' 関連（DMLInterfaceEnum が定数を参照）
-    DMLInterfaceEnum --> Constants : uses
+    DMLInterfaceEnum -> Constants : uses
+
 }
 
-package "jp.pgw.lab78.androrm.ksp" {
-    class PropsProcessor {
-    }
+package com.google.devtools.ksp.processing{
+    class SymbolProcessor
+    class SymbolProcessorProvider
+}
 
+folder androrm-generator-ksp #Tomato{
+    package jp.pgw.lab78.androrm.ksp {
+        class PropsProcessor {
+            + PropsProcessor(codeGenerator: CodeGenerator,logger: KSPLogger)
+            + <<override>> process(resolver: Resolver): List<KSAnnotated>
+            - generateProps(resolver: Resolver)
+            - generateDataClassFromProjections(resolver: Resolver)
+            - processProjectionAnnotations(classDecls: Sequence<KSClassDeclaration>,resolver: Resolver)
+            - checkProjectionFields(classDecl: KSClassDeclaration,annotation: KSAnnotation)
+            - processSingleProjection(classDecl: KSClassDeclaration,annotation: KSAnnotation,resolver: Resolver)
+            - extractProjectionList(annotation: KSAnnotation): List<KSAnnotation>
+            - generatedPackageNameFromAnnotation(classDeclaration: KSClassDeclaration,symbols: Sequence<KSAnnotated>,commonInterface: String): String
+            - createDataClassFile(classNameFQN: ClassName,selectedProps: List<KSPropertyDeclaration>,interfaces: List<TypeName>): FileSpec
+            - collectFields(annotation: KSAnnotation): Map<String, Any>
+            - copyColumnAnnotation(prop: KSPropertyDeclaration): AnnotationSpec?
+            - generateCommonInterFace(commonInterface: String) : ClassName
+        }
+        class PropsProcessorProvider {
+            + <<override>> create(environment: SymbolProcessorEnvironment): SymbolProcessor
+        }
+        enum PackageInterfaceRelation {
+            + SELECT
+            + INSERT
+            + UPDATE
+            + UPSERT
+            + CONDITION
+            --
+            + relation: String
+        }
+        PropsProcessor --|> SymbolProcessor
+        PropsProcessorProvider --|> SymbolProcessorProvider
+    }
+}
+
+folder app #DeepSkyBlue {
+    package jp.pgw.lab78.androrm.database.condition.interfaces {
+        interface ConditionBuilderLike {
+            + buildList(): List<Condition>
+        }
+        interface LogicalConditionSupportLike<T : ConditionBuilderLike> {
+            + and(block: T.() -> Unit)
+            + or(block: T.() -> Unit)
+        }
+        interface OrderBuilderLike {
+            + buildList(): List<Order>
+        }
+    }
+    package jp.pgw.lab78.androrm.database.condition.operator {
+        enum ComparisonOperator {
+            EQUALS
+            EQ
+            NOT_EQUALS
+            NE
+            GREATER_THAN
+            GT
+            GREATER_THAN_OR_EQUALS
+            GE
+            LESS_THAN
+            LT
+            LESS_THAN_OR_EQUALS
+            LE
+            LIKE
+            NOT_LIKE
+            IN
+            NOT_IN
+            BETWEEN
+            EXISTS
+            NOT_EXISTS
+            IS_NULL
+            IS_NOT_NULL
+            --
+            + symbol: String
+        }
+    }
+    package jp.pgw.lab78.androrm.database.condition.sealed {
+        abstract class Condition <<sealed>> {
+            + build(): String
+        }
+        abstract class Compare <<sealed>> {
+        }
+        class Compare_Column<T1 : Entity,T2 : Entity> {
+            + mainProperty: KProperty1<T1, *>
+            + operator: ComparisonOperator
+            + joinedProperty: KProperty1<T2, *>
+            + build(): String
+        }
+        class Compare_Value<T : Entity> {
+            + lhsProperty: KProperty1<T, *>
+            + operator: ComparisonOperator
+            + value: Any
+            + build(): String
+        }
+        Compare --|> Condition
+        Compare_Column --|> Condition
+        Compare_Value --|> Condition
+        Compare_Column --+ Compare
+        Compare_Value --+ Compare
+        abstract class HavingCompare <<sealed>> {
+        }
+        class HavingCompare_Function<T1 : Entity,T2 : Entity> {
+            + leftFunction: AggregateFunction
+            + leftProperty: KProperty1<T1, *>
+            + operator: ComparisonOperator
+            + rightFunction: AggregateFunction
+            + rightProperty: KProperty1<T2, *>
+            + build(): String
+        }
+        class HavingCompare_Value<T : Entity> {
+            + function: AggregateFunction,
+            + property: KProperty1<T, *>,
+            + operator: ComparisonOperator,
+            + value: Any
+            + build(): String
+        }
+        class HavingCompare_Expression<T : Entity> {
+            + function: AggregateFunction,
+            + property: KProperty1<T, *>,
+            + operator: ComparisonOperator,
+            + expression: List<String>,
+            + build(): String
+        }
+        HavingCompare --|> Condition
+        HavingCompare_Function --|> Condition
+        HavingCompare_Value --|> Condition
+        HavingCompare_Expression --|> Condition
+        HavingCompare_Function --+ HavingCompare
+        HavingCompare_Value --+ HavingCompare
+        HavingCompare_Expression --+ HavingCompare
+        class FreeText {
+            + text: String
+            + build(): String
+        }
+        FreeText --|> Condition
+        class LogicalCondition {
+            + operator: String
+            + conditions: List<Condition>
+            + build(): String
+        }
+        LogicalCondition --|> Condition
+        abstract class Order {
+            + build(): String
+        }
+        class ColumnOrder<T1 : Entity> {
+            + mainProperty: KProperty1<T1, *>
+            + descending: Boolean = false
+            + build(): String
+        }
+        ColumnOrder --|> Order
+    }
+    package jp.pgw.lab78.androrm.database.condition{
+        class ConditionBuilder {
+            + <T : Entity> condition(property: KProperty1<T, *>,operator: ComparisonOperator,value: Any)
+            + <T1 : Entity,T2 : Entity> condition(left: KProperty1<T1, *>,operator: ComparisonOperator,right: KProperty1<T2, *>,)
+            + condition(text: String)
+            + <<override>> buildList(): List<Condition>
+            + <<override>> and(block: ConditionBuilder.() -> Unit)
+            + <<override>> or(block: ConditionBuilder.() -> Unit)
+        }
+        class HavingConditionBuilder {
+            + <T : Entity> condition(function: AggregateFunction,property: KProperty1<T, *>,operator: ComparisonOperator,value: Any)
+            + <T1 : Entity,T2 : Entity> condition(leftFunction: AggregateFunction,leftProperty: KProperty1<T1, *>,operator: ComparisonOperator,rightFunction: AggregateFunction,rightProperty: KProperty1<T2, *>)
+            + <<override>> buildList(): List<Condition>
+            + <<override>> and(block: ConditionBuilder.() -> Unit)
+            + <<override>> or(block: ConditionBuilder.() -> Unit)
+        }
+        LogicalConditionDelegate .|> LogicalConditionSupportLike
+        ConditionBuilder ..|> ConditionBuilderLike
+        ConditionBuilder ..|> LogicalConditionSupportLike
+        ConditionBuilder -> LogicalConditionDelegate
+        HavingConditionBuilder ..|> ConditionBuilderLike
+        HavingConditionBuilder ..|> LogicalConditionSupportLike
+        HavingConditionBuilder --->  LogicalConditionDelegate
+        class LogicalConditionDelegate<T : ConditionBuilderLike> {
+            + <<operator>> getValue(thisRef: Any?, property: KProperty<*>)
+            + <<override>> and(block: ConditionBuilder.() -> Unit)
+            + <<override>> or(block: ConditionBuilder.() -> Unit)
+        }
+        class OrderBuilder {
+            + <T : Entity> column(property: KProperty1<T, *>,descending: Boolean)
+            + <<override>> buildList(): List<Condition>
+        }
+        OrderBuilder .|> OrderBuilderLike
+        enum AggregateFunction {
+            COUNT
+            SUM
+            AVG
+            MIN
+            MAX
+            GROUP_CONCAT
+            STRING_AGG
+            --
+            + sql: String
+            + supportedInSQLite: Boolean
+            + supportedInPostgres: Boolean
+            + supportedInMySQL: Boolean
+            + <T : Entity>create(column: KProperty1<T, *>, isDistinct: Boolean = false): String
+        }
+    }
+    package jp.pgw.lab78.androrm.database.utility {
+        class EntityManager {
+            + <T : Entity> KProperty1<T, *>.extractClassFromProperty(): KClass<T>
+            + <T : Entity> KClass<out T>.createTableName(): String
+            + <T : TableDefinitionEntity> KClass<out T>.getColumnDefinitions(): List<Pair<String, String>>
+            + <T : Entity> KClass<out T>.getColumns(): List<String>
+            - <T : Entity> KClass<out T>.extractColumnMetadata(tableName: String,alias: String,columnAlias: String,property: KProperty1<out T, *>): String
+            + <T : Entity> getAlias(entityClass: KClass<T>): String
+            + <reified T: Entity> getValueFromEntity(vararg entities: T) : List<Map<String, Any>>
+            + bindPlaceholders(query: String, valuesMap: List<Map<String, Any>>): Pair<String, List<Array<String>>>
+            + mapKotlinTypeToSqlType(field : Any): String
+            + formatValue(value: Any): String
+        }
+        class TableDefinition {
+            + tableName: String
+            + aliases: MutableMap<String,EntityDefinition<T>>
+        }
+        class EntityDefinition {
+            alias: String,
+            entityClass: KClass<out T>,
+            columns: MutableMap<String, KProperty1<out T, *>>
+        }
+        TableDefinition -+ EntityManager
+        EntityDefinition --+ EntityManager
+        TableDefinition *- "aliases" EntityDefinition
+    }
+    package jp.pgw.lab78.androrm.database {
+        class AndrOrmDatabaseHelper {
+            + context: Context
+            + name: String
+            + version: Int
+            - vararg val entities: KClass<out TableDefinitionEntity>
+            + <<override>> onCreate(db: SQLiteDatabase)
+            + <<override>> onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int)
+            + getDatabase(): SQLiteOpenHelper
+            + getValue(thisRef: Any?, property: KProperty<*>): SQLiteOpenHelper
+            + <reified T:SelectEntity,reified TC:ConditionEntity>exec(query: Select<out T>,entities: TC): List<T>
+        }
+    }
 }
 @enduml

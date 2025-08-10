@@ -9,12 +9,24 @@ package jp.pgw.lab78.androrm.database.condition.operator
  */
 enum class ComparisonOperator(val symbol: String) {
     EQUALS("="),
+    EQ("="),
     NOT_EQUALS("!="),
+    NE("!="),
     GREATER_THAN(">"),
+    GT(">"),
     GREATER_THAN_OR_EQUALS(">="),
+    GE(">="),
     LESS_THAN("<"),
+    LT("<"),
     LESS_THAN_OR_EQUALS("<="),
+    LE("<="),
     LIKE("LIKE"),
+    NOT_LIKE("NOT LIKE"),
     IN("IN"),
-    BETWEEN("BETWEEN")
+    NOT_IN("NOT IN"),
+    BETWEEN("BETWEEN"),
+    EXISTS("EXISTS"),
+    NOT_EXISTS("NOT EXISTS"),
+    IS_NULL("IS NULL"),
+    IS_NOT_NULL("IS NOT NULL"),
 }

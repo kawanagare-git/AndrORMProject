@@ -7,7 +7,7 @@ package jp.pgw.lab78.androrm.database.condition.interfaces
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-interface LogicalConditionSupport<T : ConditionBuilderLike> {
+interface LogicalConditionSupportLike<T : ConditionBuilderLike> {
     /**
      * ## 論理積メソッド
      * @param block 検索条件の記述

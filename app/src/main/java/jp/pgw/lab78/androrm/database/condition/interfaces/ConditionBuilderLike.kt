@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.database.interfaces
+package jp.pgw.lab78.androrm.database.condition.interfaces
 
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 

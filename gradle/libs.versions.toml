@@ -1,5 +1,6 @@
 [versions]
 androidxJunit = "1.2.1"
+aspectjrt = "1.9.19"
 coreKtxVersion = "1.13.1"
 desugar_jdk_libs = "2.1.5"
 espressoCore = "3.6.1"
@@ -12,6 +13,8 @@ agp = "8.3.0"
 junit = "5.10.0"
 kotlinpoet = "1.15.1"
 kotlinpoetVersion = "1.15.0"
+logbackAndroid = "3.0.0"
+logbackClassic = "1.5.6"
 material = "1.12.0"
 mockitoAndroid = "5.12.0"
 mockitoCore = "5.15.2"
@@ -19,6 +22,8 @@ propsGeneratorKsp = "<version>"
 runner = "1.6.2"
 coreKtx = "1.16.0"
 appcompat = "1.7.1"
+slf4jApi = "2.0.16"
+slf4jApiVersion = "2.0.13"
 symbolProcessingApi = "1.9.10-1.0.13"
 
 [plugins]
@@ -28,6 +33,7 @@ kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 
 [libraries]
+aspectjrt = { module = "org.aspectj:aspectjrt", version.ref = "aspectjrt" }
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
@@ -44,6 +50,8 @@ kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 kotlinpoet-v1150 = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoetVersion" }
 ksp-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api" }
+logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }
+logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logbackClassic" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
@@ -51,5 +59,7 @@ props-generator-ksp = { module = "your.group:props-generator-ksp", version.ref =
 runner = { module = "androidx.test:runner", version.ref = "runner" }
 core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
+slf4j-api-v2013 = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApiVersion" }
 symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "symbolProcessingApi" }
 symbol-processing-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin" }

@@ -3,19 +3,16 @@ package jp.pgw.lab78.androrm.database.utility
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 
@@ -25,125 +22,167 @@ import kotlin.reflect.full.primaryConstructor
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-object Functions {
+object EntityManager {
     /**
-     * ## エンティティ定義管理クラス
-     * ### エンティティの定義（構造）を管理
+     * ## テーブル定義
+     * ### テーブル名と関連エンティティクラスを紐づける
      * @param tableName テーブル名
-     * @param columnInfo テーブルに定義してあるカラムの情報 キー:entity クラスのフィールド value:カラム名
+     * @param aliases 関連エンティティクラス
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private data class EntityDefinitionManager(
-        var tableName: String,
-        var columnInfo: MutableMap<KProperty<*>, String>,
-        var tableAlias: String,
-        var columnAliasMap: MutableMap<KProperty<*>, String>
+    data class TableDefinition<T : Entity>(
+        val tableName: String,
+        val aliases: MutableMap<String,EntityDefinition<T>>
     )
+
+    /**
+     * ## テーブルエイリアス-エンティティクラス紐づけ定義
+     * ### テーブルエイリアスとエンティティクラスを紐づける
+     * @param alias テーブルエイリアス
+     * @param entityClass エンティティクラス
+     * @param columns カラム定義マップ
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    data class EntityDefinition<T : Entity>(
+        val alias: String,
+        val entityClass: KClass<out T>,
+        val columns: MutableMap<String, KProperty1<out T, *>>
+    )
+
+    /** テーブルメタデータ管理 */
+    private val tableMetadata = mutableMapOf<String, TableDefinition<Entity>>()
 
     /** プレースホルダー名正規表現 */
     private val PLACE_HOLDER_REGEX = Regex(""":(\w+)""")
 
-    /** エンティティクラス定義管理マップ */
-    private val entityDefinitionMap = mutableMapOf<KClass<*>, EntityDefinitionManager>()
-
-    /**
-     * ## CREATE 文文字列生成関数
-     * ### テーブルを作成するクエリを生成する
-     * @param entityClass TableDefinitionEntity クラスのインスタンスを指定
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun <T : TableDefinitionEntity> generateTableCreationQuery(entityClass: KClass<out T>): String {
-        /** テーブル名の生成 */
-        val tableName = getTableName(entityClass)
-        /** カラム定義の生成 */
-        val columnList = getColumnDefinitions(entityClass)
-        return "CREATE TABLE $tableName (${columnList.joinToString(", ") {
-                                                (columnName, sqlType) -> "$columnName $sqlType"
-                                            }})"
-    }
-
     /**
      * ## クラス取得
      * ### KProperty1<T, *> からクラスを取得する
-     * @param property KProperty1<T, *> プロパティ
+     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
      * @return 取得したクラスの型
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
     @Suppress("UNCHECKED_CAST")
-    fun <T : Entity> extractClassFromProperty(property: KProperty1<T, *>): KClass<T>? =
-        // property.parameters[0] はレシーバー（=宣言元）に対応する
-        property.parameters.firstOrNull()?.type?.classifier as? KClass<T>
+    fun <T : Entity> KProperty1<T, *>.extractClassFromProperty(): KClass<T> =
+        // this.parameters[0] はレシーバー（=宣言元）に対応する
+        this.parameters.firstOrNull()?.type?.classifier as KClass<T>
 
     /**
-     * ## テーブル名取得
+     * ## テーブル名生成
      * ### エンティティクラスからテーブル名を取得する
-     * @param entityClass エンティティクラスを指定
-     * @return 取得したテーブル名
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> getTableName(entityClass: KClass<T>): String =
-        entityDefinitionMap.getOrPut(entityClass) {
-            val tableAnnotation = entityClass.findAnnotation<Table>()
+    fun <T : Entity> KClass<out T>.createTableName(): String {
+        val tableAnnotation = this.getTableAnnotation()
+        return tableMetadata.getOrPut(tableAnnotation.name) {
             // テーブル名の生成
-            val baseName = tableAnnotation?.name
-                ?.ifBlank { entityClass.simpleNameToSnakeCase() }
-                ?: entityClass.simpleNameToSnakeCase()
+            val tableName = tableAnnotation.name
+                .ifBlank { this.simpleNameToSnakeCase() }
             // エイリアスの生成
-            val alias = tableAnnotation?.alias
-                ?.takeIf { it.isNotBlank() }
-                ?: baseName
-
-            EntityDefinitionManager(
-                tableName = "$baseName $alias",
-                columnInfo = mutableMapOf(),
-                tableAlias = alias,
-                columnAliasMap = mutableMapOf()
-            )
+            val alias = tableAnnotation.alias
+                .takeIf { it.isNotBlank() }
+                ?: tableName
+            val entityDefinition = EntityDefinition<Entity>(alias,this, mutableMapOf())
+            TableDefinition(tableName, mutableMapOf(alias to entityDefinition))
         }.tableName
+    }
 
     /**
-     * ## 定義順カラム情報取得
+     * ## 定義順カラム情報取得（カラム名とカラム型）
      * ### カラム定義をコンストラクタ順に取得
-     * @param [T] Entity インターフェイスの実装型
-     * @param entityClass 対象のエンティティクラス
-     * @return 定義順に並んだカラム名のリスト
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型
+     * @return 定義順に並んだカラム名とカラム型のリスト
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> getColumnDefinitions(entityClass: KClass<T>): List<Pair<String, String>> {
-        val alias = getAlias(entityClass)
+    fun <T : TableDefinitionEntity> KClass<out T>.getColumnDefinitions(): List<Pair<String, String>> {
+        val tableName = this.createTableName()
+        val alias = this.getTableAlias()
         // プライマリコンストラクタがないときはエラー
-        val constructor = entityClass.primaryConstructor
-            ?: error("No primary constructor for ${entityClass.simpleName}")
+        val constructor = this.primaryConstructor
+            ?: error("No primary constructor for ${this.simpleName}")
         // コンストラクタパラメータ順でプロパティをマッピング
         return constructor.parameters.map { param ->
-            // プロパティ名と対応づけ
-            val prop = entityClass.memberProperties
-                .first { it.name == param.name }
+            // メタデータから抽出準備
+            val property = this.memberProperties.first { it.name == param.name }
             // @Column の name/alias を取得
-            val colAnno = prop.findAnnotation<Column>()
-            val baseName = colAnno?.name
-                .takeIf { !it.isNullOrBlank() }
-                ?: prop.getColumn()
-            val columnAlias = colAnno?.alias
-                .takeIf { !it.isNullOrBlank() }
-                ?.let { prop.getColumnAlias() }
-                ?: baseName
-            val columnName = "${alias}.$baseName as ${alias}_$columnAlias"
-            // カラム情報を保存（entityDefinitionMap に登録されていることが前提）
-            entityDefinitionMap[entityClass]?.columnInfo?.also {
-                it[prop] = columnName
-            } ?: error("Initialization required for ${entityClass.simpleName}.")
+            val columnAlias = "${alias}_${property.getColumnAlias().ifBlank{property.getColumn()}}"
+            // tableMetadata から、カラム情報抽出
+            val columnName = this.extractColumnMetadata(tableName,alias,columnAlias,property)
             // SQL 型マッピング（既存関数を呼び出し）
-            val sqlType = mapKotlinTypeToSqlType(prop.returnType)
+            val sqlType = mapKotlinTypeToSqlType(property.returnType)
             // 結果をペアで返却
             columnName to sqlType
         }
     }
+
+    /**
+     * ## 定義順カラム情報取得
+     * ### カラム定義をコンストラクタ順に取得
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型
+     * @return 定義順に並んだカラム名のリスト
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T : Entity> KClass<out T>.getColumns(): List<String> {
+        val tableName = this.createTableName()
+        val alias = this.getTableAlias()
+        // プライマリコンストラクタがないときはエラー
+        val constructor = this.primaryConstructor
+            ?: error("No primary constructor for ${this.simpleName}")
+        // コンストラクタパラメータ順でプロパティをマッピング
+        return constructor.parameters.map { param ->
+            // メタデータから抽出準備
+            val property = this.memberProperties.first { it.name == param.name }
+            // @Column の name/alias を取得
+            val columnAlias = "${alias}_${property.getColumnAlias().ifBlank{property.getColumn()}}"
+            // tableMetadata から、カラム名抽出
+            this.extractColumnMetadata(tableName,alias,columnAlias,property)
+        }
+    }
+
+    /**
+     * ## テーブル内カラム定義情報抽出
+     * ### テーブル内に定義されているカラム情報を抽出する
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型
+     * @param tableName テーブル名
+     * @param alias テーブルエイリアス
+     * @param columnAlias カラムエイリアス
+     * @param property プロパティ
+     * @return プロパティ
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    private fun <T : Entity> KClass<out T>.extractColumnMetadata(
+        tableName: String,
+        alias: String,
+        columnAlias: String,
+        property: KProperty1<out T, *>
+    ): String {
+        val definedProperty: KProperty1<out Entity, *>? = tableMetadata.getOrPut(tableName) {
+            // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
+            val entityDefinition = EntityDefinition<Entity>(alias,
+                                                            this,
+                                                            mutableMapOf(columnAlias to property)
+            )
+            TableDefinition(tableName, mutableMapOf(alias to entityDefinition))
+        }.aliases.getOrPut(alias) {
+            // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
+            EntityDefinition(alias, this, mutableMapOf(columnAlias to property))
+        }.columns.put(columnAlias, property)
+        return definedProperty?.getColumn()?:property.getColumn()
+    }
+
 
     /**
      * ## エイリアス取得
@@ -153,29 +192,7 @@ object Functions {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> getAlias(entityClass: KClass<T>): String = (
-            entityDefinitionMap[entityClass]
-                ?.tableName
-                // tableName を２分割する
-                ?.split(" ", limit = 2)
-                // 分割した２つ目を取得
-                ?.getOrNull(1)
-                // 取得した内容が空欄か？
-                ?.takeIf { it.isNotBlank() }
-                // 空欄の場合、クラス名をスネークケースに変換
-                ?: entityClass.getTableAlias())
-
-    /**
-     * ## テーブル名とエイリアスを分離
-     * @param tableName "users u" のような形式
-     * @return Pair(テーブル名, エイリアス). エイリアスがない場合は ""。
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun splitTableNameAndAlias(tableName: String): Pair<String, String> {
-        val parts = tableName.split(" ", limit = 2)
-        return parts[0] to (parts.getOrNull(1) ?: "")
-    }
+    fun <T : Entity> getAlias(entityClass: KClass<T>): String = entityClass.getTableAlias()
 
     /**
      * ## エンティティクラス値マップ生成

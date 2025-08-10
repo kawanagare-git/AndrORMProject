@@ -1,16 +1,20 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.Constants.COMMA
+import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.OrderBuilder
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
-import jp.pgw.lab78.androrm.database.utility.Functions.getColumnDefinitions
-import jp.pgw.lab78.androrm.database.utility.Functions.getTableName
+import jp.pgw.lab78.androrm.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
+import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -23,17 +27,17 @@ import kotlin.reflect.KProperty1
  * @since 2025-08-01
  */
 class Select<T : SelectEntity>(
-    private val entityClass: KClass<out T>,
+    entityClass: KClass<out T>,
     private val isDistinct : Boolean = false
-) {
+): QueryStructureLike {
     /** テーブル名：クラス名をスネークケース（大文字）に変換 */
-    private val mainTableName = getTableName(entityClass)
+    private val mainTableName = entityClass.createTableName()
 
     /** クエリの構文を管理するマップ */
-    private val queryStructureMap = enumMapOf<SelectIdentifier, MutableList<String>>()
+    private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
 
     /** 抽出カラムリスト */
-    private val selectColumnList = mutableListOf<Pair<String, String>>()
+    private val selectColumnList = mutableListOf<String>()
 
     /** 検索条件リスト */
     private val whereConditions = mutableListOf<Condition>()
@@ -50,8 +54,13 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private enum class SelectIdentifier {
-        SELECT, JOIN, WHERE, GROUP, HAVING, ORDER
+    private enum class SelectClause(val sql: String) {
+        SELECT("select"),
+        JOIN ("join"),
+        WHERE("where"),
+        GROUP("group by"),
+        HAVING("having"),
+        ORDER("order by")
     }
 
     /**
@@ -78,11 +87,12 @@ class Select<T : SelectEntity>(
      */
     init {
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        selectColumnList += getColumnDefinitions(entityClass)
+        selectColumnList += entityClass.getColumns()
         // from 句とテーブル名の定義を設定
-        queryStructureMap[SelectIdentifier.SELECT] = mutableListOf(" from $mainTableName")
+        queryStructureMap[SelectClause.SELECT] = mutableListOf(" from $mainTableName")
     }
 
+    fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
     /**
      * ## join メソッド
      * ### テーブル結合を指定する
@@ -98,14 +108,14 @@ class Select<T : SelectEntity>(
                                  , block: ConditionBuilder.() -> Unit
     ): Select<T> {
         // 結合テーブル名取得
-        val joinedTableName = getTableName(joinedEntityClass).trim()
+        val joinedTableName = joinedEntityClass.createTableName()
         val joinCondition = ConditionBuilder().apply(block).buildList()
-        queryStructureMap.getOrPut(SelectIdentifier.JOIN) { mutableListOf() }
+        queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add("${joinType.name.lowercase(Locale.ROOT)} "
                     + "join $joinedTableName on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        selectColumnList += getColumnDefinitions(joinedEntityClass)
+        selectColumnList += joinedEntityClass.getColumns()
         return this
     }
 
@@ -146,7 +156,7 @@ class Select<T : SelectEntity>(
      */
     fun <TX : SelectEntity>group(vararg columns: KProperty1<out TX, *>): Select<T> {
         val clause = columns.joinToString(", ") { generateColumn(it) }
-        queryStructureMap.getOrPut(SelectIdentifier.GROUP) { mutableListOf() }
+        queryStructureMap.getOrPut(SelectClause.GROUP) { mutableListOf() }
             .add("group by $clause")
         return this
     }
@@ -193,31 +203,43 @@ class Select<T : SelectEntity>(
     }
 
     /**
-     * ## build メソッド
-     * ### 最終的な Select 文を生成します
+     * ## SELECT 文文字列生成関数
+     * ### 最終的な Select 文を生成する
      * @return  生成された SQL 文字列
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun build(): String {
-        val selectClause = "select ${if (isDistinct) "distinct " else ""}" +
-                selectColumnList.joinToString(", ") { (col, _) -> col }
-        if (whereConditions.isNotEmpty()) {
-            val whereClause = whereConditions.joinToString(" AND ") { it.build() }
-            queryStructureMap[SelectIdentifier.WHERE] = mutableListOf("where $whereClause")
+    override fun build(): String {
+        val selectClause = buildString {
+            append("select ")
+            if (isDistinct) append("distinct ")
+            append(selectColumnList.joinToString(", ") { it })
         }
-        if (havingConditions.isNotEmpty()) {
-            val havingClause = havingConditions.joinToString(" AND ") { it.build() }
-            queryStructureMap[SelectIdentifier.HAVING] = mutableListOf("having by $havingClause")
+        /**
+         * ## 構成要素追加
+         * ## ローカル関数
+         * ### 引数に指定された内容をクエリ構成に追加する
+         * @param clauseId クエリの「句」
+         * @param separator 区切り文字列
+         * @param element 追加する要素
+         */
+        fun addClauseIfNotEmpty(
+            clauseId: SelectClause,
+            separator : CharSequence,
+            vararg element: QueryStructureLike
+        ) {
+            if (element.isNotEmpty()) {
+                val clause = element.joinToString(separator) { it.build() }
+                queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+            }
         }
-        if (orderColumns.isNotEmpty()) {
-            val orderClause = orderColumns.joinToString(", ") { it.build() }
-            queryStructureMap[SelectIdentifier.ORDER] = mutableListOf("order by $orderClause")
-        }
-        val clauses = SelectIdentifier.entries.joinToString(" ") { identifier ->
-                            queryStructureMap[identifier]?.joinToString(" ") ?: ""
-                        }
-        return StringBuilder().append(selectClause).append(clauses).toString().trim()
+        addClauseIfNotEmpty(SelectClause.WHERE, AND.sql, *whereConditions.toTypedArray())
+        addClauseIfNotEmpty(SelectClause.HAVING, AND.sql, *havingConditions.toTypedArray())
+        addClauseIfNotEmpty(SelectClause.ORDER, COMMA, *orderColumns.toTypedArray())
+        val otherClauses = SelectClause.entries
+            .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: "" }
+        // select 文を生成
+        return "$selectClause $otherClauses".trim()
     }
 
     /**
@@ -242,10 +264,10 @@ class Select<T : SelectEntity>(
      */
     private fun <T : SelectEntity> generateColumn(column: KProperty1<out T, *>): String {
         // エンティティクラスの取得
-        val entityClass = extractClassFromProperty(column)?: error("Could not infer entity class")
+        val entityClass = column.extractClassFromProperty()
         // エイリアスの生成
         val alias = getAlias(entityClass)
-        val columnName = column.simpleNameToSnakeCase()
+        val columnName = column.getColumn()
         return "$alias$columnName"
     }
 

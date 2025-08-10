@@ -8,10 +8,11 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.database.utility.Functions.bindPlaceholders
-import jp.pgw.lab78.androrm.database.utility.Functions.generateTableCreationQuery
-import jp.pgw.lab78.androrm.database.utility.Functions.getValueFromEntity
+import jp.pgw.lab78.androrm.database.utility.EntityManager.bindPlaceholders
+import jp.pgw.lab78.androrm.database.utility.EntityManager.convertToEntity
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getValueFromEntity
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
 
 /**
@@ -33,37 +34,38 @@ class AndrOrmDatabaseHelper(
 ) : SQLiteOpenHelper(context, name, null, version) {
 
     /**
-     * override
-     * スーパークラスの onCreate メソッドをオーバーライドします。
-     * 設定された entities を基に Create 文を生成し、テーブルを作成する
+     * ## AndrORM データベーステーブル生成メソッド
+     * ### スーパークラスの onCreate メソッドをオーバーライドします。
+     * ### 設定された entities を基に Create 文を生成し、テーブルを作成する
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2025-08-08
      * @see android.database.sqlite.SQLiteDatabase
      */
     override fun onCreate(db: SQLiteDatabase) {
         // 全エンティティに対してテーブル生成クエリを実行
         entities.forEach { entity ->
-            val tableQuery = generateTableCreationQuery(entity)
+            val tableQuery = Create(entity).build()
             db.execSQL(tableQuery)
         }
     }
 
     /**
-     * override
-     * スーパークラスの onUpgrade メソッドをオーバーライドします。
-     * 設定された entities を基に Drop 文を作成し、テーブルを削除する
+     * ## AndrORM データベースアップグレードメソッド
+     * ### スーパークラスの onUpgrade メソッドをオーバーライドします。
+     * ### 設定された entities を基に Drop 文を作成し、テーブルを削除する
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2025-08-08
      * @see android.database.sqlite.SQLiteDatabase
      */
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         // 各エンティティに対して DROP TABLE 文を実行
         entities.forEach { entity ->
             val tableAnnotation = entity.findAnnotation<Table>()
-            val tableName = if (tableAnnotation != null && tableAnnotation.name.isNotBlank())
+            val tableName = if (tableAnnotation != null && tableAnnotation.name.isNotBlank()) {
                 tableAnnotation.name
-            else
+            } else {
                 entity.simpleName?.toSnakeCase() ?: error("Unable to determine table name")
+            }
             db.execSQL("DROP TABLE IF EXISTS $tableName")
         }
         onCreate(db)
@@ -75,9 +77,18 @@ class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun getDatabase(): SQLiteOpenHelper {
-        return this
-    }
+    fun getDatabase(): SQLiteOpenHelper = this
+
+    /**
+     * ## AndrORM データベースヘルパ取得メソッド（移譲用）
+     * ### AndrORM データベースヘルパークラスのインスタンスを移譲元に渡す
+     * @param thisRef オーナーオブジェクト：システムで設定
+     * @param property プロパティ情報：システムで設定
+     * @return AndrORM データベースヘルパを返す
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    operator fun getValue(thisRef: Any?, property: KProperty<*>) = this
 
     /**
      * ## AndrORM データベース実行メソッド
@@ -100,7 +111,7 @@ class AndrOrmDatabaseHelper(
         val result = mutableListOf<T>()
         cursor.use {
             while (it.moveToFirst()) {
-                it.columnNames
+                val propertiesMap = convertToEntity(it.columnNames, T::class)
                 result += T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
             }
         }

@@ -28,6 +28,9 @@ import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
+import jp.pgw.lab78.androrm.common.database.SupportFunction.buildAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.hasText
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
@@ -66,6 +69,8 @@ class PropsProcessor(
         /** プロパティ名一覧 Enum 名 */
         private const val GENERATED_PROPERTIES = "AllClassProperties"
 
+        /** @Table の変数名定義（name） */
+        private const val TABLE_NAME = "name"
         /** @Table の変数名定義（alias） */
         private const val TABLE_ALIAS = "alias"
 
@@ -188,7 +193,7 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private fun generateDataClassFromProjections (resolver: Resolver) {
+    private fun generateDataClassFromProjections(resolver: Resolver) {
         // @Projection の抽出
         val projectionSymbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false)
         // @Projections の抽出
@@ -300,17 +305,31 @@ class PropsProcessor(
         )
         // クラス名の抽出
         val createClassName = classDecl.simpleName.asString() +
-                dataClassMaterialMap[EXTEND_NAME].toString()
+                                dataClassMaterialMap[EXTEND_NAME].toString()
+        // @Table の取得
+        val tableAnnotation = classDecl.annotations
+                                        .firstOrNull { it.shortName.asString() == TABLE }
+        val tableName = tableAnnotation?.arguments
+                                        // @Table からテーブル名を取得
+                                        ?.firstOrNull { arg -> arg.name?.asString() == TABLE_NAME }
+                                        ?.value
+                                        // @Table からテーブル名を取得できたか判定
+                                        ?.takeIf { it is String && it.isNotBlank() }
+                                        // テーブル名をキャストして戻す
+                                        ?.let { it as String }
+                                        // @Table からテーブル名を取得できていない場合
+                                        ?: classDecl.simpleName.asString().toSnakeCase()
         // エイリアスの抽出
-        val tableAnnotation = classDecl.annotations.firstOrNull { it.shortName.asString() == TABLE }
-        val tableAlias =  tableAnnotation?.arguments?.firstOrNull { it.name?.asString() == TABLE_ALIAS }
-                                                        ?.value as? String
+        val tableAlias =  tableAnnotation?.arguments
+                                            ?.firstOrNull { it.name?.asString() == TABLE_ALIAS }
+                                            ?.value as? String
         val extendAlias = dataClassMaterialMap[EXTEND_ALIAS].toString()
         tableAnnotationSpec = AnnotationSpec.builder(Table::class).apply {
-                                    if (!extendAlias.isNullOrBlank()) {
-                                        addMember("$TABLE_ALIAS = %S"
-                                                    ,"${tableAlias}_$extendAlias")
-                                    }
+                                    // @Table name の生成
+                                    addMember("$TABLE_NAME = %S",tableName)
+                                    // @Table alias の生成
+                                    addMember("$TABLE_ALIAS = %S",buildAlias(tableAlias, extendAlias)
+                                                                    ?:tableName)
                                 }
                                 .build()
         // 必須プロパティの抽出
@@ -593,7 +612,6 @@ class PropsProcessor(
  * @since 2025-08-01
  */
 class PropsProcessorProvider : SymbolProcessorProvider {
-
     /**
      * ## プロパティプロセッサ生成メソッド
      * ### プロパティプロセッサのインスタンスを生成する

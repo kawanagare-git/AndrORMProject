@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common
 
+
 /**
  * ## 定数オブジェクト
  * @author Masahiro Inoue
@@ -10,5 +11,13 @@ object Constants {
     const val EMPTY_STRING = ""
     /** 不明 */
     const val UNKNOWN = "Unknown"
+    /** 空白 */
+    const val SPACE = " "
+    /** カンマ */
+    const val COMMA = ","
 
+    enum class LogicalOperator(val sql: String) {
+        AND(" AND "),
+        OR(" OR "),
+    }
 }

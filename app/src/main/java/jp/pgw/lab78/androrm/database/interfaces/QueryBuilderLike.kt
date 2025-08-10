@@ -6,7 +6,7 @@ package jp.pgw.lab78.androrm.database.interfaces
  * @author Masahiro Inoue
  * @since 2025-08-08
  */
-interface QueryBuilder {
+interface QueryBuilderLike<T> {
     /**
      * ## 生成メソッド
      * ### クエリを生成するときに呼び出す

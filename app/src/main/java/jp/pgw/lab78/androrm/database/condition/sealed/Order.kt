@@ -1,10 +1,10 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
-import jp.pgw.lab78.androrm.database.utility.Functions.extractClassFromProperty
-import jp.pgw.lab78.androrm.database.utility.Functions.getAlias
-import kotlin.reflect.KClass
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import kotlin.reflect.KProperty1
 
 /**
@@ -13,7 +13,7 @@ import kotlin.reflect.KProperty1
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-sealed class Order {
+sealed class Order: QueryStructureLike {
     /**
      * ## 条件生成メソッド
      * ### 定義された条件から文字列を生成する
@@ -21,7 +21,7 @@ sealed class Order {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    abstract fun build(): String
+    abstract override fun build(): String
 }
 
 /**
@@ -44,8 +44,9 @@ data class ColumnOrder<T1 : Entity>(
      * @since 2025-08-01
      */
     override fun build(): String {
-        val mainAlias = getAlias(extractClassFromProperty(mainProperty) as KClass<out Entity>)
+        val kClass = mainProperty.extractClassFromProperty()
+        val mainAlias = kClass.getTableAlias()
         val mainColumn = mainProperty.getColumn()
-        return "$mainAlias$mainColumn ${if (descending) "desc" else ""}"
+        return "${mainAlias}.$mainColumn ${if (descending) "desc" else ""}"
     }
 }
