@@ -54,8 +54,7 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T: Entity> KClass<out T>.getTableAlias() =
-        this.getTableAnnotation().alias
+    fun <T: Entity> KClass<out T>.getTableAlias() = this.getTableAnnotation().alias
 
     /**
      * ## カラム名の取得

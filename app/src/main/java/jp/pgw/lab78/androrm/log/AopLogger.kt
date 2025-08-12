@@ -7,26 +7,34 @@ import org.slf4j.LoggerFactory
 
 @Aspect
 class AopLogger {
-    companion object {
-        /** ログインスタンス*/
-        val LOGGER = LoggerFactory.getLogger(AopLogger::class.java)
+    /** ログインスタンス*/
+    private val selfLogger = LoggerFactory.getLogger(this::class.java)
+    init {
+        println("ログ出力準備：$selfLogger")
     }
 
-    @Around("execution(* jp.pgw.lab78.androrm..*(..))")
+    @Around("execution(* *(..))")
+//    @Around("execution(* jp.pgw.lab78.androrm.database..*(..))")
     @Throws(Throwable::class)
     fun traceAdvice(pjp: ProceedingJoinPoint): Any? {
-        LOGGER.trace("メソッド開始: ${pjp.signature.name} / ${pjp.args.joinToString( ", ")}")
+        val targetLogger = LoggerFactory.getLogger(pjp.target.javaClass)
+        val beforeMessage = "メソッド開始: ${pjp.signature.name} / ${pjp.args.joinToString( ", ")}"
+        targetLogger.trace(beforeMessage)
+        println(beforeMessage)
         val result = pjp.proceed(pjp.args)
-        LOGGER.trace("メソッド終了: ${pjp.signature.name} / $result")
+        val afterMessage = "メソッド終了: ${pjp.signature.name} / $result"
+        targetLogger.trace(afterMessage)
+        println(afterMessage)
         return result
     }
 
     @Around("execution(* jp.pgw.lab78.androrm..*(..)) && @annotation(jp.pgw.lab78.androrm.log.annotations.LogTarget)")
     @Throws(Throwable::class)
     fun infoAdvice(pjp: ProceedingJoinPoint): Any? {
-        LOGGER?.info("メソッド開始: ${pjp.signature.name}")
+        val targetLogger = LoggerFactory.getLogger(pjp.target.javaClass)
+        targetLogger?.info("メソッド開始: ${pjp.signature.name}")
         val result = pjp.proceed(pjp.args)
-        LOGGER?.info("メソッド終了: ${pjp.signature.name}")
+        targetLogger?.info("メソッド終了: ${pjp.signature.name}")
         return result
     }
 }

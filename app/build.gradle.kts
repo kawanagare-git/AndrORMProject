@@ -1,10 +1,14 @@
+// ＜app/build.gradle.kts＞
+import org.aspectj.bridge.IMessage
+import org.aspectj.bridge.MessageHandler
+import org.aspectj.tools.ajc.Main
+
 // app/build.gradle.kts
 plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
-    id("io.freefair.aspectj.post-compile-weaving") version "6.4.3"
 }
 
 dependencies {
@@ -19,6 +23,12 @@ dependencies {
     ksp(project(":androrm-generator-ksp"))
 
     testImplementation(libs.junit.jupiter.v5102)
+}
+
+// 依存関係用のカスタムコンフィグレーションを作成
+val aspectjCompileClasspath by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
 }
 
 android {
@@ -58,6 +68,55 @@ android {
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
+    }
+}
+// ここから AspectJ カスタムタスクを定義
+android.applicationVariants.forEach { variant ->
+    val variantName = variant.name.replaceFirstChar {
+        if (it.isLowerCase()) it.titlecase() else it.toString()
+    }
+    val ajcTaskName = "compile${variantName}AspectJ"
+    val javaCompile = tasks.named<JavaCompile>("compile${variantName}JavaWithJavac")
+
+    tasks.register(ajcTaskName) {
+        dependsOn(javaCompile)
+        doLast {
+            val inputDir = javaCompile.get().outputs.files.singleFile
+            val aspectPath = configurations.getByName("implementation").asPath
+            val classpath = javaCompile.get().classpath.asPath
+            val bootClasspath = android.bootClasspath.joinToString(separator = ":")
+
+            val args = arrayOf(
+                "-showWeaveInfo",
+                "-source", "17",
+                "-target", "17",
+                "-inpath", inputDir.absolutePath,
+                "-aspectpath", aspectPath,
+                "-d", inputDir.absolutePath,
+                "-classpath", classpath,
+                "-bootclasspath", bootClasspath
+            )
+
+            val handler = MessageHandler(true)
+            Main().run(args, handler)
+
+            for (msg in handler.getMessages(null, true)) {
+                println("[AspectJ] ${msg.kind}: ${msg.message}")
+            }
+
+            for (msg in handler.getMessages(null, true)) {
+                when (msg.getKind()) {
+                    IMessage.INFO -> println("AJC INFO: ${msg.getMessage()}")
+                    IMessage.WARNING -> println("AJC WARNING: ${msg.getMessage()}")
+                    IMessage.ERROR -> println("AJC ERROR: ${msg.getMessage()}")
+                    IMessage.FAIL -> println("AJC FAIL: ${msg.getMessage()}")
+                }
+            }
+        }
+    }
+
+    javaCompile.configure {
+        finalizedBy(tasks.named(ajcTaskName))
     }
 }
 
@@ -101,12 +160,26 @@ dependencies {
     implementation(libs.slf4j.api.v2013)
     implementation(libs.logback.android)
 }
-// AOP(AspectJ)陽男依存関係
+// AOP(AspectJ)用依存関係
+// 依存関係に AspectJ ライブラリを追加
 dependencies {
-    implementation(libs.aspectjrt)
+    aspectjCompileClasspath(libs.aspectjrt)      // AspectJ runtime
+    aspectjCompileClasspath(libs.aspectjtools)   // AspectJ tools (コンパイル時のみ)
+}
+//dependencies {
+//    implementation(libs.aspectjrt)
+//    testImplementation(libs.aspectjweaver)
+//    implementation(libs.aspectjtools)
+//}
+// testImplementation を拡張して解決可能な構成を作成
+val aspectjWeaverConfig by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    extendsFrom(configurations.testImplementation.get())
 }
 
 dependencies {
+    implementation(libs.monitor)
     implementation(project(":androrm-common"))
     implementation(project(":androrm-generated"))
     implementation(project(":androrm-generator-ksp"))
@@ -115,4 +188,20 @@ dependencies {
 // build.gradle.kts の末尾付近に追加
 tasks.withType<Test>().configureEach {
     useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須
+
+    doFirst {
+        val weaverJar = aspectjWeaverConfig.files
+            .find { it.name.contains("aspectjweaver") }
+            ?: error("aspectjweaver not found in classpath")
+
+        jvmArgs("-javaagent:${weaverJar.absolutePath}")
+    }
+}
+
+tasks.register("listConfigs") {
+    doLast {
+        configurations.names.sorted().forEach {
+            println("Config: $it")
+        }
+    }
 }

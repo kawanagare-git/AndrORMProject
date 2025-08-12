@@ -1,13 +1,27 @@
 <configuration>
-    <!-- 共通設定をインポート -->
-    <include resource="logback-base.xml"/>
+    <property name="LOG_DIR" value="${LOG_DIR:-logs}" />
 
-    <!-- テスト時は全体を DEBUG に -->
-    <root level="DEBUG">
+    <!-- 標準出力用カスタムAppender -->
+    <appender name="STDOUT" class="jp.pgw.lab78.androrm.log.StdoutAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ファイル出力（必要なら） -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/application.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/application.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="TRACE">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="FILE"/>
     </root>
-
-    <!-- 例: SQL ログを有効化 -->
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
-    <logger name="org.hibernate.type.descriptor.sql" level="TRACE"/>
 </configuration>

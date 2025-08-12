@@ -15,9 +15,9 @@ import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntityWithAlias
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.log.AopLogger
+import jp.pgw.lab78.androrm.log.LogInitializer
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import java.io.File
 import java.time.LocalDate
 import java.time.LocalDateTime
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity as EmployeeEntityJoined
@@ -27,19 +27,14 @@ class SelectTest {
     companion object {
         @JvmStatic
         lateinit var SELECT: Select<*>
+        @JvmStatic
+        lateinit var aop: AopLogger
 
-        val aop = AopLogger()
         @JvmStatic
         @BeforeAll
-        fun setup(): Unit {
-
-            // 内部ストレージの /files/logs ディレクトリを取得
-            val logDir = File("AndrORM", "logs")
-            if (!logDir.exists()) {
-                logDir.mkdirs()
-            }
-            // logback 用の LOG_DIR プロパティを設定
-            System.setProperty("LOG_DIR", logDir.absolutePath)
+        fun setup() {
+            LogInitializer.initLogDir()
+            val aop = AopLogger()
         }
     }
 

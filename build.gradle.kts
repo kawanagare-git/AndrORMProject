@@ -8,7 +8,12 @@ plugins {
     id("com.google.devtools.ksp") version "1.9.0-1.0.13"
 }
 buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
     dependencies {
         classpath(libs.symbol.processing.gradle.plugin)
+        classpath(libs.aspectjtools)
     }
 }

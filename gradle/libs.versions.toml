@@ -1,6 +1,8 @@
 [versions]
 androidxJunit = "1.2.1"
+aspectjAspectjrt = "1.9.9.1"
 aspectjrt = "1.9.19"
+aspectjtools = "1.9.19"
 coreKtxVersion = "1.13.1"
 desugar_jdk_libs = "2.1.5"
 espressoCore = "3.6.1"
@@ -25,6 +27,7 @@ appcompat = "1.7.1"
 slf4jApi = "2.0.16"
 slf4jApiVersion = "2.0.13"
 symbolProcessingApi = "1.9.10-1.0.13"
+monitor = "1.8.0"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -34,6 +37,8 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 
 [libraries]
 aspectjrt = { module = "org.aspectj:aspectjrt", version.ref = "aspectjrt" }
+aspectjtools = { module = "org.aspectj:aspectjtools", version.ref = "aspectjtools" }
+aspectjweaver = { module = "org.aspectj:aspectjweaver", version.ref = "aspectjrt" }
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espressoCore" }
@@ -63,3 +68,4 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
 slf4j-api-v2013 = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApiVersion" }
 symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "symbolProcessingApi" }
 symbol-processing-gradle-plugin = { module = "com.google.devtools.ksp:symbol-processing-gradle-plugin" }
+monitor = { group = "androidx.test", name = "monitor", version.ref = "monitor" }
