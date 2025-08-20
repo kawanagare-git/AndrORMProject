@@ -2,9 +2,14 @@ package jp.pgw.lab78.androrm.database.function
 
 import jp.pgw.lab78.androrm.database.function.interfaces.FunctionBuilderLike
 
+/**
+ * ## 関数列挙型
+ * ### 列に使用する関数定義
+ *
+ */
 enum class ColumnFunction(
-    val sql: String,
-): FunctionBuilderLike by FunctionBuilder(sql) {
+    val query: String,
+): FunctionBuilderLike by FunctionBuilder(query) {
     COUNT("count"),
     SUM("sum"),
     AVG("avg"),
