@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum.CONDITION
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
@@ -8,7 +9,6 @@ import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
-import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.superclasses
 
@@ -64,13 +64,13 @@ sealed class Compare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String {
-            val mainAlias = getAlias(mainProperty.extractClassFromProperty())
+            val mainAlias = mainProperty.extractClassFromProperty().getTableAlias()
             val mainColumn = mainProperty.getColumn()
             val declaringClass = joinedProperty.extractClassFromProperty()
             val joined = if (declaringClass.superclasses.contains(CONDITION_CLASS)) {
                 ":${joinedProperty.getColumn()}"
             } else {
-                val joinedAlias = getAlias(joinedProperty.extractClassFromProperty())
+                val joinedAlias = joinedProperty.extractClassFromProperty().getTableAlias()
                 val joinedColumn = joinedProperty.getColumn()
                 "${joinedAlias}.$joinedColumn"
             }
@@ -101,7 +101,7 @@ sealed class Compare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String {
-            val alias = getAlias(lhsProperty.extractClassFromProperty())
+            val alias = lhsProperty.extractClassFromProperty().getTableAlias()
             val column = lhsProperty.getColumn()
             return "${alias}.$column ${operator.symbol} ${formatValue(value)}"
         }
@@ -245,6 +245,25 @@ data class LogicalCondition(
      * @since 2025-08-01
      */
     override fun build(): String {
-        return conditions.joinToString(" $operator ", "(", ")") { it.build() }
+        return build(mutableSetOf())
+    }
+
+    /**
+     * ## 循環検出メソッド
+     * ### 循環参照を検出し問題がなければ、条件文字列を生成
+     * @param visited 循環検出リスト
+     * @return 生成された文字列 / 循環参照を検出した場合 "<cycle>"
+     * @author Masahiro Inoue
+     * @since 2025-08-13
+     */
+    private fun build(visited: MutableSet<LogicalCondition>): String {
+        if (!visited.add(this)) return "<cycle>"   // 循環検出
+        val body = conditions.joinToString(" $operator ") {
+            when (it) {
+                is LogicalCondition -> it.build(visited)
+                else -> it.build()
+            }
+        }
+        return "($body)"
     }
 }

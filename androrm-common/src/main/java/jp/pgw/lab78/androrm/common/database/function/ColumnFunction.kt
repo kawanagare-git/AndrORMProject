@@ -1,37 +1,36 @@
-package jp.pgw.lab78.androrm.database.function
-
-import jp.pgw.lab78.androrm.database.function.interfaces.FunctionBuilderLike
+package jp.pgw.lab78.androrm.common.database.function
 
 /**
  * ## 関数列挙型
  * ### 列に使用する関数定義
- *
+ * @param query クエリに使用される文字列
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
-enum class ColumnFunction(
-    val query: String,
-): FunctionBuilderLike by FunctionBuilder(query) {
-    COUNT("count"),
-    SUM("sum"),
-    AVG("avg"),
-    MAX("max"),
-    MIN("min"),
-    GROUP_CONCAT("group_concat"),
-    LENGTH("length"),
-    LOWER("lower"),
-    UPPER("UPPER"),
-    REPLACE("replace"),
-    SUBSTR("substr"),
-    TRIM("trim"),
-    GLOB("glob"),
-    DATE("date"),
-    TIME("time"),
-    DATETIME("datetime"),
-    STRFTIME("strftime"),
-    JULIANDAY("julianday"),
-    ABS("abs"),
-    ROUND("round"),
-    RANDOM("random"),
-    IFNULL("ifnull"),
-    COALESCE("coalesce"),
-    NULLIF("nullif"),
+enum class ColumnFunction(val query: String ,val isSingleArgument:Boolean ) {
+    COUNT("count",true),
+    SUM("sum",true),
+    AVG("avg",true),
+    MAX("max",true),
+    MIN("min",true),
+    GROUP_CONCAT("group_concat",false),
+    LENGTH("length",true),
+    LOWER("lower",true),
+    UPPER("upper",true),
+    REPLACE("replace",false),
+    SUBSTR("substr",false),
+    TRIM("trim",false),
+    LTRIM("ltrim",false),
+    RTRIM("rtrim",false),
+    DATE("date",false),
+    TIME("time",false),
+    DATETIME("datetime",false),
+    STRFTIME("strftime",false),
+    JULIANDAY("julianday",false),
+    ABS("abs",false),
+    ROUND("round",false),
+    RANDOM("random",false),
+    IFNULL("ifnull",false),
+    COALESCE("coalesce",false),
+    NULLIF("nullif",false),
 }

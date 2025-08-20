@@ -29,8 +29,10 @@ object SupportFunction {
      */
     fun <T: Entity> KClass<out T>.getTableAnnotation() =
         this.findAnnotation<Table>()
-            ?: error("Cannot be constructed using an entity(${this.qualifiedName})" +
-                    " that does not have the `@Table` annotation.")
+            ?: error(
+                "Cannot be constructed using an entity(${this.qualifiedName})" +
+                        " that does not have the `@Table` annotation."
+            )
 
     /**
      * ## テーブル名取得
@@ -41,8 +43,8 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> KClass<out T>.getTableName() =
-        this.getTableAnnotation().name
+    fun <T : Entity> KClass<out T>.getTableName() = this.getTableAnnotation().name
+                                                        .ifEmpty { this.simpleNameToSnakeCase() }
 
     /**
      * ## テーブルエイリアス取得
@@ -55,6 +57,7 @@ object SupportFunction {
      * @since 2025-08-01
      */
     fun <T: Entity> KClass<out T>.getTableAlias() = this.getTableAnnotation().alias
+                                                        .ifEmpty { this.simpleNameToSnakeCase() }
 
     /**
      * ## カラム名の取得

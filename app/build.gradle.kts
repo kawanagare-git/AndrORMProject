@@ -25,12 +25,6 @@ dependencies {
     testImplementation(libs.junit.jupiter.v5102)
 }
 
-// 依存関係用のカスタムコンフィグレーションを作成
-val aspectjCompileClasspath by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
 android {
     namespace = "jp.pgw.lab78.androrm"
     compileSdk = 34
@@ -70,7 +64,19 @@ android {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
 }
-// ここから AspectJ カスタムタスクを定義
+// 依存関係用のカスタムコンフィグレーションを作成
+val aspectjCompileClasspath by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+// 依存関係に AspectJ ライブラリを追加
+dependencies {
+    aspectjCompileClasspath(libs.aspectjrt)      // AspectJ runtime
+    aspectjCompileClasspath(libs.aspectjtools)   // AspectJ tools (コンパイル時のみ)
+}
+
+// AspectJ コンパイル用カスタムタスクを登録
 android.applicationVariants.forEach { variant ->
     val variantName = variant.name.replaceFirstChar {
         if (it.isLowerCase()) it.titlecase() else it.toString()
@@ -82,7 +88,7 @@ android.applicationVariants.forEach { variant ->
         dependsOn(javaCompile)
         doLast {
             val inputDir = javaCompile.get().outputs.files.singleFile
-            val aspectPath = configurations.getByName("implementation").asPath
+            val aspectPath = aspectjCompileClasspath.asPath   // ここで専用クラスパスを使用
             val classpath = javaCompile.get().classpath.asPath
             val bootClasspath = android.bootClasspath.joinToString(separator = ":")
 
@@ -101,15 +107,11 @@ android.applicationVariants.forEach { variant ->
             Main().run(args, handler)
 
             for (msg in handler.getMessages(null, true)) {
-                println("[AspectJ] ${msg.kind}: ${msg.message}")
-            }
-
-            for (msg in handler.getMessages(null, true)) {
-                when (msg.getKind()) {
-                    IMessage.INFO -> println("AJC INFO: ${msg.getMessage()}")
-                    IMessage.WARNING -> println("AJC WARNING: ${msg.getMessage()}")
-                    IMessage.ERROR -> println("AJC ERROR: ${msg.getMessage()}")
-                    IMessage.FAIL -> println("AJC FAIL: ${msg.getMessage()}")
+                when (msg.kind) {
+                    IMessage.INFO -> println("AJC INFO: ${msg.message}")
+                    IMessage.WARNING -> println("AJC WARNING: ${msg.message}")
+                    IMessage.ERROR -> println("AJC ERROR: ${msg.message}")
+                    IMessage.FAIL -> println("AJC FAIL: ${msg.message}")
                 }
             }
         }
@@ -163,14 +165,9 @@ dependencies {
 // AOP(AspectJ)用依存関係
 // 依存関係に AspectJ ライブラリを追加
 dependencies {
-    aspectjCompileClasspath(libs.aspectjrt)      // AspectJ runtime
-    aspectjCompileClasspath(libs.aspectjtools)   // AspectJ tools (コンパイル時のみ)
+    implementation(libs.aspectjrt)
+    testImplementation(libs.aspectjweaver)
 }
-//dependencies {
-//    implementation(libs.aspectjrt)
-//    testImplementation(libs.aspectjweaver)
-//    implementation(libs.aspectjtools)
-//}
 // testImplementation を拡張して解決可能な構成を作成
 val aspectjWeaverConfig by configurations.creating {
     isCanBeResolved = true

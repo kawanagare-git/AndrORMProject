@@ -22,7 +22,7 @@ class ConditionBuilder: ConditionBuilderLike, LogicalConditionSupportLike<Condit
     private val list  = mutableListOf<Condition>()
 
     /** LogicalConditionSupport インターフェースのデリゲート */
-    private val delegate by LogicalConditionDelegate({ this }, list)
+    private val delegate by LogicalConditionDelegate({ ConditionBuilder() }, list)
 
     /**
      * ## 単一条件用関数

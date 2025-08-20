@@ -13,8 +13,7 @@ class AopLogger {
         println("ログ出力準備：$selfLogger")
     }
 
-    @Around("execution(* *(..))")
-//    @Around("execution(* jp.pgw.lab78.androrm.database..*(..))")
+    @Around("execution(* jp.pgw.lab78.androrm.database..*(..))")
     @Throws(Throwable::class)
     fun traceAdvice(pjp: ProceedingJoinPoint): Any? {
         val targetLogger = LoggerFactory.getLogger(pjp.target.javaClass)

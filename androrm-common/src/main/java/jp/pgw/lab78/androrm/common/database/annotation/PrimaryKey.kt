@@ -5,8 +5,6 @@ package jp.pgw.lab78.androrm.common.database.annotation
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-@Target(AnnotationTarget.CLASS)
+@Target(AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class PrimaryKey(
-    val columns: Array<String>
-)
+annotation class PrimaryKey

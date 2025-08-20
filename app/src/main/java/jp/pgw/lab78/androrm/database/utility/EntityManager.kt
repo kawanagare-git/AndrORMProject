@@ -4,7 +4,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
-import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
@@ -81,14 +81,13 @@ object EntityManager {
      */
     fun <T : Entity> KClass<out T>.createTableName(): String {
         val tableAnnotation = this.getTableAnnotation()
-        return tableMetadata.getOrPut(tableAnnotation.name) {
+        return tableMetadata.getOrPut(tableAnnotation.name.ifEmpty { this.getTableName() }) {
             // テーブル名の生成
             val tableName = tableAnnotation.name
-                .ifBlank { this.simpleNameToSnakeCase() }
+                .ifBlank { this.getTableName() }
             // エイリアスの生成
             val alias = tableAnnotation.alias
-                .takeIf { it.isNotBlank() }
-                ?: tableName
+                .ifBlank { tableName }
             val entityDefinition = EntityDefinition<Entity>(alias,this, mutableMapOf())
             TableDefinition(tableName, mutableMapOf(alias to entityDefinition))
         }.tableName
@@ -187,12 +186,12 @@ object EntityManager {
     /**
      * ## エイリアス取得
      * ### エンティティクラスからエイリアスを取得する
-     * @param entityClass エンティティクラスを指定
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
      * @return 取得したエイリアス
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> getAlias(entityClass: KClass<T>): String = entityClass.getTableAlias()
+    fun <T : Entity> KClass<T>.getAlias(): String =  this.getTableAlias()
 
     /**
      * ## エンティティクラス値マップ生成
@@ -227,7 +226,10 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun bindPlaceholders(query: String, valuesMap: List<Map<String, Any>>): Pair<String, List<Array<String>>> {
+    fun bindPlaceholders(
+        query: String,
+        valuesMap: List<Map<String, Any>>
+    ): Pair<String, List<Array<String>>> {
         val argNames = mutableListOf<String>()
         val queryWithPlaceholders = PLACE_HOLDER_REGEX.replace(query) {
             argNames += it.groupValues[1]
@@ -276,7 +278,8 @@ object EntityManager {
         if (valueForJudgment == null) {
             throw IllegalArgumentException("Unsupported type: $field")
         }else{
-            return fieldToColumnMap[valueForJudgment] ?: throw IllegalArgumentException("Unsupported type: $valueForJudgment")
+            return fieldToColumnMap[valueForJudgment]
+                ?: throw IllegalArgumentException("Unsupported type: $valueForJudgment")
         }
     }
 

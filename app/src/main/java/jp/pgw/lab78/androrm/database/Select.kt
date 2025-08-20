@@ -10,7 +10,7 @@ import jp.pgw.lab78.androrm.database.condition.OrderBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
@@ -30,8 +30,11 @@ class Select<T : SelectEntity>(
     entityClass: KClass<out T>,
     private val isDistinct : Boolean = false
 ): QueryStructureLike {
-    /** テーブル名：クラス名をスネークケース（大文字）に変換 */
+    /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
     private val mainTableName = entityClass.createTableName()
+
+    /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
+    private val mainTableAlias = entityClass.getAlias().ifEmpty { mainTableName }
 
     /** クエリの構文を管理するマップ */
     private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
@@ -87,9 +90,11 @@ class Select<T : SelectEntity>(
      */
     init {
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        selectColumnList += entityClass.getColumns()
+        entityClass.getColumns().forEach {
+            selectColumnList += "$mainTableAlias.$it as ${mainTableAlias}_$it"
+        }
         // from 句とテーブル名の定義を設定
-        queryStructureMap[SelectClause.SELECT] = mutableListOf(" from $mainTableName")
+        queryStructureMap[SelectClause.SELECT] = mutableListOf("from $mainTableName $mainTableAlias")
     }
 
     fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
@@ -109,13 +114,17 @@ class Select<T : SelectEntity>(
     ): Select<T> {
         // 結合テーブル名取得
         val joinedTableName = joinedEntityClass.createTableName()
+        val joinedTableAlias = joinedEntityClass.getAlias(). ifEmpty { joinedTableName }
         val joinCondition = ConditionBuilder().apply(block).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add("${joinType.name.lowercase(Locale.ROOT)} "
-                    + "join $joinedTableName on ${joinCondition.joinToString(" AND ") { it.build() }}"
+                    + "join $joinedTableName $joinedTableAlias"
+                    + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        selectColumnList += joinedEntityClass.getColumns()
+        joinedEntityClass.getColumns().forEach {
+            selectColumnList += "$joinedTableAlias.$it as ${joinedTableAlias}_$it"
+        }
         return this
     }
 
@@ -229,17 +238,17 @@ class Select<T : SelectEntity>(
             vararg element: QueryStructureLike
         ) {
             if (element.isNotEmpty()) {
-                val clause = element.joinToString(separator) { it.build() }
+                val clause = element.joinToString(separator) { it.build() }.trim()
                 queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
             }
         }
-        addClauseIfNotEmpty(SelectClause.WHERE, AND.sql, *whereConditions.toTypedArray())
-        addClauseIfNotEmpty(SelectClause.HAVING, AND.sql, *havingConditions.toTypedArray())
+        addClauseIfNotEmpty(SelectClause.WHERE, AND.query, *whereConditions.toTypedArray())
+        addClauseIfNotEmpty(SelectClause.HAVING, AND.query, *havingConditions.toTypedArray())
         addClauseIfNotEmpty(SelectClause.ORDER, COMMA, *orderColumns.toTypedArray())
         val otherClauses = SelectClause.entries
             .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: "" }
         // select 文を生成
-        return "$selectClause $otherClauses".trim()
+        return "$selectClause $otherClauses"
     }
 
     /**
@@ -266,9 +275,9 @@ class Select<T : SelectEntity>(
         // エンティティクラスの取得
         val entityClass = column.extractClassFromProperty()
         // エイリアスの生成
-        val alias = getAlias(entityClass)
+        val alias = entityClass.getAlias()
         val columnName = column.getColumn()
-        return "$alias$columnName"
+        return "${alias}.$columnName"
     }
 
 }

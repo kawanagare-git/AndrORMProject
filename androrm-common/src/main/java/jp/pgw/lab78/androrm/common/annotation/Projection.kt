@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.annotation
 
+import jp.pgw.lab78.androrm.common.database.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 
 /**
@@ -18,12 +19,14 @@ import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 @Retention(AnnotationRetention.SOURCE)
 @Repeatable
 annotation class Projection(
-    /** エンティティ派生名 */
+    /** エンティティ拡張名 */
     val entityNameExtend: String,
-    /** テーブルエイリアス */
+    /** テーブルエイリアス拡張名 */
     val aliasExtend: String = "",
     /** クラスに定義するプロパティ名 */
     val properties: Array<String>,
+    /** エンティティに関数を使用する場合に指定 */
+    val functions: Array<FunctionProjection> = [],
     /** 共通インターフェス */
     val commonInterface: DMLInterfaceEnum = DMLInterfaceEnum.NOT_USE,
     /** 独自インターフェス */

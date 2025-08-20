@@ -16,8 +16,12 @@ object Constants {
     /** カンマ */
     const val COMMA = ","
 
-    enum class LogicalOperator(val sql: String) {
-        AND(" AND "),
-        OR(" OR "),
+    /**
+     * ## 論理演算子
+     * @param query クエリ文字列
+     */
+    enum class LogicalOperator(val query: String) {
+        AND("and"),
+        OR("or"),
     }
 }

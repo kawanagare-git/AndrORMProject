@@ -4,6 +4,7 @@ import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
@@ -43,10 +44,13 @@ import java.time.LocalDateTime
 )
 @Table("DEPARTMENT", alias = "DEP")
 data class DepartmentEntity(
+    @PrimaryKey
     @Column("ID")
     val employeeId: String,
+    @PrimaryKey
     @Column("DEPARTMENT", alias = "DEPARTMENT_NAME")
     val department: String,
+    @PrimaryKey
     @Column("SECTION", alias = "SECTION_NAME")
     val section: String,
     @Column("CREATE_DATE_TIME")

@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition
 
+import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.*
 import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
 import jp.pgw.lab78.androrm.database.condition.interfaces.LogicalConditionSupportLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
@@ -36,7 +37,7 @@ class LogicalConditionDelegate<T : ConditionBuilderLike>(
      */
     override fun and(block: T.() -> Unit) {
         val inner = ownerFactory().apply(block)
-        targetList += LogicalCondition("AND", inner.buildList())
+        targetList += LogicalCondition(AND.query, inner.buildList())
     }
 
     /**
@@ -47,6 +48,6 @@ class LogicalConditionDelegate<T : ConditionBuilderLike>(
      */
     override fun or(block: T.() -> Unit) {
         val inner = ownerFactory().apply(block)
-        targetList += LogicalCondition("OR", inner.buildList())
+        targetList += LogicalCondition(OR.query, inner.buildList())
     }
 }
