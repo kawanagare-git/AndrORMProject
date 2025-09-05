@@ -4,10 +4,11 @@ package jp.pgw.lab78.androrm.common.database.function
  * ## 関数列挙型
  * ### 列に使用する関数定義
  * @param query クエリに使用される文字列
+ * @param isSingleArgument 引数が1つしかないか
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-enum class ColumnFunction(val query: String ,val isSingleArgument:Boolean ) {
+enum class ColumnFunction(val query: String ,val isSingleArgument: Boolean ) {
     COUNT("count",true),
     SUM("sum",true),
     AVG("avg",true),
@@ -33,4 +34,5 @@ enum class ColumnFunction(val query: String ,val isSingleArgument:Boolean ) {
     IFNULL("ifnull",false),
     COALESCE("coalesce",false),
     NULLIF("nullif",false),
+    CUSTOM("",false),
 }

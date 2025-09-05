@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.common.database.annotation
+package jp.pgw.lab78.androrm.common.annotation
 
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 
