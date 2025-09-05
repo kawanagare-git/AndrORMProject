@@ -11,7 +11,6 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
  * @param returnHint 戻り値の型推論 : 推論不能なときだけ任意指定
  * @param raw 関数定義の直書き
  */
-
 annotation class FunctionProjection(
     val function: ColumnFunction,
     val args: Array<String>,
