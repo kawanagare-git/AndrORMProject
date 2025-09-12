@@ -27,7 +27,7 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T: Entity> KClass<out T>.getTableAnnotation() =
+    fun <T : Entity> KClass<out T>.getTableAnnotation() =
         this.findAnnotation<Table>()
             ?: error(
                 "Cannot be constructed using an entity(${this.qualifiedName})" +
@@ -44,7 +44,7 @@ object SupportFunction {
      * @since 2025-08-01
      */
     fun <T : Entity> KClass<out T>.getTableName() = this.getTableAnnotation().name
-                                                        .ifEmpty { this.simpleNameToSnakeCase() }
+        .ifEmpty { this.simpleNameToSnakeCase() }
 
     /**
      * ## テーブルエイリアス取得
@@ -56,8 +56,8 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T: Entity> KClass<out T>.getTableAlias() = this.getTableAnnotation().alias
-                                                        .ifEmpty { this.simpleNameToSnakeCase() }
+    fun <T : Entity> KClass<out T>.getTableAlias() = this.getTableAnnotation().alias
+        .ifEmpty { this.simpleNameToSnakeCase() }
 
     /**
      * ## カラム名の取得
@@ -68,7 +68,7 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T: Entity> KProperty1<out T, *>.getColumn(): String =
+    fun <T : Entity> KProperty1<out T, *>.getColumn(): String =
         this.findAnnotation<Column>()?.name?.takeIf { it.isNotBlank() }
             ?: this.simpleNameToSnakeCase()
 
@@ -81,8 +81,9 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T: Entity> KProperty1<out T, *>.getColumnAlias() =
+    fun <T : Entity> KProperty1<out T, *>.getColumnAlias() =
         this.findAnnotation<Column>()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
+
     /**
      * ## クラスをスネークケースに変換
      * @receiver [KClass] インスタンス。
@@ -131,11 +132,22 @@ object SupportFunction {
     }
 
     /**
+     * ## キャメルケース変換関数
+     * ### スネークケースの文字列をキャメルケースに変換
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun CharSequence.toCamelCase(): String {
+        return this.toString().lowercase(Locale.ROOT)
+            .replace(Regex("_(.)")) { it.groupValues[1].uppercase(Locale.ROOT) }
+    }
+
+    /**
      * ## 文字列存在判定
      * ### 文字列変数に何かしら設定（null でもなく 空白でもない）
      * @return true 文字列変数に何かしら設定（null でもなく 空白でもない） / false null または 空白
      * @author Masahiro Inoue
      * @since 2025-08-08
      */
-    fun  CharSequence?.hasText() = !this.isNullOrBlank()
+    fun CharSequence?.hasText() = !this.isNullOrBlank()
 }

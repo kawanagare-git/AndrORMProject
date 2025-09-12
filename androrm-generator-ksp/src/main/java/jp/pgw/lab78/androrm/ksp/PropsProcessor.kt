@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.ksp
 
+import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.*
@@ -9,6 +10,7 @@ import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.*
 import jp.pgw.lab78.androrm.common.database.SupportFunction.buildAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toCamelCase
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
@@ -74,19 +76,31 @@ class PropsProcessor(
         private const val COLUMN_ALIAS = "alias"
 
         /** @FunctionPrpjection の変数名定義（function） */
-        private const val FUNCTION = "function"
+        private const val FP_FUNCTION = "function"
 
         /** @FunctionPrpjection の変数名定義（args） */
-        private const val ARGS = "args"
+        private const val FP_ARGS = "args"
 
         /** @FunctionPrpjection の変数名定義（alias） */
-        private const val ALIAS = "alias"
+        private const val FP_ALIAS = "alias"
 
-        /** @FunctionPrpjection の変数名定義（returnHint） */
-        private const val RETURN_HINT = "returnHint"
+        /** @Function の変数名定義（returnHint） */
+        private const val FP_RETURN_HINT = "returnHint"
 
         /** @FunctionPrpjection の変数名定義（raw） */
-        private const val RAW = "raw"
+        private const val FP_RAW = "raw"
+
+        /** @Function の変数名定義（columnFunction） */
+        private const val F_COLUMN_FUNCTION = "columnFunction"
+
+        /** @Function の変数名定義（args） */
+        private const val F_ARGS = "args"
+
+        /** @Function の変数名定義（alias） */
+        private const val F_ALIAS = "alias"
+
+        /** @FunctionPrpjection の変数名定義（raw） */
+        private const val F_RAW = "raw"
 
         /** @EntityPackageInfo の変数名定義（basePackage） */
         private const val BASE_PACKAGE = "basePackage"
@@ -124,11 +138,14 @@ class PropsProcessor(
         /** @Column(FQN) */
         private val COLUMN_FQN = Column::class.qualifiedName!!
 
-        /** ログ再起上限 */
-        const val MAX_DEPTH = 3
+        /** @Column */
+        private val FUNCTION = Function::class.simpleName!!
 
-        /** 最新階層表示要素数 */
-        const val MAX_ELEMENTS_AT_MAX_DEPTH = 4
+        /** @Column(FQN) */
+        private val FUNCTION_FQN = Function::class.qualifiedName!!
+
+        /** FunctionProjection の引数検査用正規表現 */
+        private val STRING_LITERAL_REGEX = "^'.*'$".toRegex()
     }
 
     /** 自動生成するために必要な全プロパティ名 */
@@ -222,36 +239,22 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @OptIn(KspExperimental::class)
     private fun generateDataClassFromProjections(resolver: Resolver) {
         infoEntered()
-        // @Projection の抽出
-        val projectionSymbols = resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false)
-        // @Projections の抽出
-        val projectionsSymbols = resolver.getSymbolsWithAnnotation(PROJECTIONS_FQN, false)
-        // Projection（単体）の処理
-        processProjectionAnnotations(
-            projectionSymbols.filterIsInstance<KSClassDeclaration>(),
-            resolver
-        )
-        // Projections（複数）の処理
-        projectionsSymbols.filterIsInstance<KSClassDeclaration>().forEach { classDecl ->
-            classDecl.annotations
-                // @Projections を抽出
-                .filter {
-                    it.shortName.asString() == PROJECTIONS &&
-                            it.annotationType.resolve().declaration.qualifiedName?.asString() ==
-                            PROJECTIONS_FQN
-                }
-                // @Projections をループさせて @Projection を取り出す
-                .forEach { annotation ->
-                    // Array<Projection> を解析
-                    val projectionList = extractProjectionList(annotation)
-                    projectionList.forEach { projection ->
-                        checkProjectionProperties(classDecl, projection)
-                        // ここで各 Projection ごとに data class を生成
-                        processSingleProjection(classDecl, projection, resolver)
-                    }
-                }
+        // @Projection と @Projections を両方まとめて拾う
+        val allProjectionClasses = sequenceOf(
+            resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false),
+            resolver.getSymbolsWithAnnotation(PROJECTIONS_FQN, false)
+        ).flatten()
+            .filterIsInstance<KSClassDeclaration>()
+        // 各クラスごとに Projection 系アノテーションを展開
+        allProjectionClasses.forEach { classDecl ->
+            extractProjectionsFromClass(classDecl).forEach { projection ->
+                checkAggregateConflicts(projection)
+                checkProjectionProperties(classDecl, projection)
+                processSingleProjection(classDecl, projection, resolver)
+            }
         }
         infoExiting()
     }
@@ -260,24 +263,20 @@ class PropsProcessor(
      * ## @Projection の処理
      * ### 単一の @Projection を検証し、対応する data class を生成する
      * @param classDecls @Projection が付与されているクラス群
-     * @param resolver KSP のアノテーション解析リゾルバ
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private fun processProjectionAnnotations(
-        classDecls: Sequence<KSClassDeclaration>,
-        resolver: Resolver
-    ) {
-        infoEntered(classDecls)
-        classDecls.forEach { classDecl ->
-            val annotation = classDecl.annotations.firstOrNull {
-                it.shortName.asString() == PROJECTION &&
-                        it.annotationType.resolve().declaration.qualifiedName?.asString() == PROJECTION_FQN
-            } ?: return@forEach
-            checkProjectionProperties(classDecl, annotation)
-            processSingleProjection(classDecl, annotation, resolver)
+    private fun extractProjectionsFromClass(classDecl: KSClassDeclaration): Sequence<KSAnnotation> {
+        infoEntered()
+        val result = classDecl.annotations.flatMap { annotation ->
+            when (annotation.annotationType.resolve().declaration.qualifiedName?.asString()) {
+                PROJECTION_FQN -> listOf(annotation)
+                PROJECTIONS_FQN -> extractProjectionList(annotation) // Array<Projection> の展開
+                else -> emptyList()
+            }
         }
-        infoExiting()
+        infoExiting(result)
+        return result
     }
 
     /**
@@ -329,7 +328,7 @@ class PropsProcessor(
      * - properties → 通常の列
      * - functions → 関数列（SUM, AVG, …）
      *   - プロパティ化 + @Function アノテーション付与を別メソッドで処理
-     * @param classDecl 元のクラス宣言
+     * @param classDecl @Projection が適用されたクラス
      * @param annotation 対象 @Projection
      * @param resolver KSP のアノテーション解析リゾルバ
      * @author Masahiro Inoue
@@ -346,7 +345,7 @@ class PropsProcessor(
         val packageName = generatedPackageNameFromAnnotation(
             classDecl,
             resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
-            dataClassMaterialMap[COMMON_INTERFACE].toString()
+            (dataClassMaterialMap[COMMON_INTERFACE] as List<*>).firstOrNull().toString()
         )
         val createClassName = classDecl.simpleName.asString() +
                 dataClassMaterialMap[EXTEND_NAME].toString()
@@ -371,6 +370,7 @@ class PropsProcessor(
         val functionProjections = (dataClassMaterialMap[FUNCTIONS] as? List<*>)
             ?.filterIsInstance<FunctionProjection>()
             ?: emptyList()
+        // プロパティ名 → KSPropertyDeclaration のマップを生成
         val propsByName: Map<String, KSPropertyDeclaration> =
             classDecl.getAllProperties().associateBy { it.simpleName.asString() }
         // マーカーインターフェースの抽出
@@ -415,7 +415,7 @@ class PropsProcessor(
      * ## テーブル名抽出
      * ### 指定されたテーブルアノテーションからテーブル名を抽出
      * @param tableAnnotation テーブルアノテーション
-     * @param classDecl 元のクラス宣言
+     * @param classDecl @Projection が適用されたクラス
      * @return 抽出したテーブル名
      * @author Masahiro Inoue
      * @since 2025-08-22
@@ -467,16 +467,15 @@ class PropsProcessor(
     private fun collectInterfaces(dataClassMaterialMap: MutableMap<String, Any>): List<TypeName> {
         infoEntered(dataClassMaterialMap)
         val result = buildList<TypeName> {
-            (dataClassMaterialMap[COMMON_INTERFACE]).toString()
-                .let {
+            (dataClassMaterialMap[COMMON_INTERFACE] as List<*>)
+                .map {
                     add(
                         ClassName.bestGuess(
                             DMLInterfaceEnum.valueOf(
                                 ClassName
-                                    .bestGuess(it)
+                                    .bestGuess(it.toString())
                                     .simpleName
-                            )
-                                .interfaceFQN
+                            ).interfaceFQN
                         )
                     )
                 }
@@ -491,6 +490,7 @@ class PropsProcessor(
     /**
      * ## FunctionProjection → PropertySpec 変換
      * ### FunctionProjection から PropertySpec のリストを生成する
+     * @param classDecl @Projection が適用されたクラス
      * @param functions Projection に定義された関数列
      * @param propsByName プロパティ名とプロパティ定義のマップ
      * @return data class に埋め込む用の PropertySpec のリスト
@@ -502,17 +502,17 @@ class PropsProcessor(
         propsByName: Map<String, KSPropertyDeclaration>
     ): List<PropertySpec> {
         infoEntered(functions, propsByName)
+        val properties = propsByName.keys
         val result = functions.map { func ->
+            checkFunctionArgs(properties, func)
             // 戻り値型（KotlinPoet の TypeName）を解決
             val typeName = resolveReturnType(func, propsByName)
-
             // @Function アノテーションを生成（raw/CUSTOM・args を考慮）
             val annotation = buildFunctionAnnotation(func)
-
-            // alias をそのままプロパティ名として使う（あなたの方針に沿う）
-            PropertySpec.builder(func.alias, typeName)
-                .addAnnotation(annotation)     // ← ここで "@Function とプロパティを結び付け"
-                .initializer("TODO()")         // 初期化子は生成時点では不要
+            // alias をキャメルケース に変換して PropertySpec を生成
+            PropertySpec.builder(func.alias.toCamelCase(), typeName)
+                // @Function とプロパティを結び付け
+                .addAnnotation(annotation)
                 .build()
         }
         infoExiting(result)
@@ -537,7 +537,7 @@ class PropsProcessor(
         commonInterface: String
     ): String {
         infoEntered(classDeclaration, symbols, commonInterface)
-        if (commonInterface.isBlank() || symbols.count() == 0) {
+        if (commonInterface.isNullOrEmpty()) {
             return classDeclaration.packageName.asString()
         }
         val common = generateCommonInterFace(commonInterface)
@@ -607,32 +607,36 @@ class PropsProcessor(
         }
 
         // クラスビルダー
-        val classBuilder = TypeSpec.classBuilder(classNameFQN)
-            .addModifiers(KModifier.DATA)
-            .addSuperinterfaces(interfaces)
-            .addAnnotation(tableAnnotationSpec)
-        // コンストラクタビルダー
-        val constructorBuilder = FunSpec.constructorBuilder()
-
-        // プロパティ一覧からプロパティ名とプロパティ型を取得し data class の構成要素にする
-        selectedProps.forEach { prop ->
-            val name = prop.simpleName.asString()
-            val type = prop.type.resolve().toTypeName()
-            constructorBuilder.addParameter(name, type)
-            classBuilder.addProperty(
-                PropertySpec.builder(name, type)
-                    .initializer(name)
-                    .apply {
-                        // copyColumnAnnotation の結果が null 以外の時に addAnnotation が実行
-                        copyColumnAnnotation(prop)?.let { addAnnotation(it) }
-                    }
+        // ファイルの構成要素としてクラスを追加し呼び出し元へ戻す
+        val result = FileSpec.builder(classNameFQN)
+            .addType(
+                TypeSpec.classBuilder(classNameFQN)
+                    .addModifiers(KModifier.DATA)
+                    .primaryConstructor(
+                        FunSpec.constructorBuilder()
+                            .apply {
+                                allProps.forEach { prop ->
+                                    addParameter(
+                                        ParameterSpec.builder(prop.name, prop.type)
+                                            .build()
+                                    )
+                                }
+                            }
+                            .build()
+                    )
+                    .addProperties(
+                        allProps.map { prop ->
+                            prop.toBuilder(prop.name, prop.type)
+                                .initializer(prop.name)
+                                .mutable(false)
+                                .build()
+                        }
+                    )
+                    .addSuperinterfaces(interfaces)
+                    .addAnnotation(tableAnnotationSpec)
                     .build()
             )
-        }
-        // クラスビルダーにプライマリィコンストラクタの構成を追加する
-        classBuilder.primaryConstructor(constructorBuilder.build())
-        // ファイルの構成要素としてクラスを追加し呼び出し元へ戻す
-        val result = FileSpec.builder(classNameFQN).addType(classBuilder.build()).build()
+            .build()
         infoExiting(result)
         return result
     }
@@ -658,22 +662,23 @@ class PropsProcessor(
                     // List<KSAnnotation> を List<FunctionProjection> に変換
                     val projections = (value as? List<*>)?.mapNotNull { v ->
                         (v as? KSAnnotation)?.let { ksAnn ->
-                            val func = ksAnn.argumentOf<ColumnFunction>(FUNCTION)
-                            val raw = ksAnn.argumentOf<String>(RAW) ?: EMPTY_STRING
+                            val func = ksAnn.argumentOf<ColumnFunction>(FP_FUNCTION)
+                            val raw = ksAnn.argumentOf<String>(FP_RAW) ?: EMPTY_STRING
                             if (func == null && raw.isEmpty()) {
-                                logger.error(
+                                error(
                                     "@FunctionProjection requires either " +
                                             "'function' or 'raw' to be specified",
-                                    ksAnn
+                                    ksAnn,
+                                    ksAnn.argumentOf<ColumnFunction>(FP_FUNCTION) ?: "null"
                                 )
                             }
                             FunctionProjection(
                                 function = func
                                     ?: ColumnFunction.CUSTOM,
-                                args = ksAnn.argumentOf<List<String>>(ARGS)?.toTypedArray()
+                                args = ksAnn.argumentOf<List<String>>(FP_ARGS)?.toTypedArray()
                                     ?: emptyArray(),
-                                alias = ksAnn.argumentOf<String>(ALIAS) ?: EMPTY_STRING,
-                                returnHint = ksAnn.argumentOf<ReturnHint>(RETURN_HINT)
+                                alias = ksAnn.argumentOf<String>(FP_ALIAS) ?: EMPTY_STRING,
+                                returnHint = ksAnn.argumentOf<ReturnHint>(FP_RETURN_HINT)
                                     ?: ReturnHint.AUTO,
                                 raw = raw
                             )
@@ -682,30 +687,42 @@ class PropsProcessor(
                     result[argName] = projections
                 }
 
+                COMMON_INTERFACE,
+                CUSTOM_INTERFACE -> {
+                    // 配列対応（String または DMLInterfaceEnum の配列）
+                    val listValue: List<Any> = (value as? List<*>)?.mapNotNull { element ->
+                        when (element) {
+                            is KSType -> element.declaration.simpleName.asString()
+                            is String -> element
+                            is DMLInterfaceEnum -> element
+                            else -> null
+                        }
+                    } ?: emptyList()
+                    argName.let { result[it] = listValue }
+                }
+
                 else -> when (value) {
-                    when (value) {
-                        // アノテーション変数が配列
-                        is List<*> -> {
-                            val castedValue = it.value as List<*>
-                            val firstElement = castedValue.firstOrNull()
-                            val fieldList: List<Any> = when (firstElement) {
-                                // KSType から変数型を取得
-                                is KSType -> castedValue.mapNotNull { geneType ->
-                                    (geneType as KSType).declaration.simpleName.asString()
-                                }
-                                // 変数型を文字列に変換
-                                is String -> castedValue.filterIsInstance<String>()
-                                // 変数型を Int に変換
-                                is Int -> castedValue.filterIsInstance<Int>()
-                                // それ以外は空リスト
-                                else -> emptyList()
+                    // アノテーション変数が配列
+                    is List<*> -> {
+                        val castedValue = it.value as List<*>
+                        val firstElement = castedValue.firstOrNull()
+                        val fieldList: List<Any> = when (firstElement) {
+                            // KSType から変数型を取得
+                            is KSType -> castedValue.mapNotNull { geneType ->
+                                (geneType as KSType).declaration.simpleName.asString()
                             }
-                            argName?.let { result[it] = fieldList }
+                            // 変数型を文字列に変換
+                            is String -> castedValue.filterIsInstance<String>()
+                            // 変数型を Int に変換
+                            is Int -> castedValue.filterIsInstance<Int>()
+                            // それ以外は空リスト
+                            else -> emptyList()
                         }
-                        // アノテーション変数が上記に当てはまらない
-                        else -> {
-                            argName?.let { key -> result[key] = it.value ?: EMPTY_STRING }
-                        }
+                        argName?.let { result[it] = fieldList }
+                    }
+                    // アノテーション変数が上記に当てはまらない
+                    else -> {
+                        argName?.let { key -> result[key] = it.value ?: EMPTY_STRING }
                     }
                 }
             }
@@ -793,7 +810,7 @@ class PropsProcessor(
     private fun KSPropertyDeclaration.toPropertySpec(): PropertySpec {
         return PropertySpec.builder(
             simpleName.asString(),
-            this.type.toTypeName()   // ← これでOK
+            this.type.toTypeName()
         ).initializer(simpleName.asString())
             .build()
     }
@@ -842,39 +859,47 @@ class PropsProcessor(
         }
 
         return when (func.function) {
+            // AVG は常に Double
             ColumnFunction.AVG -> DOUBLE
-
+            // SUM は引数が整数型なら Long、浮動小数点型なら Double、その他は ANY（事実上無）
             ColumnFunction.SUM -> LONG
-
+                .takeIf { argTypes.all { it == INT || it == LONG } }
+                ?: DOUBLE.takeIf { argTypes.any { it == DOUBLE || it == FLOAT } }
+                ?: ANY
+            // MAX / MIN は引数の型に依存
             ColumnFunction.MAX,
             ColumnFunction.MIN -> argTypes.firstOrNull() ?: ANY
-
-            ColumnFunction.COUNT -> LONG
+            // COUNT は常に Long
+            ColumnFunction.COUNT,
+            ColumnFunction.COUNT_ALL -> LONG
+            // GROUP_CONCAT は常に String
             ColumnFunction.GROUP_CONCAT -> STRING
-
+            // null 判定関数は引数の型に依存（広い方に寄せる）
             ColumnFunction.COALESCE,
             ColumnFunction.IFNULL,
             ColumnFunction.NULLIF -> argTypes.reduceOrNull(::widerType) ?: ANY
-
+            // LENGTH は常に Int
             ColumnFunction.LENGTH -> INT
+            // 文字列関数は常に String
             ColumnFunction.LOWER,
             ColumnFunction.UPPER,
             ColumnFunction.REPLACE,
             ColumnFunction.SUBSTR,
+            ColumnFunction.CONCAT,
             ColumnFunction.TRIM,
             ColumnFunction.LTRIM,
             ColumnFunction.RTRIM -> STRING
-
+            // 数学関数
             ColumnFunction.RANDOM -> LONG
             ColumnFunction.ROUND -> DOUBLE
-
+            // 日付/時刻関数は常に String
             ColumnFunction.DATE,
             ColumnFunction.TIME,
             ColumnFunction.DATETIME,
             ColumnFunction.STRFTIME -> STRING
-
+            // 日付/時刻関数（数値型を返すもの）
             ColumnFunction.JULIANDAY -> DOUBLE
-
+            // ABS は引数の型に依存
             ColumnFunction.ABS -> {
                 val t = argTypes.firstOrNull()
                 when (t) {
@@ -883,7 +908,7 @@ class PropsProcessor(
                     else -> DOUBLE
                 }
             }
-
+            // CUSTOM または raw 指定 → returnHint に依存
             ColumnFunction.CUSTOM -> when (func.returnHint) {
                 ReturnHint.STRING -> STRING
                 ReturnHint.INT -> INT
@@ -931,28 +956,24 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun buildFunctionAnnotation(func: FunctionProjection): AnnotationSpec {
-        return AnnotationSpec.builder(Function::class).apply {
+        infoEntered(func)
+        val result = AnnotationSpec.builder(Function::class).apply {
             // function
             val sqlFunc = if (func.raw.isNotBlank()) ColumnFunction.CUSTOM
             else func.function
-            addMember("function = %T.%L", ColumnFunction::class, sqlFunc.name)
-
+            addMember("$F_COLUMN_FUNCTION = %T.%L", ColumnFunction::class, sqlFunc.name)
             // alias
-            addMember("alias = %S", func.alias)
-
+            addMember("$F_ALIAS = %S", func.alias)
             // args or raw
             if (func.raw.isNotBlank()) {
-                addMember("raw = %S", func.raw)
+                addMember("$F_RAW = %S", func.raw)
             } else {
                 val argsLiteral = func.args.joinToString(", ") { "\"$it\"" }
-                addMember("args = [%L]", argsLiteral)
-            }
-
-            // CUSTOM の戻り型ヒント
-            if (sqlFunc == ColumnFunction.CUSTOM && func.returnHint != ReturnHint.AUTO) {
-                addMember("returnHint = %T.%L", ReturnHint::class, func.returnHint.name)
+                addMember("$F_ARGS = [%L]", argsLiteral)
             }
         }.build()
+        infoExiting(result)
+        return result
     }
 
     /**
@@ -966,8 +987,120 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
-        val arg = arguments.firstOrNull { it.name?.asString() == name } ?: return null
-        return arg.value as? T
+        infoEntered(name)
+        val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value
+            ?: run {
+                // 引数が存在しない場合は null を戻す
+                infoExiting("null")
+                return null
+            }
+        // Enum の場合は KSType から Enum を取得
+        if (T::class.java.isEnum) {
+            val ksType = argValue as? KSType ?: run {
+                // 引数が存在しない場合は null を戻す
+                infoExiting("null")
+                return null
+            }
+            val enumName = ksType.declaration.simpleName.asString()
+
+            @Suppress("UNCHECKED_CAST")
+            val result = java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
+            infoExiting(result)
+            return result
+        }
+        infoExiting(argValue)
+        return argValue as? T
+    }
+
+    /**
+     * ## 関数引数検査
+     * ### FunctionProjection の引数が元のクラスに存在するプロパティ名かどうかを検証する
+     * - 存在しない場合、又は「'（シングルクオーテーション）」で囲われていない場合、ビルドエラー
+     * - 文字列リテラルの場合は検査対象外
+     * @param properties 元のクラスに存在するプロパティ名一覧
+     * @param functionProjections 関数列
+     * @author Masahiro Inoue
+     * @since 2025-09-05
+     */
+    private fun checkFunctionArgs(
+        properties: Set<String>,
+        functionProjection: FunctionProjection
+    ) {
+        infoEntered(functionProjection, properties)
+        // プロパティ名一覧を取得
+        val columnFunction = functionProjection.function
+        // CUSTOM は args 検査不要
+        if (columnFunction == ColumnFunction.CUSTOM) {
+            infoExiting()
+            return
+        }
+        // 引数のリスト化
+        val args = functionProjection.args.toList()
+        //
+        val invalidArgs = if (columnFunction.isSingleArgument) {
+            // 単一引数の場合は first() だけ確認
+            args.firstOrNull()?.takeIf {
+                !it.matches(Regex("'[^']*'")) && it !in properties
+            }?.let { listOf(it) } ?: emptyList()
+        } else {
+            // 複数引数の場合は一つでも存在すればOK
+            args.filter { !it.matches(Regex("'[^']*'")) && it !in properties }
+        }
+        // 引数の定義誤りがある場合（List に登録）、ビルドエラー
+        if (invalidArgs.isNotEmpty()) {
+            error("Invalid argument for '${functionProjection.alias}': $invalidArgs")
+        }
+        infoExiting()
+    }
+
+    /**
+     * ## 集計関数と通常カラムの重複検査
+     * ### Projection に指定された通常カラムと集計関数の対象カラムが
+     * ### 重複している場合、警告を出す
+     * @param annotation @Projection を抽出した解析対象
+     * @author Masahiro Inoue
+     * @since 2025-09-05
+     */
+    private fun checkAggregateConflicts(annotation: KSAnnotation) {
+        infoEntered(annotation)
+        // properties を取得して正規化
+        val propertiesValues: Set<String> =
+            (annotation.arguments.firstOrNull { it.name?.asString() == PROPERTIES }?.value as? List<*>)
+                ?.mapNotNull { it as? String }
+                ?.map { it.trim().lowercase() }
+                ?.toSet()
+                ?: emptySet()
+        // functions を取得
+        val functionsValues: List<KSAnnotation> =
+            (annotation.arguments.firstOrNull { it.name?.asString() == FUNCTIONS }?.value as? List<*>)
+                ?.mapNotNull { it as? KSAnnotation }
+                ?: emptyList()
+        // functions の args を平坦化して正規化
+        val functionTargetColsNormalized: Set<String> = functionsValues
+            .filter { funcAnnotation ->
+                val funcEnum = funcAnnotation.arguments.firstOrNull {
+                    it.name?.asString() == FP_FUNCTION
+                }?.value as? ColumnFunction
+                funcEnum != ColumnFunction.CUSTOM
+            }
+            .flatMap { funcAnnotation ->
+                (funcAnnotation.arguments.firstOrNull {
+                    it.name?.asString() == FP_ARGS
+                }?.value as? List<*>)
+                    ?.mapNotNull { it as? String }
+                    ?.map { arg -> arg.trim().substringAfterLast('.').lowercase() }
+                    ?: emptyList()
+            }
+            .toSet()
+        // 重複検出
+        val duplicates = propertiesValues.intersect(functionTargetColsNormalized)
+        if (duplicates.isNotEmpty()) {
+            warning(
+                "Projection contains column(s) that are both in properties and used as aggregate targets: " +
+                        duplicates.joinToString(", ")
+            )
+        }
+        infoExiting()
     }
 }
 

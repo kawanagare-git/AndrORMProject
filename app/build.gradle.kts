@@ -8,7 +8,7 @@ plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
-    id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    id("com.google.devtools.ksp")
 }
 
 dependencies {
@@ -21,7 +21,6 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.2.1")
 
     ksp(project(":androrm-generator-ksp"))
-
     testImplementation(libs.junit.jupiter.v5102)
 }
 
@@ -42,7 +41,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 

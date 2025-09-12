@@ -2,10 +2,16 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.KSPLogger
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
-import jp.pgw.lab78.androrm.ksp.PropsProcessor.Companion.MAX_DEPTH
-import jp.pgw.lab78.androrm.ksp.PropsProcessor.Companion.MAX_ELEMENTS_AT_MAX_DEPTH
 
-class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike{
+class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
+    // クラス内定数
+    companion object {
+        /** ログ再起上限 */
+        const val MAX_DEPTH = 4
+
+        /** 最新階層表示要素数 */
+        const val MAX_ELEMENTS_AT_MAX_DEPTH = 4
+    }
 
     /** スタックトレースでスキップするための、このクラスのFQCN（完全修飾クラス名） */
     private val fqcn = KspDelegatingLogger::class.qualifiedName
@@ -20,7 +26,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike{
         val argsString = if (args.isNotEmpty()) {
             " args: '${args.joinToString(", ") { stringifyForLog(it) }}'"
         } else ""
-        logger.info("[AndrORM-KSP] INFO: method: ${getMethodName()} $infoMessage$argsString")
+        logger.warn("[AndrORM-KSP] INFO: method: ${getMethodName()} $infoMessage$argsString")
     }
 
     /**
@@ -42,7 +48,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike{
      */
     override fun infoExiting(result: Any?) {
         logger.warn("[AndrORM-KSP] INFO: Exiting method: ${getMethodName()} " +
-                (result?.let { "'${it}'" } ?:""))
+                (result?.let { "'${it}'" } ?: ""))
     }
 
     /**
@@ -94,7 +100,8 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike{
     private fun stringifyForLog(value: Any?, depth: Int = 0): String {
         if (depth > MAX_DEPTH) return "..."
         // 深さに応じて表示要素数を制限
-        val maxElements = ((MAX_ELEMENTS_AT_MAX_DEPTH * (MAX_DEPTH - depth + 1)) / MAX_DEPTH).coerceAtLeast(1)
+        val maxElements =
+            ((MAX_ELEMENTS_AT_MAX_DEPTH * (MAX_DEPTH - depth + 1)) / MAX_DEPTH).coerceAtLeast(1)
         return when (value) {
             null -> "null"
             is Sequence<*> -> stringifyForLog(value.toList(), depth)
@@ -102,12 +109,14 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike{
             is Iterable<*> -> value.take(maxElements)
                 .map { stringifyForLog(it, depth + 1) }
                 .joinToString(", ", "[", if (value.count() > maxElements) ", ..." else "]")
+
             is Map<*, *> -> {
                 val entries = value.entries.take(maxElements)
                 entries.joinToString(", ", "{", if (value.size > maxElements) ", ...}" else "}") {
                     "${stringifyForLog(it.key, depth + 1)}:${stringifyForLog(it.value, depth + 1)}"
                 }
             }
+
             else -> value.toString()
         }
     }

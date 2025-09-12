@@ -9,6 +9,8 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
  * @param alias エイリアス
  */
 annotation class Function(
-    val columnExpression: ColumnFunction,
-    val alias: String
+    val columnFunction: ColumnFunction,
+    val alias: String,
+    val args: Array<String> = [],
+    val raw: String = "",
 )

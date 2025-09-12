@@ -11,23 +11,28 @@ import java.time.LocalDateTime
 @Projections(
     [
         Projection(
-            entityNameExtend = "IdOnly"
-            , aliasExtend = "ID"
-            , properties = ["id"]
-            , commonInterface = DMLInterfaceEnum.SELECT
+            entityNameExtend = "IdOnly",
+            aliasExtend = "ID",
+            properties = ["id"],
+            commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
-            entityNameExtend = "Condition"
-            , properties = [
+            entityNameExtend = "Condition", properties = [
                 "id",
                 "name",
                 "address",
                 "birthday",
-            ]
-            , commonInterface = DMLInterfaceEnum.CONDITION
+            ], commonInterface = [DMLInterfaceEnum.CONDITION]
         )
     ]
 )
 @Table
-data class TestAllEntity(val id :Int, val name :String, val address: String, val birthday :LocalDate, val updateDate :LocalDateTime, val insertDateTime: LocalDateTime) :
+data class TestAllEntity(
+    val id: Int,
+    val name: String,
+    val address: String,
+    val birthday: LocalDate,
+    val updateDate: LocalDateTime,
+    val insertDateTime: LocalDateTime
+) :
     ComprehensiveEntity

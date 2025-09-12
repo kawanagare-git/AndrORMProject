@@ -1,17 +1,22 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.AVG
-import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.MAX
+import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.*
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
+/**
+ * ## エンティティクラス（給与）
+ * ### 給与テーブルの基になるエンティティクラス
+ * @author Masahiro Inoue
+ * @since 2025-09-06
+ */
 @GenerateProps
 @Projections(
     [
@@ -22,7 +27,8 @@ import java.time.LocalDateTime
                 "payMonth",
                 "createdAt"
             ],
-            commonInterface = DMLInterfaceEnum.UPSERT),
+            commonInterface = [DMLInterfaceEnum.UPSERT]
+        ),
         Projection(
             entityNameExtend = "Insert",
             properties = [
@@ -32,59 +38,57 @@ import java.time.LocalDateTime
                 "updatedAt",
                 "updatedBy"
             ],
-            commonInterface = DMLInterfaceEnum.INSERT),
+            commonInterface = [DMLInterfaceEnum.INSERT]
+        ),
         Projection(
-            entityNameExtend = "Selective"
-            , properties = [
+            entityNameExtend = "Selective", properties = [
                 "employeeId",
                 "payMonth",
                 "gross",
-            ]
-            , functions = [
+            ],
+            functions = [
                 FunctionProjection(
-                    MAX
-                    , args = ["gross"]
-                    , alias = "MAX_GROSS"
+                    function = MAX, args = ["gross"], alias = "MAX_GROSS"
+                ), FunctionProjection(
+                    function = AVG, args = ["gross"], alias = "AVG_GROSS"
+                ), FunctionProjection(
+                    function = MAX, args = ["deduction"], alias = "MAX_DEDUCTION"
+                ), FunctionProjection(
+                    function = AVG, args = ["deduction"], alias = "AVG_DEDUCTION"
                 )
-                , FunctionProjection(
-                    AVG
-                    , args = ["gross"]
-                    , alias = "AVG_GROSS"
-                )
-                , FunctionProjection(
-                    MAX
-                    , args = ["deduction"]
-                    , alias = "MAX_DEDUCTION"
-                )
-                , FunctionProjection(
-                    AVG
-                    , args = ["deduction"]
-                    , alias = "AVG_DEDUCTION"
-                )
-            ]
-            , commonInterface = DMLInterfaceEnum.SELECT),
+            ],
+            commonInterface = [DMLInterfaceEnum.SELECT]
+        ),
         Projection(
-            entityNameExtend = "Condition"
-            , properties = [
+            entityNameExtend = "Condition", properties = [
                 "employeeId",
                 "payMonth",
                 "gross",
-            ]
-            , commonInterface = DMLInterfaceEnum.CONDITION)
+            ],
+            commonInterface = [DMLInterfaceEnum.CONDITION]
+        )
     ]
 )
-@Table("SALARY",alias = "SAL")
+@Table("SALARY", alias = "SAL")
 data class SalaryEntity(
+    /** 社員ID */
     val employeeId: String,
+    /** 支払月 */
     val payMonth: String,
+    /** 支給額 */
     val gross: Int,
+    /** 控除額 */
     val deduction: Int,
+    /** 作成日時 */
     @Column("CREATE_DATE_TIME")
-    val createdAt: LocalDateTime,   // 作成日時
+    val createdAt: LocalDateTime,
+    /** 作成者（employeeId） */
     @Column("CREATED_BY_ID")
-    val createdBy: String,          // 作成者（employeeId）
+    val createdBy: String,
+    /** 更新日時 */
     @Column("UPDATE_DATE_TIME")
-    val updatedAt: LocalDateTime,   // 更新日時
+    val updatedAt: LocalDateTime,
+    /** 更新者（employeeId） */
     @Column("UPDATE_BY_ID")
-    val updatedBy: String           // 更新者（employeeId）
+    val updatedBy: String
 ) : TableDefinitionEntity

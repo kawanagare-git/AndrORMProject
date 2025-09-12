@@ -27,7 +27,7 @@ annotation class Projection(
     /** エンティティに関数を使用する場合に指定 */
     val functions: Array<FunctionProjection> = [],
     /** 共通インターフェス */
-    val commonInterface: DMLInterfaceEnum = DMLInterfaceEnum.NOT_USE,
+    val commonInterface: Array<DMLInterfaceEnum> = [DMLInterfaceEnum.NOT_USE],
     /** 独自インターフェス */
-    val customInterface: String = "",
+    val customInterface: Array<String> = [""],
 )

@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
@@ -10,7 +11,6 @@ import jp.pgw.lab78.androrm.database.condition.OrderBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
@@ -28,8 +28,8 @@ import kotlin.reflect.KProperty1
  */
 class Select<T : SelectEntity>(
     entityClass: KClass<out T>,
-    private val isDistinct : Boolean = false
-): QueryStructureLike {
+    private val isDistinct: Boolean = false
+) : QueryStructureLike {
     /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
     private val mainTableName = entityClass.createTableName()
 
@@ -59,7 +59,7 @@ class Select<T : SelectEntity>(
      */
     private enum class SelectClause(val sql: String) {
         SELECT("select"),
-        JOIN ("join"),
+        JOIN("join"),
         WHERE("where"),
         GROUP("group by"),
         HAVING("having"),
@@ -94,10 +94,12 @@ class Select<T : SelectEntity>(
             selectColumnList += "$mainTableAlias.$it as ${mainTableAlias}_$it"
         }
         // from 句とテーブル名の定義を設定
-        queryStructureMap[SelectClause.SELECT] = mutableListOf("from $mainTableName $mainTableAlias")
+        queryStructureMap[SelectClause.SELECT] =
+            mutableListOf("from $mainTableName $mainTableAlias")
     }
 
     fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
+
     /**
      * ## join メソッド
      * ### テーブル結合を指定する
@@ -108,36 +110,23 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <TJ : SelectEntity> join(joinType: JoinType
-                                 , joinedEntityClass: KClass<out TJ>
-                                 , block: ConditionBuilder.() -> Unit
+    fun <TJ : SelectEntity> join(
+        joinType: JoinType, joinedEntityClass: KClass<out TJ>, block: ConditionBuilder.() -> Unit
     ): Select<T> {
         // 結合テーブル名取得
         val joinedTableName = joinedEntityClass.createTableName()
-        val joinedTableAlias = joinedEntityClass.getAlias(). ifEmpty { joinedTableName }
+        val joinedTableAlias = joinedEntityClass.getAlias().ifEmpty { joinedTableName }
         val joinCondition = ConditionBuilder().apply(block).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
-            .add("${joinType.name.lowercase(Locale.ROOT)} "
-                    + "join $joinedTableName $joinedTableAlias"
-                    + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
+            .add(
+                "${joinType.name.lowercase(Locale.ROOT)} "
+                        + "join $joinedTableName $joinedTableAlias"
+                        + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
         joinedEntityClass.getColumns().forEach {
             selectColumnList += "$joinedTableAlias.$it as ${joinedTableAlias}_$it"
         }
-        return this
-    }
-
-    /**
-     * ## where メソッド
-     * ### テーブル検索条件を指定する
-     * @param condition 条件を構築されたインスタンス
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun where(condition: ConditionBuilder): Select<T> {
-        whereConditions += condition.buildList()
         return this
     }
 
@@ -151,6 +140,7 @@ class Select<T : SelectEntity>(
      */
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
         val builder = ConditionBuilder().apply(block)
+        // Select は builder の中身を意識せず、リストだけ取得して保持
         whereConditions += builder.buildList()
         return this
     }
@@ -163,7 +153,7 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <TX : SelectEntity>group(vararg columns: KProperty1<out TX, *>): Select<T> {
+    fun <TX : SelectEntity> group(vararg columns: KProperty1<out TX, *>): Select<T> {
         val clause = columns.joinToString(", ") { generateColumn(it) }
         queryStructureMap.getOrPut(SelectClause.GROUP) { mutableListOf() }
             .add("group by $clause")
@@ -224,6 +214,7 @@ class Select<T : SelectEntity>(
             if (isDistinct) append("distinct ")
             append(selectColumnList.joinToString(", ") { it })
         }
+
         /**
          * ## 構成要素追加
          * ## ローカル関数
@@ -234,7 +225,7 @@ class Select<T : SelectEntity>(
          */
         fun addClauseIfNotEmpty(
             clauseId: SelectClause,
-            separator : CharSequence,
+            separator: CharSequence,
             vararg element: QueryStructureLike
         ) {
             if (element.isNotEmpty()) {
