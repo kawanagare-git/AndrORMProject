@@ -8,9 +8,6 @@ import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
 import jp.pgw.lab78.androrm.database.function.AggregateFunction.*
-import jp.pgw.lab78.androrm.log.AopLogger
-import jp.pgw.lab78.androrm.log.LogInitializer
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -18,8 +15,79 @@ import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity as EmployeeE
 
 class SelectTest {
 
+    companion object {
+        @JvmStatic
+        lateinit var SELECT: Select<*>
+
+    }
+
     @Test
-    fun fromTest() {
+    fun build0() {
+        SELECT = Select(TestSelectEntity::class)
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntityWithAlias::class)
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntity::class, isDistinct = true)
+        println(SELECT.build())
+    }
+
+    @Test
+    fun build1() {
+        SELECT = Select(TestSelectEntityWithAlias::class)
+            .join(
+                LEFT, TestSelectEntity::class, {
+                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
+                })
+            .where {
+                or {
+                    condition(TestSelectEntity::name, LIKE, "kawanagare%")
+                    condition("name like '川流%'")
+                }
+            }
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntityWithAlias::class)
+            .where {
+                and {
+                    condition(TestSelectEntityWithAlias::name, EQUALS, "川流")
+                    condition(TestSelectEntityWithAlias::address, LIKE, "%Shinjuku%")
+                }
+                or {
+                    condition(TestSelectEntityWithAlias::id, GT, 100)
+                    condition(TestSelectEntityWithAlias::id, LT, 10)
+                }
+            }
+        println(SELECT.build())
+        SELECT = Select(TestSelectEntityWithAlias::class)
+            .join(INNER, TestSelectEntity::class, {
+                and {
+                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
+                    condition(TestSelectEntityWithAlias::name, EQUALS, TestSelectEntity::name)
+                }
+            })
+            .join(LEFT, TestAllEntity::class, {
+                condition(
+                    TestSelectEntityWithAlias::birthday,
+                    GREATER_THAN_OR_EQUALS,
+                    TestAllEntity::birthday
+                )
+            })
+            .where {
+                and {
+                    condition(TestSelectEntityWithAlias::name, EQUALS, "川流")
+                    condition(TestSelectEntity::address, LIKE, "%Shinjuku%")
+                }
+                or {
+                    condition(
+                        TestAllEntity::insertDateTime,
+                        GREATER_THAN,
+                        LocalDateTime.parse("2025-01-01T00:00:00.000")
+                    )
+                    condition(
+                        TestAllEntity::updateDate, LESS_THAN, LocalDate.parse("2025-07-01")
+                    )
+                }
+            }
+        println(SELECT.build())
     }
 
     @Test
