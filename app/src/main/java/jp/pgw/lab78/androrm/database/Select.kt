@@ -15,7 +15,6 @@ import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
-import kotlinx.coroutines.selects.SelectClause
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
