@@ -8,17 +8,11 @@ package jp.pgw.lab78.androrm.database.condition.operator
  * @since 2025-08-01
  */
 enum class ComparisonOperator(val symbol: String) {
-    EQUALS("="),
     EQ("="),
-    NOT_EQUALS("!="),
-    NE("!="),
-    GREATER_THAN(">"),
+    NE("<>"),
     GT(">"),
-    GREATER_THAN_OR_EQUALS(">="),
     GE(">="),
-    LESS_THAN("<"),
     LT("<"),
-    LESS_THAN_OR_EQUALS("<="),
     LE("<="),
     LIKE("like"),
     NOT_LIKE("not like"),

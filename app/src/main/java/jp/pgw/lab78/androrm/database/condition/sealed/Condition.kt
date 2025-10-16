@@ -4,8 +4,11 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum.CONDITION
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
+import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.function.AggregateFunction
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
@@ -41,6 +44,7 @@ sealed class Compare : Condition() {
         /** 条件エンティティのクラス型 */
         private val CONDITION_CLASS = CONDITION.kClass
     }
+
     /**
      * ## 結合条件記述用クラス
      * ### join に使用する単一条件を指定
@@ -50,7 +54,7 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    data class Column<T1 : Entity,T2 : Entity>(
+    data class Column<T1 : Entity, T2 : Entity>(
         val mainProperty: KProperty1<T1, *>,
         val operator: ComparisonOperator,
         val joinedProperty: KProperty1<T2, *>,
@@ -106,6 +110,157 @@ sealed class Compare : Condition() {
             return "${alias}.$column ${operator.symbol} ${formatValue(value)}"
         }
     }
+
+    /**
+     * ## 範囲条件記述用クラス
+     * ### BETWEEN 範囲条件を指定
+     * @param property 検索条件のカラム
+     * @param start 下限検索値
+     * @param end 上限検索値
+     * @author Masahiro Inoue
+     * @since 2025-09-13
+     */
+    data class Between<T : Entity>(
+        val property: KProperty1<T, *>,
+        val start: Any,
+        val end: Any
+    ) : Condition() {
+
+        /**
+         * ## 条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-09-13
+         */
+        override fun build(): String {
+            val column = property.getColumn()
+            val startValue = formatValue(start)
+            val endValue = formatValue(end)
+            return "$column BETWEEN $startValue AND $endValue"
+        }
+    }
+
+    /**
+     * ## 範囲条件ビルダークラス
+     * ### BETWEEN 範囲条件を構築するためのビルダークラス
+     * @param property 検索条件のカラム
+     * @param start 下限検索値
+     * @author Masahiro Inoue
+     * @since 2025-09-13
+     */
+    class BetweenBuilder<T : Entity>(
+        private val property: KProperty1<T, *>,
+        private val start: Any
+    ) {
+        /**
+         * ## 範囲条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @param end 上限検索値
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-09-13
+         */
+        infix fun and(end: Any): Condition {
+            return Between(property, start, end)
+        }
+    }
+
+    /**
+     * ## EXISTS 条件記述用クラス
+     * ### where に使用する単一条件を指定
+     * @param subQuery サブクエリ
+     * @author Masahiro Inoue
+     * @since 2025-10-03
+     */
+    class Exists<T : SelectEntity>(
+        private val subQuery: Select<T>,
+    ) : Condition() {
+
+        /**
+         * ## 単一条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-10-03
+         */
+        override fun build(): String {
+            return "${EXISTS.symbol} (${subQuery.build()})"
+        }
+    }
+
+    /**
+     * ## NOT EXISTS 条件記述用クラス
+     * ### where に使用する単一条件を指定
+     * @param subQuery サブクエリ
+     * @author Masahiro Inoue
+     * @since 2025-10-03
+     */
+    class NotExists<T : SelectEntity>(
+        private val subQuery: Select<T>,
+    ) : Condition() {
+
+        /**
+         * ## 単一条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-10-03
+         */
+        override fun build(): String {
+            return "${NOT_EXISTS.symbol} (${subQuery.build()})"
+        }
+    }
+
+    /**
+     * ## null 条件記述用クラス
+     * ### where に使用する単一条件を指定
+     * @param lhsProperty 検索条件のカラム
+     * @author Masahiro Inoue
+     * @since 2025-10-03
+     */
+    data class IsNull<T : Entity>(
+        val lhsProperty: KProperty1<T, *>,
+    ) : Condition() {
+
+        /**
+         * ## 単一条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-10-03
+         */
+        override fun build(): String {
+            val alias = lhsProperty.extractClassFromProperty().getTableAlias()
+            val column = lhsProperty.getColumn()
+            return "${alias}.$column ${IS_NULL.symbol}"
+        }
+    }
+
+    /**
+     * ## null 条件記述用クラス
+     * ### where に使用する単一条件を指定
+     * @param lhsProperty 検索条件のカラム
+     * @author Masahiro Inoue
+     * @since 2025-10-03
+     */
+    data class IsNotNull<T : Entity>(
+        val lhsProperty: KProperty1<T, *>,
+    ) : Condition() {
+
+        /**
+         * ## 単一条件生成メソッド
+         * ### 定義された条件から文字列を生成する
+         * @return 生成された文字列
+         * @author Masahiro Inoue
+         * @since 2025-10-03
+         */
+        override fun build(): String {
+            val alias = lhsProperty.extractClassFromProperty().getTableAlias()
+            val column = lhsProperty.getColumn()
+            return "${alias}.$column ${IS_NOT_NULL.symbol}"
+        }
+    }
 }
 
 /**
@@ -126,7 +281,7 @@ sealed class HavingCompare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    data class Function<T1 : Entity,T2 : Entity>(
+    data class Function<T1 : Entity, T2 : Entity>(
         val leftFunction: AggregateFunction,
         val leftProperty: KProperty1<T1, *>,
         val operator: ComparisonOperator,
@@ -142,7 +297,7 @@ sealed class HavingCompare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String = "${leftFunction.build(leftProperty)} " +
-                                        "${operator.symbol} ${rightFunction.build(rightProperty)}"
+                "${operator.symbol} ${rightFunction.build(rightProperty)}"
     }
 
     /**
@@ -170,7 +325,7 @@ sealed class HavingCompare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String = "${function.build(property)} " +
-                                        "${operator.symbol} ${formatValue(value)}"
+                "${operator.symbol} ${formatValue(value)}"
     }
 
     /**
@@ -267,3 +422,4 @@ data class LogicalCondition(
         return "($body)"
     }
 }
+

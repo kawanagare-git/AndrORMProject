@@ -15,6 +15,7 @@ import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
+import kotlinx.coroutines.selects.SelectClause
 import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
@@ -47,6 +48,9 @@ class Select<T : SelectEntity>(
 
     /** 関数結果検索条件リスト */
     private val havingConditions = mutableListOf<Condition>()
+
+    /** グループ倍自動生成用リスト */
+    private val groupByColumns = mutableListOf<String>()
 
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()

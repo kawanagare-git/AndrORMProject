@@ -36,11 +36,11 @@ class SelectTest {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(
                 LEFT, TestSelectEntity::class, {
-                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
+                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
                 })
             .where {
                 or {
-                    condition(TestSelectEntity::name, LIKE, "kawanagare%")
+                    TestSelectEntity::name like "kawanagare%"
                     condition("name like '川流%'")
                 }
             }
@@ -48,43 +48,34 @@ class SelectTest {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .where {
                 and {
-                    condition(TestSelectEntityWithAlias::name, EQUALS, "川流")
-                    condition(TestSelectEntityWithAlias::address, LIKE, "%Shinjuku%")
+                    TestSelectEntityWithAlias::name eq "川流"
+                    TestSelectEntityWithAlias::address like "%Shinjuku%"
                 }
                 or {
-                    condition(TestSelectEntityWithAlias::id, GT, 100)
-                    condition(TestSelectEntityWithAlias::id, LT, 10)
+                    TestSelectEntityWithAlias::id gt 100
+                    TestSelectEntityWithAlias::id le 10
                 }
             }
         println(SELECT.build())
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, {
                 and {
-                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
-                    condition(TestSelectEntityWithAlias::name, EQUALS, TestSelectEntity::name)
+                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
+                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
                 }
             })
             .join(LEFT, TestAllEntity::class, {
-                condition(
-                    TestSelectEntityWithAlias::birthday,
-                    GREATER_THAN_OR_EQUALS,
-                    TestAllEntity::birthday
-                )
+                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
             })
             .where {
                 and {
-                    condition(TestSelectEntityWithAlias::name, EQUALS, "川流")
-                    condition(TestSelectEntity::address, LIKE, "%Shinjuku%")
+                    TestSelectEntityWithAlias::name eq "川流"
+                    TestSelectEntity::address like "%Shinjuku%"
                 }
                 or {
-                    condition(
-                        TestAllEntity::insertDateTime,
-                        GREATER_THAN,
-                        LocalDateTime.parse("2025-01-01T00:00:00.000")
-                    )
-                    condition(
-                        TestAllEntity::updateDate, LESS_THAN, LocalDate.parse("2025-07-01")
-                    )
+                    TestAllEntity::insertDateTime gt
+                            LocalDateTime.parse("2025-01-01T00:00:00.000")
+                    TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
                 }
             }
         println(SELECT.build())
@@ -96,36 +87,26 @@ class SelectTest {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, {
                 and {
-                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
-                    condition(TestSelectEntityWithAlias::name, EQUALS, TestSelectEntity::name)
+                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
+                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
                 }
             })
             .join(LEFT, TestAllEntity::class, {
-                condition(
-                    TestSelectEntityWithAlias::birthday,
-                    GREATER_THAN_OR_EQUALS,
-                    TestAllEntity::birthday
-                )
+                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
             })
             .where {
                 and {
-                    condition(TestSelectEntityWithAlias::name, EQUALS, "川流")
-                    condition(TestSelectEntity::address, LIKE, "%Shinjuku%")
+                    TestSelectEntityWithAlias::name eq "川流"
+                    TestSelectEntity::address like "%Shinjuku%"
                 }
                 or {
-                    condition(
-                        TestAllEntity::insertDateTime,
-                        GREATER_THAN,
-                        LocalDateTime.parse("2025-01-01T00:00:00.000")
-                    )
-                    condition(
-                        TestAllEntity::updateDate, LESS_THAN, LocalDate.parse("2025-07-01")
-                    )
+                    TestAllEntity::insertDateTime gt LocalDateTime.parse("2025-01-01T00:00:00.000")
+                    TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
                 }
             }
             .having {
                 condition(
-                    MAX, TestSelectEntity::birthday, LESS_THAN, LocalDate.parse("2025-07-01")
+                    MAX, TestSelectEntity::birthday, LT, LocalDate.parse("2025-07-01")
                 )
             }
         println(SELECT.build())
@@ -134,11 +115,7 @@ class SelectTest {
             .join(
                 LEFT, EmployeeEntityJoined::class,
                 {
-                    condition(
-                        EmployeeEntityIdSelection::employeeId,
-                        EQUALS,
-                        EmployeeEntityJoined::employeeId
-                    )
+                    EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
                 })
             .order {
                 column(EmployeeEntityIdSelection::employeeId, true)
@@ -158,45 +135,25 @@ class SelectTest {
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQUALS,
-                    DepartmentEntityInfo::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { column(DepartmentEntityInfo::department) }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQUALS,
-                    DepartmentEntityInfo::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .where({
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQUALS,
-                    EmployeeEntity::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
             })
             .order { column(DepartmentEntityInfo::department) }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQUALS,
-                    DepartmentEntityInfo::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .where({
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQUALS,
-                    DepartmentEntityInfo::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { column(DepartmentEntityInfo::department) }
         println(SELECT.build())
@@ -207,35 +164,23 @@ class SelectTest {
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQ,
-                    DepartmentEntityInfo::employeeId
-                )
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQ,
-                    DepartmentEntityInfo::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { column(DepartmentEntityInfo::department) }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
-                condition(EmployeeEntityIdSelection::employeeId, EQ, DepartmentEntity::employeeId)
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntity::employeeId
             })
             .join(LEFT, SalaryEntitySelective::class, {
-                condition(
-                    EmployeeEntityIdSelection::employeeId,
-                    EQ,
-                    SalaryEntitySelective::employeeId
-                )
+                EmployeeEntityIdSelection::employeeId eq SalaryEntitySelective::employeeId
             })
             .where({
-                condition(DepartmentEntityInfo::department, EQ, DepartmentEntity::department)
+                DepartmentEntityInfo::department eq DepartmentEntity::department
                 or {
-                    condition(DepartmentEntityInfo::section, EQ, "10")
-                    condition(DepartmentEntityInfo::section, EQ, "20")
+                    DepartmentEntityInfo::section eq "10"
+                    DepartmentEntityInfo::section eq "20"
                 }
             })
             .having(HavingConditionBuilder().apply {
@@ -250,13 +195,13 @@ class SelectTest {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(
                 LEFT, TestSelectEntity::class, {
-                    condition(TestSelectEntityWithAlias::id, EQUALS, TestSelectEntity::id)
-                    condition(TestSelectEntity::name, LIKE, "%kawanagare")
+                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
+                    TestSelectEntity::name like "%kawanagare"
                 })
             .where {
                 or {
-                    condition(TestSelectEntity::name, LIKE, "%kawanagare")
-                    condition(TestSelectEntityWithAlias::address, LIKE, "%Shinjuku%")
+                    TestSelectEntity::name like "%kawanagare"
+                    TestSelectEntityWithAlias::address like "%Shinjuku%"
                 }
             }
         println(SELECT.build())
