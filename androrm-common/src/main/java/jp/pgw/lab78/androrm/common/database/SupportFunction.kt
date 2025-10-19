@@ -2,8 +2,10 @@ package jp.pgw.lab78.androrm.common.database
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.shared.library.Utils.isNotNull
 import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -150,4 +152,22 @@ object SupportFunction {
      * @since 2025-08-08
      */
     fun CharSequence?.hasText() = !this.isNullOrBlank()
+
+    /**
+     * ## カラム判定関数
+     * ### プロパティに Column アノテーションが付与されているか判定
+     * @return true Column アノテーションが付与されている / false 付与されていない
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    fun KProperty1<*, *>.isColumn() = this.findAnnotation<Column>().isNotNull()
+
+    /**
+     * ## 関数カラム判定関数
+     * ### プロパティに Function アノテーションが付与されているか判定
+     * @return true Function アノテーションが付与されている / false 付与されていない
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    fun KProperty1<*, *>.isFunctionColumn() = this.findAnnotation<Function>().isNotNull()
 }

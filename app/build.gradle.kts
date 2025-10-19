@@ -12,16 +12,13 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     implementation(project(":androrm-generated"))
+    ksp(project(":androrm-generator-ksp"))
 
     implementation(libs.core.ktx.v1131)
-    implementation("androidx.activity:activity-compose:1.9.0")
-    implementation("androidx.compose.ui:ui:1.6.7")
-    implementation("androidx.compose.material3:material3:1.2.1")
-
-    ksp(project(":androrm-generator-ksp"))
-    testImplementation(libs.junit.jupiter.v5102)
+    testImplementation(libs.junit.jupiter)
 }
 
 android {
@@ -59,11 +56,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
-        compose = true
-    }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        compose = false
     }
 }
 // 依存関係用のカスタムコンフィグレーションを作成
@@ -137,9 +130,6 @@ dependencies {
     // ==== 単体テスト（JVM 上で動作） ====
     // JUnit 5
     testImplementation(libs.junit.jupiter)
-    testImplementation(libs.junit.jupiter.api)      // JUnit 5 API
-    testImplementation(libs.junit.jupiter.params)   // パラメータ化テスト用
-    testRuntimeOnly(libs.junit.jupiter.engine)      // JUnit 5 Engine
     // Mockito for unit tests
     testImplementation(libs.mockito.core)
     // JUnit 4
@@ -161,7 +151,7 @@ dependencies {
 }
 // ログ出力用依存関係
 dependencies {
-    implementation(libs.slf4j.api.v2013)
+    implementation(libs.slf4j.api)
     implementation(libs.logback.android)
 }
 // AOP(AspectJ)用依存関係
@@ -177,13 +167,6 @@ val aspectjWeaverConfig by configurations.creating {
     extendsFrom(configurations.testImplementation.get())
 }
 
-dependencies {
-    implementation(libs.monitor)
-    implementation(project(":androrm-common"))
-    implementation(project(":androrm-generated"))
-    implementation(project(":androrm-generator-ksp"))
-    add("ksp", project(":androrm-generator-ksp"))
-}
 // build.gradle.kts の末尾付近に追加
 tasks.withType<Test>().configureEach {
     useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須

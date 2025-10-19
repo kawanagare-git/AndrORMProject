@@ -14,6 +14,7 @@
             <option value="$PROJECT_DIR$/androrm-generated" />
             <option value="$PROJECT_DIR$/androrm-generator-ksp" />
             <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/shared-library" />
           </set>
         </option>
         <option name="resolveExternalAnnotations" value="false" />

@@ -5,8 +5,12 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 /**
  * ## AndrORM 関数アノテーションクラス
  * ### 自動生成されたエンティティクラスに付与するアノテーション
- * @param columnExpression 関数名（生成される関数の情報を格納）
+ * @param columnFunction 関数名（Enum 型）
  * @param alias エイリアス
+ * @param args 関数の引数リスト
+ * @param raw 関数を生文字列で生成する場合に使用（優先定義）
+ * @author Masahiro Inoue
+ * @since 2025-08-01
  */
 annotation class Function(
     val columnFunction: ColumnFunction,

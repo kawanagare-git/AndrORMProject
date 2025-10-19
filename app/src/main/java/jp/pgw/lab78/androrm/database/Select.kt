@@ -3,6 +3,8 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.isColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
@@ -19,6 +21,7 @@ import java.util.EnumMap
 import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.memberProperties
 
 /**
  * ## Select 文生成クラス
@@ -27,9 +30,12 @@ import kotlin.reflect.KProperty1
  * @since 2025-08-01
  */
 class Select<T : SelectEntity>(
-    entityClass: KClass<out T>,
+    private val entityClass: KClass<out T>,
     private val isDistinct: Boolean = false
 ) : QueryStructureLike {
+    /** Select クラスで使用するエンティティクラスのリスト */
+    private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
+
     /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
     private val mainTableName = entityClass.createTableName()
 
@@ -99,6 +105,8 @@ class Select<T : SelectEntity>(
         // from 句とテーブル名の定義を設定
         queryStructureMap[SelectClause.SELECT] =
             mutableListOf("from $mainTableName $mainTableAlias")
+        // select 文で使用するエンティティクラスを登録
+        usedEntityClasses += entityClass
     }
 
     fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
@@ -130,6 +138,7 @@ class Select<T : SelectEntity>(
         joinedEntityClass.getColumns().forEach {
             selectColumnList += "$joinedTableAlias.$it as ${joinedTableAlias}_$it"
         }
+        usedEntityClasses += joinedEntityClass
         return this
     }
 
@@ -149,37 +158,9 @@ class Select<T : SelectEntity>(
     }
 
     /**
-     * ## group メソッド
-     * ### 集計範囲を指定する
-     * @param columns 集計条件として参照するカラム
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun <TX : SelectEntity> group(vararg columns: KProperty1<out TX, *>): Select<T> {
-        val clause = columns.joinToString(", ") { generateColumn(it) }
-        queryStructureMap.getOrPut(SelectClause.GROUP) { mutableListOf() }
-            .add("group by $clause")
-        return this
-    }
-
-    /**
      * ## having メソッド
      * ### 集計結果検索条件を指定する
-     * @param condition 条件を構築されたインスタンス
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun having(condition: HavingConditionBuilder): Select<T> {
-        havingConditions += condition.buildList()
-        return this
-    }
-
-    /**
-     * ## having メソッド
-     * ### 集計結果検索条件を指定する
-     * @param block 条件を構築するための DSL ブロック。`HavingConditionBuilder` の拡張ラムダとして記述。
+     * @param block 条件を構築するための DSL ブロック。`HavingBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
      * @since 2025-08-01
@@ -187,8 +168,27 @@ class Select<T : SelectEntity>(
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
         val builder = HavingConditionBuilder().apply(block)
         havingConditions += builder.buildList()
+        // HAVING 句が指定されると自動的に GROUP BY 句を生成する
+        // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
+        if (groupByColumns.isEmpty()) {
+            groupByColumns += detectGroupColumns()
+        }
         return this
     }
+
+    /**
+     * ## グループ化カラム検出関数
+     * ### SELECT 句に指定されたカラムのうち、関数列以外のカラムを抽出する
+     * @return 関数列以外のカラムリスト
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    private fun detectGroupColumns(): List<String> =
+        usedEntityClasses.flatMap { entityClass ->
+            entityClass.memberProperties
+                .filter { it.isColumn() && !it.isFunctionColumn() }
+                .map { it.getColumn() }
+        }
 
     /**
      * ## order メソッド

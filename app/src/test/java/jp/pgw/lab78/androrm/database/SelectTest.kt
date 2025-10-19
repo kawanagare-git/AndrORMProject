@@ -1,13 +1,10 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.database.Select.JoinType.*
-import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
-import jp.pgw.lab78.androrm.database.function.AggregateFunction.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -105,9 +102,7 @@ class SelectTest {
                 }
             }
             .having {
-                condition(
-                    MAX, TestSelectEntity::birthday, LT, LocalDate.parse("2025-07-01")
-                )
+                TestSelectEntity::newestBirthday lt LocalDate.parse("2020-01-01")
             }
         println(SELECT.build())
         // 新エンティティクラス
@@ -183,9 +178,9 @@ class SelectTest {
                     DepartmentEntityInfo::section eq "20"
                 }
             })
-            .having(HavingConditionBuilder().apply {
-                condition(SUM, SalaryEntitySelective::gross, GT, 100000)
-            })
+            .having {
+                SalaryEntitySelective::maxGross gt 100000
+            }
             .order { column(DepartmentEntityInfo::department) }
         println(SELECT.build())
     }

@@ -19,6 +19,7 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.KspDelegatingLogger
+import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**
  * ## AndrORM プロパティプロセッサクラス
@@ -664,7 +665,7 @@ class PropsProcessor(
                         (v as? KSAnnotation)?.let { ksAnn ->
                             val func = ksAnn.argumentOf<ColumnFunction>(FP_FUNCTION)
                             val raw = ksAnn.argumentOf<String>(FP_RAW) ?: EMPTY_STRING
-                            if (func == null && raw.isEmpty()) {
+                            if (func.isNull() && raw.isEmpty()) {
                                 error(
                                     "@FunctionProjection requires either " +
                                             "'function' or 'raw' to be specified",

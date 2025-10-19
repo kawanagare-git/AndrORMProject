@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.common.database.annotation
 
 /**
- * ## Column アノテーション
+ * ## AndrORM テーブル列アノテーション
  * @param name フィールド名にカラム名を指定する
  * @param alias カラムのエイリアスを設定する
  * @author Masahiro Inoue

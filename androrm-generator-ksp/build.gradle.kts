@@ -1,41 +1,29 @@
-// androrm-generator-ksp/build.gradle.kts
+// ＜androrm-generator-ksp/build.gradle.kts＞
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+
 plugins {
-    kotlin("jvm")
-    id("com.google.devtools.ksp") version "1.9.0-1.0.13"
+    id("org.jetbrains.kotlin.jvm")
+    id("com.google.devtools.ksp")
+}
+
+// Kotlin JVM 設定
+extensions.configure<KotlinJvmProjectExtension>("kotlin") {
+    jvmToolchain(17)
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
+    // === 自作モジュール ===
     implementation(project(":androrm-common"))
-    implementation(libs.ksp.symbol.processing.api)
-}
+    implementation(project(":androrm-generated"))
+    implementation(project(":shared-library"))
 
-dependencies {
+    // === KSP / KotlinPoet ===
     implementation(libs.symbol.processing.api)
     implementation(libs.kotlinpoet)
     implementation(libs.kotlinpoet.ksp)
 }
 
-dependencies {
-    implementation(project(":androrm-common"))
-    implementation(project(":androrm-generated"))
-}
-
-kotlin {
-    jvmToolchain(17)
-}
-
-// androrm-generator-ksp/build.gradle.kts
-tasks.withType<Jar> {
-    manifest {
-        attributes["Main-Class"] = "jp.pgw.lab78.androrm.ksp.PropsProcessorProvider"
-    }
-
-    from(layout.buildDirectory.dir("ksp-meta")) {
-        into("META-INF/services")
-    }
-}
-
+// === KSP META-INF サービス登録 ===
 tasks.register("generateKspMeta") {
     val outputDir = layout.buildDirectory.dir("ksp-meta")
     outputs.dir(outputDir)
@@ -49,11 +37,22 @@ tasks.register("generateKspMeta") {
     }
 }
 
-// 依存関係として `generateKspMeta` をビルド前に走らせる
+// === JAR 出力設定 ===
+tasks.withType<Jar> {
+    manifest {
+        attributes["Main-Class"] = "jp.pgw.lab78.androrm.ksp.PropsProcessorProvider"
+    }
+    from(layout.buildDirectory.dir("ksp-meta")) {
+        into("META-INF/services")
+    }
+}
+
+// === KSP メタ生成を Kotlin コンパイル前に実行 ===
 tasks.named("compileKotlin").configure {
     dependsOn("generateKspMeta")
 }
 
-kotlin {
+// === KSP 出力ソースを明示的に追加 ===
+extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     sourceSets["main"].kotlin.srcDir("build/generated/ksp/main/kotlin")
 }
