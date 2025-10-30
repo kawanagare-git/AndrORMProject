@@ -338,13 +338,16 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>> :
      */
     override fun or(block: B.() -> Unit) = delegate.or(block)
 
-    /** プレースホルダ変換（共通ロジック） */
-    protected fun Any.toConditionValue(): Any = when (this) {
-        is KProperty1<*, *> -> when (this.getter.call(null)) {
-            is ConditionEntity -> ":${this.name}"
-            else -> this
-        }
-
+    /**
+     * ##プレースホルダ変換（共通ロジック）
+     * ### ConditionEntity の場合はプレースホルダ文字列に変換する
+     * @receiver 任意のオブジェクト
+     * @return ConditionEntityの場合はプレースホルダ文字列、そうでない場合はそのままのオブジェクト
+     * @author Masahiro Inoue
+     * @since 2025-10-21
+     */
+    private fun Any.toConditionValue(): Any = when (this) {
+        is ConditionEntity -> ":${this::class.simpleName}"
         else -> this
     }
 }

@@ -1,7 +1,8 @@
 package jp.pgw.lab78.androrm.common.database.function
 
-import jp.pgw.lab78.androrm.common.database.function.AggregateFunction.*
+import jp.pgw.lab78.androrm.common.database.function.SqlAggregateFunction.*
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction
+import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgType
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgType.*
 import java.util.Locale
 
@@ -10,13 +11,33 @@ import java.util.Locale
  * GROUP BY が不要な関数。
  * WHERE 句や ORDER 句で使用可能。
  */
-enum class ScalarFunction(private val argType: SqlFunction.ArgType) : SqlFunction {
-    ABS(MULTI),
+enum class SqlScalarFunction(override val argType: ArgType) : SqlFunction {
+    ABS(SINGLE),
     LENGTH(SINGLE),
     LOWER(SINGLE),
     UPPER(SINGLE),
     REPLACE(MULTI),
-    ROUND(MULTI),
+    ROUND(SINGLE) {
+        /**
+         * ## クエリ生成（round 専用）
+         * ### 関数クエリを生成する
+         * @param arg 引数
+         * @return 生成されたクエリ文字列
+         * @author Masahiro Inoue
+         * @since 2024-10-30
+         */
+        override fun build(vararg arg: String): String = run {
+            require(arg.isNotEmpty()) {
+                "ROUND requires at least one argument. The second argument (precision) is optional." +
+                        " Additional arguments are ignored."
+            }
+            if (arg.size == 1) {
+                "${getFunctionName()}(${arg[0]})"
+            } else {
+                "${getFunctionName()}(${arg[0]}, ${arg[1]})"
+            }
+        }
+    },
     COALESCE(MULTI),
     IFNULL(MULTI),
     CAST(SPECIAL) {
@@ -28,8 +49,10 @@ enum class ScalarFunction(private val argType: SqlFunction.ArgType) : SqlFunctio
          * @author Masahiro Inoue
          * @since 2024-10-30
          */
-        override fun build(vararg arg: String): String =
-            "${this.getFunctionName()}(${arg.first()} AS ${arg[1]})"
+        override fun build(vararg arg: String): String {
+            require(arg.size >= 2) { "CAST requires at least two arguments: expression and type. Additional arguments are ignored." }
+            return "${getFunctionName()}(${arg[0]} AS ${arg[1]})"
+        }
     },
     CONCAT(MULTI),
     SUBSTR(MULTI),
@@ -97,7 +120,12 @@ enum class ScalarFunction(private val argType: SqlFunction.ArgType) : SqlFunctio
          * @author Masahiro Inoue
          * @since 2025-10-30
          */
-        override fun build(vararg arg: String): String = arg.first()
+        override fun build(vararg arg: String): String = run {
+            // カスタム関数は少なくとも1つの引数が必要：空なら例外 IllegalArgumentException() をスロー
+            require(arg.isNotEmpty()) { "CUSTOM requires at least one argument." }
+            arg.first()
+        }
+
     }, ;
 
     /**
@@ -106,26 +134,15 @@ enum class ScalarFunction(private val argType: SqlFunction.ArgType) : SqlFunctio
      * @author Masahiro Inoue
      * @since 2024-10-30
      */
-    override fun getFunctionName(): String = this.name.lowercase(Locale.getDefault())
+    override fun getFunctionName(): String = name.lowercase(Locale.getDefault())
 
     /**
-     * ## クエリ生成
+     * ## 関数生成
      * ### 関数クエリを生成する
      * @param arg 引数
-     * @return 生成されたクエリ文字列
+     * @return 関数名文字列
      * @author Masahiro Inoue
      * @since 2024-10-30
      */
-    override fun build(vararg arg: String): String =
-        when (argType) {
-            NONE -> "${this.getFunctionName()}()"
-            SINGLE -> "${this.getFunctionName()}(${arg.first()})"
-            SPECIAL -> throw IllegalArgumentException("SPECIAL argType requires custom build implementation.")
-            MULTI -> {
-                if (arg.isEmpty()) {
-                    throw IllegalArgumentException("At least one argument is required for MULTI argType.")
-                }
-                "${this.getFunctionName()}(${arg.joinToString(",")})"
-            }
-        }
+    override fun build(vararg arg: String): String = buildDefault(argType, *arg)
 }

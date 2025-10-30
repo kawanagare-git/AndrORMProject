@@ -33,7 +33,7 @@ object EntityManager {
      */
     data class TableDefinition<T : Entity>(
         val tableName: String,
-        val aliases: MutableMap<String,EntityDefinition<T>>
+        val aliases: MutableMap<String, EntityDefinition<T>>
     )
 
     /**
@@ -88,7 +88,7 @@ object EntityManager {
             // エイリアスの生成
             val alias = tableAnnotation.alias
                 .ifBlank { tableName }
-            val entityDefinition = EntityDefinition<Entity>(alias,this, mutableMapOf())
+            val entityDefinition = EntityDefinition<Entity>(alias, this, mutableMapOf())
             TableDefinition(tableName, mutableMapOf(alias to entityDefinition))
         }.tableName
     }
@@ -113,9 +113,10 @@ object EntityManager {
             // メタデータから抽出準備
             val property = this.memberProperties.first { it.name == param.name }
             // @Column の name/alias を取得
-            val columnAlias = "${alias}_${property.getColumnAlias().ifBlank{property.getColumn()}}"
+            val columnAlias =
+                "${alias}_${property.getColumnAlias().ifBlank { property.getColumn() }}"
             // tableMetadata から、カラム情報抽出
-            val columnName = this.extractColumnMetadata(tableName,alias,columnAlias,property)
+            val columnName = this.extractColumnMetadata(tableName, alias, columnAlias, property)
             // SQL 型マッピング（既存関数を呼び出し）
             val sqlType = mapKotlinTypeToSqlType(property.returnType)
             // 結果をペアで返却
@@ -143,9 +144,10 @@ object EntityManager {
             // メタデータから抽出準備
             val property = this.memberProperties.first { it.name == param.name }
             // @Column の name/alias を取得
-            val columnAlias = "${alias}_${property.getColumnAlias().ifBlank{property.getColumn()}}"
+            val columnAlias =
+                "${alias}_${property.getColumnAlias().ifBlank { property.getColumn() }}"
             // tableMetadata から、カラム名抽出
-            this.extractColumnMetadata(tableName,alias,columnAlias,property)
+            this.extractColumnMetadata(tableName, alias, columnAlias, property)
         }
     }
 
@@ -170,18 +172,18 @@ object EntityManager {
     ): String {
         val definedProperty: KProperty1<out Entity, *>? = tableMetadata.getOrPut(tableName) {
             // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
-            val entityDefinition = EntityDefinition<Entity>(alias,
-                                                            this,
-                                                            mutableMapOf(columnAlias to property)
+            val entityDefinition = EntityDefinition<Entity>(
+                alias,
+                this,
+                mutableMapOf(columnAlias to property)
             )
             TableDefinition(tableName, mutableMapOf(alias to entityDefinition))
         }.aliases.getOrPut(alias) {
             // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
             EntityDefinition(alias, this, mutableMapOf(columnAlias to property))
         }.columns.put(columnAlias, property)
-        return definedProperty?.getColumn()?:property.getColumn()
+        return definedProperty?.getColumn() ?: property.getColumn()
     }
-
 
     /**
      * ## エイリアス取得
@@ -191,7 +193,7 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> KClass<T>.getAlias(): String =  this.getTableAlias()
+    fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
 
     /**
      * ## エンティティクラス値マップ生成
@@ -202,9 +204,9 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    inline fun <reified T: Entity> getValueFromEntity(vararg entities: T) : List<Map<String, Any>> {
+    inline fun <reified T : Entity> getValueFromEntity(vararg entities: T): List<Map<String, Any>> {
         val entityList = listOf(*entities)
-        val result : MutableList<Map<String, Any>> = mutableListOf()
+        val result: MutableList<Map<String, Any>> = mutableListOf()
         entityList.forEach { entity ->
             val map: MutableMap<String, Any> = mutableMapOf()
             T::class.memberProperties.forEach { property ->
@@ -239,7 +241,7 @@ object EntityManager {
             valuesMap.map {
                 it[key]?.toString() ?: error("Missing bind value for :$it")
             }
-            .toTypedArray()
+                .toTypedArray()
         }
         return queryWithPlaceholders to args
     }
@@ -250,15 +252,15 @@ object EntityManager {
 
     /** 型変換用マップ */
     private val fieldToColumnMap = mapOf(
-        Int::class to "INTEGER"
-        ,Long::class to "INTEGER"
-        ,Float::class to "REAL"
-        ,Double::class to "REAL"
-        ,Boolean::class to "INTEGER"
-        ,String::class to "TEXT"
-        ,LocalDate::class to "DATETIME"
-        ,LocalTime::class to "DATETIME"
-        ,LocalDateTime::class to "DATETIME"
+        Int::class to "INTEGER",
+        Long::class to "INTEGER",
+        Float::class to "REAL",
+        Double::class to "REAL",
+        Boolean::class to "INTEGER",
+        String::class to "TEXT",
+        LocalDate::class to "DATETIME",
+        LocalTime::class to "DATETIME",
+        LocalDateTime::class to "DATETIME"
     )
 
     /**
@@ -268,7 +270,7 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun mapKotlinTypeToSqlType(field : Any): String {
+    fun mapKotlinTypeToSqlType(field: Any): String {
         val valueForJudgment = when (field) {
             // arg が既に KType の場合、KClass<*> にキャスト
             is KType -> field.classifier as? KClass<*>
@@ -277,7 +279,7 @@ object EntityManager {
         }
         if (valueForJudgment == null) {
             throw IllegalArgumentException("Unsupported type: $field")
-        }else{
+        } else {
             return fieldToColumnMap[valueForJudgment]
                 ?: throw IllegalArgumentException("Unsupported type: $valueForJudgment")
         }
@@ -291,8 +293,19 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @Suppress("UNCHECKED_CAST")
     fun formatValue(value: Any): String = when (value) {
-        is String -> "'$value'"
+        is KProperty1<*, *> -> {
+            val property = value as KProperty1<out Entity, *>
+            "${property.extractClassFromProperty().getTableAlias()}.${property.getColumn()}"
+        }
+
+        is String -> if (value.startsWith(":")) {
+            "$value"
+        } else {
+            "'$value'"
+        }
+
         is LocalDate -> "'$value'"
         is LocalDateTime -> "'$value'"
         is LocalTime -> "'$value'"

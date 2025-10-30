@@ -68,11 +68,11 @@ class SelectTest {
                 and {
                     TestSelectEntityWithAlias::name eq "川流"
                     TestSelectEntity::address like "%Shinjuku%"
-                }
-                or {
-                    TestAllEntity::insertDateTime gt
-                            LocalDateTime.parse("2025-01-01T00:00:00.000")
-                    TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
+                    or {
+                        TestAllEntity::insertDateTime gt
+                                LocalDateTime.parse("2025-01-01T00:00:00.000")
+                        TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
+                    }
                 }
             }
         println(SELECT.build())
@@ -113,14 +113,14 @@ class SelectTest {
                     EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
                 })
             .order {
-                column(EmployeeEntityIdSelection::employeeId, true)
-                column(EmployeeEntity::name)
+                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
+                EmployeeEntityJoined::name.asc
             }
         println(SELECT.build())
         SELECT = Select(DepartmentEntityInfo::class)
             .order {
-                column(DepartmentEntityInfo::employeeId, true)
-                column(DepartmentEntityInfo::section)
+                DepartmentEntityInfo::employeeId.asc
+                DepartmentEntityInfo::section.asc.nullsLast
             }
         println(SELECT.build())
     }
@@ -132,7 +132,7 @@ class SelectTest {
             .join(INNER, DepartmentEntityInfo::class, {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
-            .order { column(DepartmentEntityInfo::department) }
+            .order { DepartmentEntityInfo::department.asc }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -141,7 +141,7 @@ class SelectTest {
             .where({
                 EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
             })
-            .order { column(DepartmentEntityInfo::department) }
+            .order { DepartmentEntityInfo::department.desc }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -150,7 +150,7 @@ class SelectTest {
             .where({
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
-            .order { column(DepartmentEntityInfo::department) }
+            .order { DepartmentEntityInfo::department.asc }
         println(SELECT.build())
     }
 
@@ -162,7 +162,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
-            .order { column(DepartmentEntityInfo::department) }
+            .order { DepartmentEntityInfo::department.asc }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -181,7 +181,7 @@ class SelectTest {
             .having {
                 SalaryEntitySelective::maxGross gt 100000
             }
-            .order { column(DepartmentEntityInfo::department) }
+            .order { DepartmentEntityInfo::department.asc.nullsLast }
         println(SELECT.build())
     }
 

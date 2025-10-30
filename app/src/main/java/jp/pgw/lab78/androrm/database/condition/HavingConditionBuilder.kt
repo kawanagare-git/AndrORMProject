@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition
 
+import jp.pgw.lab78.androrm.database.condition.annotation.HavingDslMarker
 import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder
 
 /**
@@ -9,6 +10,7 @@ import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
+@HavingDslMarker
 class HavingConditionBuilder : BaseConditionBuilder<HavingConditionBuilder>() {
     /** Self インスタンス生成関数 */
     override fun createSelf() = HavingConditionBuilder()

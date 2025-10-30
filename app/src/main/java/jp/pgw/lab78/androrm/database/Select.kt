@@ -9,7 +9,6 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.OrderBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
@@ -198,9 +197,9 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun order(block: OrderBuilder.() -> Unit): Select<T> {
-        val builder = OrderBuilder().apply(block)
-        orderColumns += builder.buildList()
+    fun order(block: OrderDsl.() -> Unit): Select<T> {
+        val builder = OrderDsl().apply(block)
+        orderColumns += builder.orders
         return this
     }
 
