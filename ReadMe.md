@@ -1,4 +1,3 @@
-アンドロイド向け ORM
 # AndrORM 使用方法
 ## 1.AndrORM 概要
 ## 2.AndrORM 機能
