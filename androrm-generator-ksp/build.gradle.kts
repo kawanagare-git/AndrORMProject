@@ -3,7 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
-    id("com.google.devtools.ksp")
+//    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
 
 // Kotlin JVM 設定

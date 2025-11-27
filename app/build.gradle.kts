@@ -8,14 +8,15 @@ plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
 
 dependencies {
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
-    implementation(project(":androrm-generated"))
     ksp(project(":androrm-generator-ksp"))
+    ksp(project(":androrm-validator-ksp"))
+    implementation(project(":androrm-generated"))
 
     implementation(libs.core.ktx.v1131)
     testImplementation(libs.junit.jupiter)

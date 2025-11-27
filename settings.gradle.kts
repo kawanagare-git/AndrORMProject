@@ -1,3 +1,4 @@
+// <settings.gradle.kts>
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -15,8 +16,11 @@ dependencyResolutionManagement {
 
 rootProject.name = "AndrORMProject"
 
-include(":app")
-include(":androrm-common")
-include(":androrm-generator-ksp")
-include(":androrm-generated")
-include(":shared-library")
+include(
+    ":app",
+    ":androrm-common",
+    ":androrm-generator-ksp",
+    ":androrm-generated",
+    ":shared-library",
+    ":androrm-validator-ksp",
+)

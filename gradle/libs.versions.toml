@@ -1,6 +1,6 @@
 [versions]
 # Kotlin / Android Plugin
-kotlin = "1.9.0"
+kotlin = "1.9.24"
 agp = "8.8.0"
 
 # Core & AndroidX
@@ -25,7 +25,6 @@ slf4jApi = "2.0.16"
 
 # Build & Tools
 desugar_jdk_libs = "2.1.5"
-symbolProcessingApi = "1.9.10-1.0.13"
 
 # Misc
 espressoCore = "3.6.1"
@@ -35,19 +34,15 @@ monitor = "1.8.0"
 
 #KSP
 kotlinpoet = "1.15.1"
+ksp = "1.9.24-1.0.20"
 
 [plugins]
 # 統一したプラグイン定義
-android-application = { id = "com.android.application", version.ref = "agp" }
-android-library = { id = "com.android.library", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
-google-ksp = { id = "com.google.devtools.ksp", version.ref = "symbolProcessingApi" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+
 
 [libraries]
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 
@@ -70,7 +65,7 @@ slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
 
 # Build Tools
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
-symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "symbolProcessingApi" }
+symbol-processing-api = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 # AndroidX Testing
 ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }

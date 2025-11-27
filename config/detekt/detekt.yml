@@ -1,0 +1,38 @@
+# ===========================================
+# Detekt 全体設定
+# ===========================================
+build:
+  # 許容される違反数（0 = 1つでも違反でビルド失敗）
+  maxIssues: 0
+
+config:
+  # detekt.yml の文法チェック
+  validation: true
+
+# ===========================================
+# 標準ルールセットの有効化
+# —— Android / Kotlin プロジェクトで一般的な構成
+# ===========================================
+processors:
+  active: true    # Detekt 内部で使われる統計処理など。通常 ON のまま。
+
+style:
+  active: true    # コードスタイル関連
+naming:
+  active: true    # メソッド名・クラス名などの命名規則
+complexity:
+  active: true    # 複雑度や入れ子の深さなど
+formatting:
+  active: true    # ktlint ベースのフォーマットルール
+  android: true   # Android プロジェクト向けの追加ルール
+
+# ===========================================
+# カスタムルールセット
+# —— ここに本物の AndrORM 検査ルールを追加していく
+# ===========================================
+custom:
+  AndrOrmEntityRefRule:
+    # ★ カスタムルールを有効化する最重要項目
+    active: true
+    # 必要に応じて独自の設定を追加できる（例）:
+    # checkSelectEntity: true

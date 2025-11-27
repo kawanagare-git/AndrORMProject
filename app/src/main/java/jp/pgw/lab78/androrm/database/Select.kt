@@ -29,17 +29,18 @@ import kotlin.reflect.full.memberProperties
  * @since 2025-08-01
  */
 class Select<T : SelectEntity>(
-    private val entityClass: KClass<out T>,
-    private val isDistinct: Boolean = false
+    private val fromEntity: KClass<out T>,
+    private val isDistinct: Boolean = false,
+    private vararg val joinEntities: KClass<out SelectEntity>,
 ) : QueryStructureLike {
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
 
     /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
-    private val mainTableName = entityClass.createTableName()
+    private val mainTableName = fromEntity.createTableName()
 
     /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
-    private val mainTableAlias = entityClass.getAlias().ifEmpty { mainTableName }
+    private val mainTableAlias = fromEntity.getAlias().ifEmpty { mainTableName }
 
     /** クエリの構文を管理するマップ */
     private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
@@ -82,12 +83,6 @@ class Select<T : SelectEntity>(
      */
     enum class JoinType {
         INNER, LEFT, RIGHT, CROSS, NATURAL;
-
-        val sqliteSupported: Boolean
-            get() = when (this) {
-                INNER, LEFT, CROSS -> true
-                else -> false
-            }
     }
 
     /**
@@ -98,14 +93,14 @@ class Select<T : SelectEntity>(
      */
     init {
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        entityClass.getColumns().forEach {
+        fromEntity.getColumns().forEach {
             selectColumnList += "$mainTableAlias.$it as ${mainTableAlias}_$it"
         }
         // from 句とテーブル名の定義を設定
         queryStructureMap[SelectClause.SELECT] =
             mutableListOf("from $mainTableName $mainTableAlias")
         // select 文で使用するエンティティクラスを登録
-        usedEntityClasses += entityClass
+        usedEntityClasses += fromEntity
     }
 
     fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
@@ -120,9 +115,14 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <TJ : SelectEntity> join(
-        joinType: JoinType, joinedEntityClass: KClass<out TJ>, block: ConditionBuilder.() -> Unit
+    fun join(
+        joinType: JoinType,
+        joinedEntityClass: KClass<out SelectEntity>,
+        block: ConditionBuilder.() -> Unit
     ): Select<T> {
+        require(joinEntities.contains(joinedEntityClass)) {
+            "Joined entity ${joinedEntityClass.simpleName} is not listed in joinEntities definition."
+        }
         // 結合テーブル名取得
         val joinedTableName = joinedEntityClass.createTableName()
         val joinedTableAlias = joinedEntityClass.getAlias().ifEmpty { joinedTableName }
@@ -133,10 +133,6 @@ class Select<T : SelectEntity>(
                         + "join $joinedTableName $joinedTableAlias"
                         + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
-        // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        joinedEntityClass.getColumns().forEach {
-            selectColumnList += "$joinedTableAlias.$it as ${joinedTableAlias}_$it"
-        }
         usedEntityClasses += joinedEntityClass
         return this
     }
