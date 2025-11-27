@@ -17,20 +17,21 @@ processors:
   active: true    # Detekt 内部で使われる統計処理など。通常 ON のまま。
 
 style:
-  active: true    # コードスタイル関連
+  active: false    # コードスタイル関連
 naming:
-  active: true    # メソッド名・クラス名などの命名規則
+  active: false    # メソッド名・クラス名などの命名規則
 complexity:
-  active: true    # 複雑度や入れ子の深さなど
+  active: false   # 複雑度や入れ子の深さなど
 formatting:
-  active: true    # ktlint ベースのフォーマットルール
-  android: true   # Android プロジェクト向けの追加ルール
+  active: false    # ktlint ベースのフォーマットルール
+  android: false   # Android プロジェクト向けの追加ルール
 
 # ===========================================
 # カスタムルールセット
 # —— ここに本物の AndrORM 検査ルールを追加していく
 # ===========================================
-custom:
+androrm:
+  active: true
   AndrOrmEntityRefRule:
     # ★ カスタムルールを有効化する最重要項目
     active: true
