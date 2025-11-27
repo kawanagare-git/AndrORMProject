@@ -20,7 +20,5 @@ include(
     ":app",
     ":androrm-common",
     ":androrm-generator-ksp",
-    ":androrm-generated",
     ":shared-library",
-    ":androrm-validator-ksp",
 )

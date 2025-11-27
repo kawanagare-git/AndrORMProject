@@ -15,8 +15,6 @@ dependencies {
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
-    ksp(project(":androrm-validator-ksp"))
-    implementation(project(":androrm-generated"))
 
     implementation(libs.core.ktx.v1131)
     testImplementation(libs.junit.jupiter)

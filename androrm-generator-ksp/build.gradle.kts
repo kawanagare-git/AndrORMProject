@@ -15,7 +15,6 @@ extensions.configure<KotlinJvmProjectExtension>("kotlin") {
 dependencies {
     // === 自作モジュール ===
     implementation(project(":androrm-common"))
-    implementation(project(":androrm-generated"))
     implementation(project(":shared-library"))
 
     // === KSP / KotlinPoet ===
