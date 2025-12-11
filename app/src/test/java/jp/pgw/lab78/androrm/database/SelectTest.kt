@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select.JoinType.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity
@@ -8,6 +9,9 @@ import jp.pgw.lab78.androrm.database.entities.select.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.memberProperties
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity as EmployeeEntityJoined
 
 class SelectTest {
@@ -114,7 +118,7 @@ class SelectTest {
                 })
             .order {
                 EmployeeEntityIdSelection::employeeId.asc.nullsFirst
-                EmployeeEntityJoined::name.asc
+                EmployeeEntityJoined::name.desc
             }
         println(SELECT.build())
         SELECT = Select(DepartmentEntityInfo::class)
@@ -181,24 +185,52 @@ class SelectTest {
             .having {
                 SalaryEntitySelective::maxGross gt 100000
             }
-            .order { DepartmentEntityInfo::department.asc.nullsLast }
+            .order {
+                DepartmentEntityInfo::department.nullsFirst
+                EmployeeEntityIdSelection::employeeId.nullsLast
+            }
         println(SELECT.build())
     }
 
     @Test
     fun build5() {
         SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(
-                LEFT, TestSelectEntity::class, {
-                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
-                    TestSelectEntity::name like "%kawanagare"
-                })
+            .join(LEFT, TestSelectEntity::class, {
+                TestSelectEntityWithAlias::id eq EmployeeEntity::employeeId
+                TestSelectEntity::name like "%kawanagare"
+            })
             .where {
                 or {
                     TestSelectEntity::name like "%kawanagare"
                     TestSelectEntityWithAlias::address like "%Shinjuku%"
+                    DepartmentEntityInfo::section eq "20"
                 }
             }
+            .order { TestSelectEntity::address.nullsLast }
         println(SELECT.build())
     }
+
+    @Test
+    fun build6() {
+        val fromTable: KClass<out SelectEntity> = TestSelectEntityWithAlias::class
+        val joinTable: KClass<out SelectEntity> = TestSelectEntity::class
+        SELECT = Select(fromTable)
+            .join(
+                LEFT, joinTable, {
+                    fromTable.prop("id") eq TestSelectEntity::id
+                    joinTable.prop("name") like "%kawanagare"
+                })
+            .where {
+                or {
+                    joinTable.prop("name") like "%kawanagare"
+                    fromTable.prop("address") like "%Shinjuku%"
+                }
+            }
+            .order { joinTable.prop("address").nullsLast }
+        println(SELECT.build())
+    }
+
+    private fun KClass<out SelectEntity>.prop(name: String): KProperty1<out SelectEntity, *> =
+        this.memberProperties
+            .firstOrNull { it.name == name } as KProperty1<out SelectEntity, *>
 }

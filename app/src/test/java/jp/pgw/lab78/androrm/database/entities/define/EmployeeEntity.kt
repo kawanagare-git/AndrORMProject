@@ -26,13 +26,15 @@ import java.time.LocalDateTime
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
-            entityNameExtend = "", properties = [
+            entityNameExtend = "",
+            properties = [
                 "employeeId",
                 "name",
                 "address",
                 "gender",
                 "position",
-            ], commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.CONDITION]
+            ],
+            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.CONDITION]
         ),
     ]
 )

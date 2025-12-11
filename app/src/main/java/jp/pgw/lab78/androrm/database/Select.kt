@@ -31,7 +31,6 @@ import kotlin.reflect.full.memberProperties
 class Select<T : SelectEntity>(
     private val fromEntity: KClass<out T>,
     private val isDistinct: Boolean = false,
-    private vararg val joinEntities: KClass<out SelectEntity>,
 ) : QueryStructureLike {
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
@@ -109,7 +108,7 @@ class Select<T : SelectEntity>(
      * ## join メソッド
      * ### テーブル結合を指定する
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
-     * @param joinedEntityClass 結合するエンティティクラス（副クラス）
+     * @param joinedEntity 結合するエンティティクラス（副クラス）
      * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
@@ -117,15 +116,12 @@ class Select<T : SelectEntity>(
      */
     fun join(
         joinType: JoinType,
-        joinedEntityClass: KClass<out SelectEntity>,
+        joinedEntity: KClass<out SelectEntity>,
         block: ConditionBuilder.() -> Unit
     ): Select<T> {
-        require(joinEntities.contains(joinedEntityClass)) {
-            "Joined entity ${joinedEntityClass.simpleName} is not listed in joinEntities definition."
-        }
         // 結合テーブル名取得
-        val joinedTableName = joinedEntityClass.createTableName()
-        val joinedTableAlias = joinedEntityClass.getAlias().ifEmpty { joinedTableName }
+        val joinedTableName = joinedEntity.createTableName()
+        val joinedTableAlias = joinedEntity.getAlias().ifEmpty { joinedTableName }
         val joinCondition = ConditionBuilder().apply(block).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
@@ -133,7 +129,7 @@ class Select<T : SelectEntity>(
                         + "join $joinedTableName $joinedTableAlias"
                         + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
-        usedEntityClasses += joinedEntityClass
+        usedEntityClasses += joinedEntity
         return this
     }
 
@@ -231,42 +227,61 @@ class Select<T : SelectEntity>(
                 queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
             }
         }
-        addClauseIfNotEmpty(SelectClause.WHERE, AND.query, *whereConditions.toTypedArray())
-        addClauseIfNotEmpty(SelectClause.HAVING, AND.query, *havingConditions.toTypedArray())
-        addClauseIfNotEmpty(SelectClause.ORDER, COMMA, *orderColumns.toTypedArray())
+
+        /**
+         * ## 構成要素追加
+         * ## ローカル関数
+         * ### 引数に指定された内容をクエリ構成に追加する
+         * @param clauseId クエリの「句」
+         * @param separator 区切り文字列
+         * @param element 追加する要素
+         */
+        fun addClauseIfNotEmpty(
+            clauseId: SelectClause,
+            separator: CharSequence,
+            element: List<QueryStructureLike>
+        ) {
+            if (element.isNotEmpty()) {
+                val clause = element.joinToString(separator) { it.build() }.trim()
+                queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+            }
+        }
+
+        addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
+        addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
+        addClauseIfNotEmpty(SelectClause.ORDER, COMMA, orderColumns.toList())
         val otherClauses = SelectClause.entries
             .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: "" }
         // select 文を生成
         return "$selectClause $otherClauses"
     }
+}
 
-    /**
-     * ## enumMapOf メソッド
-     * ### EnumMap<K, V> のインスタンスを生成する
-     * ### コンビニエンスメソッド
-     * @return 生成された EnumMap のインスタンス
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private inline fun <reified K : Enum<K>, V> enumMapOf(): EnumMap<K, V> =
-        EnumMap(K::class.java)
+/**
+ * ## enumMapOf メソッド
+ * ### EnumMap<K, V> のインスタンスを生成する
+ * ### コンビニエンスメソッド
+ * @return 生成された EnumMap のインスタンス
+ * @author Masahiro Inoue
+ * @since 2025-08-01
+ */
+private inline fun <reified K : Enum<K>, V> enumMapOf(): EnumMap<K, V> =
+    EnumMap(K::class.java)
 
-    /**
-     * ## カラム生成メソッド
-     * ### where メソッドや join メソッドで渡された Entity クラスの property を
-     * ### カラム文字列として生成する
-     * @param column 生成するカラム
-     * @return 生成されたカラム名、エイリアス設定が有れば付与される
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun <T : SelectEntity> generateColumn(column: KProperty1<out T, *>): String {
-        // エンティティクラスの取得
-        val entityClass = column.extractClassFromProperty()
-        // エイリアスの生成
-        val alias = entityClass.getAlias()
-        val columnName = column.getColumn()
-        return "${alias}.$columnName"
-    }
-
+/**
+ * ## カラム生成メソッド
+ * ### where メソッドや join メソッドで渡された Entity クラスの property を
+ * ### カラム文字列として生成する
+ * @param column 生成するカラム
+ * @return 生成されたカラム名、エイリアス設定が有れば付与される
+ * @author Masahiro Inoue
+ * @since 2025-08-01
+ */
+private fun <T : SelectEntity> generateColumn(column: KProperty1<out T, *>): String {
+    // エンティティクラスの取得
+    val entityClass = column.extractClassFromProperty()
+    // エイリアスの生成
+    val alias = entityClass.getAlias()
+    val columnName = column.getColumn()
+    return "${alias}.$columnName"
 }

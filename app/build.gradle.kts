@@ -1,14 +1,17 @@
 // ＜app/build.gradle.kts＞
+import io.gitlab.arturbosch.detekt.Detekt
 import org.aspectj.bridge.IMessage
 import org.aspectj.bridge.MessageHandler
 import org.aspectj.tools.ajc.Main
 
-// app/build.gradle.kts
 plugins {
     id("com.android.application")
     kotlin("android")
     kotlin("kapt")
     alias(libs.plugins.ksp)
+
+    // detekt プラグイン
+    id("io.gitlab.arturbosch.detekt")
 }
 
 dependencies {
@@ -47,30 +50,37 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // ここを true に
         isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
         jvmTarget = "17"
     }
+
     buildFeatures {
         compose = false
     }
+
+    packaging {
+        resources {
+            excludes += "kotlin/internal/internal.kotlin_builtins"
+        }
+    }
 }
-// 依存関係用のカスタムコンフィグレーションを作成
+
+// --------------------------------------------------------
+// AspectJ コンパイル設定
+// --------------------------------------------------------
 val aspectjCompileClasspath by configurations.creating {
     isCanBeResolved = true
     isCanBeConsumed = false
 }
 
-// 依存関係に AspectJ ライブラリを追加
 dependencies {
-    aspectjCompileClasspath(libs.aspectjrt)      // AspectJ runtime
-    aspectjCompileClasspath(libs.aspectjtools)   // AspectJ tools (コンパイル時のみ)
+    aspectjCompileClasspath(libs.aspectjrt)
+    aspectjCompileClasspath(libs.aspectjtools)
 }
 
-// AspectJ コンパイル用カスタムタスクを登録
 android.applicationVariants.forEach { variant ->
     val variantName = variant.name.replaceFirstChar {
         if (it.isLowerCase()) it.titlecase() else it.toString()
@@ -82,9 +92,9 @@ android.applicationVariants.forEach { variant ->
         dependsOn(javaCompile)
         doLast {
             val inputDir = javaCompile.get().outputs.files.singleFile
-            val aspectPath = aspectjCompileClasspath.asPath   // ここで専用クラスパスを使用
+            val aspectPath = aspectjCompileClasspath.asPath
             val classpath = javaCompile.get().classpath.asPath
-            val bootClasspath = android.bootClasspath.joinToString(separator = ":")
+            val bootClasspath = android.bootClasspath.joinToString(":")
 
             val args = arrayOf(
                 "-showWeaveInfo",
@@ -116,73 +126,137 @@ android.applicationVariants.forEach { variant ->
     }
 }
 
+// --------------------------------------------------------
+// 依存関係設定
+// --------------------------------------------------------
 dependencies {
     // Kotlin 標準ライブラリ
     implementation(kotlin("stdlib"))
 
-    // リフレクション（必要に応じて）
+    // リフレクション
     implementation(libs.kotlin.reflect)
 
     // Material Components
     implementation(libs.material)
 
-    // ==== 単体テスト（JVM 上で動作） ====
-    // JUnit 5
+    // ==== 単体テスト（JVM） ====
     testImplementation(libs.junit.jupiter)
-    // Mockito for unit tests
     testImplementation(libs.mockito.core)
-    // JUnit 4
     testImplementation(libs.junit)
-    // JUnit Vintage (JUnit4互換モード)
     testRuntimeOnly(libs.junit.vintage.engine)
 
     // ==== インストルメンテーションテスト（Android） ====
-    androidTestImplementation(libs.junit)           // JUnit 4 本体 :contentReference[oaicite:2]{index=2}
-    androidTestImplementation(libs.runner)          // テストランナー :contentReference[oaicite:3]{index=3}
-    androidTestImplementation(libs.ext.junit)       // AndroidX の JUnit 4 拡張 :contentReference[oaicite:4]{index=4}
-    androidTestImplementation(libs.mockito.android) // Mockito for Android tests
-    // Android UI テスト（必要なら）
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.runner)
+    androidTestImplementation(libs.ext.junit)
+    androidTestImplementation(libs.mockito.android)
     androidTestImplementation(libs.espresso.core)
 }
+
 // JSR-310（ThreeTen） API 対応
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
-// ログ出力用依存関係
+
+// ログ出力
 dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.logback.android)
 }
-// AOP(AspectJ)用依存関係
-// 依存関係に AspectJ ライブラリを追加
+
+// AOP(AspectJ) 用
 dependencies {
     implementation(libs.aspectjrt)
     testImplementation(libs.aspectjweaver)
 }
-// testImplementation を拡張して解決可能な構成を作成
-val aspectjWeaverConfig by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    extendsFrom(configurations.testImplementation.get())
+
+//// AndrORM の detekt ルール
+// ==========================================================
+// detekt 共通設定（main + test + androidTest）
+// ==========================================================
+detekt {
+    buildUponDefaultConfig = true
+    config.setFrom("$rootDir/config/detekt/detekt.yml")
 }
 
-// build.gradle.kts の末尾付近に追加
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform() // JUnit5 + Vintage を有効にするために必須
+// detekt の全タスクに共通設定を適用
+tasks.withType<Detekt>().configureEach {
+    config.setFrom("$rootDir/config/detekt/detekt.yml")
+    // ★ Android プロジェクト対応：全ソースディレクトリを解析対象にする
+    setSource(
+        files(
+            "$projectDir/src/main/java",
+            "$projectDir/src/test/java",
+            "$projectDir/src/androidTest/java",
+        )
+    )
 
-    doFirst {
-        val weaverJar = aspectjWeaverConfig.files
-            .find { it.name.contains("aspectjweaver") }
-            ?: error("aspectjweaver not found in classpath")
+    // 解析対象ファイル
+    include("**/*.kt", "**/*.kts", "**/*.java")
 
-        jvmArgs("-javaagent:${weaverJar.absolutePath}")
+    // 除外（ビルドや生成物）
+    exclude("**/build/**", "**/generated/**")
+
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(true)
     }
 }
 
-tasks.register("listConfigs") {
-    doLast {
-        configurations.names.sorted().forEach {
-            println("Config: $it")
-        }
+// ==========================================================
+// UnitTest だけ detekt
+// ==========================================================
+tasks.register<Detekt>("detektUnitTestOnly") {
+    description = "Run detekt on unit test sources only"
+
+    setSource(
+        files(
+            "$projectDir/src/test/java",
+        )
+    )
+
+    include("**/*.kt", "**/*.kts")
+    exclude("**/build/**")
+
+    reports {
+        html.required.set(true)
+        txt.required.set(true)
     }
+}
+
+// ==========================================================
+// AndroidTest だけ detekt
+// ==========================================================
+tasks.register<Detekt>("detektAndroidTestOnly") {
+    description = "Run detekt on Android test sources only"
+
+    setSource(
+        files(
+            "$projectDir/src/androidTest/java",
+        )
+    )
+
+    include("**/*.kt", "**/*.kts")
+    exclude("**/build/**")
+
+    reports {
+        html.required.set(true)
+        txt.required.set(true)
+    }
+}
+
+// ==========================================================
+// detekt をビルド時に必ず動かす
+// ==========================================================
+tasks.named("check") {
+    dependsOn(
+        "detektUnitTestOnly",   // UnitTest 専用
+        "detektAndroidTestOnly", // AndroidTest 専用
+        "detekt",               // main + test + androidTest（共通）
+    )
+}
+
+tasks.named("assemble") {
+    dependsOn("detekt")
 }

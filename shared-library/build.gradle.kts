@@ -28,3 +28,6 @@ dependencies {
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    enabled = false
+}

@@ -23,10 +23,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @param args 表示情報
      */
     override fun info(infoMessage: String, vararg args: Any) {
-        val argsString = if (args.isNotEmpty()) {
-            " args: '${args.joinToString(", ") { stringifyForLog(it) }}'"
-        } else ""
-        logger.warn("[AndrORM-KSP] INFO: method: ${getMethodName()} $infoMessage$argsString")
+        logger.info("[AndrORM-KSP] INFO: method: ${getMethodName()}")
     }
 
     /**
@@ -35,10 +32,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @param args メソッド引数群
      */
     override fun infoEntered(vararg args: Any) {
-        val argsString = if (args.isNotEmpty()) {
-            " args: '${args.joinToString(", ") { stringifyForLog(it) }}'"
-        } else ""
-        logger.warn("[AndrORM-KSP] INFO: Entered method: ${getMethodName()}$argsString")
+        logger.info("[AndrORM-KSP] INFO: Entered method: ${getMethodName()}")
     }
 
     /**
@@ -47,8 +41,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @param result メソッド実行結果
      */
     override fun infoExiting(result: Any?) {
-        logger.warn("[AndrORM-KSP] INFO: Exiting method: ${getMethodName()} " +
-                (result?.let { "'${it}'" } ?: ""))
+        logger.info("[AndrORM-KSP] INFO: Exiting method: ${getMethodName()} ")
     }
 
     /**
@@ -75,6 +68,28 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
             " args: '${args.joinToString(", ") { stringifyForLog(it) }}'"
         } else ""
         logger.error("[AndrORM-KSP] ERROR: method: ${getMethodName()} $errMessage$argsString")
+    }
+
+    /**
+     * ## エントリーログ出力メソッド
+     * ### メソッド実行時のログ出力用の簡易メソッド
+     * @param args メソッド引数群
+     */
+    override fun traceEntered(vararg args: Any) {
+        val argsString = if (args.isNotEmpty()) {
+            " args: '${args.joinToString(", ") { stringifyForLog(it) }}'"
+        } else ""
+        logger.warn("[AndrORM-KSP] TRACE: Entered method: ${getMethodName()}$argsString")
+    }
+
+    /**
+     * ## イグジットログ出力メソッド
+     * ### メソッド完了時のログ出力用の簡易メソッド
+     * @param result メソッド実行結果
+     */
+    override fun traceExiting(result: Any?) {
+        logger.warn("[AndrORM-KSP] TRACE: Exiting method: ${getMethodName()} " +
+                (result?.let { "'${it}'" } ?: ""))
     }
 
     /**

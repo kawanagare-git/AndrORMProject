@@ -1,5 +1,6 @@
 [versions]
 # Kotlin / Android Plugin
+detektApi = "1.23.6"
 kotlin = "1.9.24"
 agp = "8.8.0"
 
@@ -35,14 +36,20 @@ monitor = "1.8.0"
 #KSP
 kotlinpoet = "1.15.1"
 ksp = "1.9.24-1.0.20"
+agpVersion = "8.8.0"
+kotlinVersion = "1.9.24"
+appcompatVersion = "1.7.1"
 
 [plugins]
 # 統一したプラグイン定義
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+android-library = { id = "com.android.library", version.ref = "agpVersion" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVersion" }
 
 
 [libraries]
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
+detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detektApi" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 
@@ -76,3 +83,4 @@ monitor = { module = "androidx.test:monitor", version.ref = "monitor" }
 # KotlinPoet 系ライブラリ
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
+appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompatVersion" }

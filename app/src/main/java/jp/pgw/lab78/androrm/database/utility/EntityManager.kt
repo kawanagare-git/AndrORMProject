@@ -247,7 +247,7 @@ object EntityManager {
     }
 
     fun convertToEntity(columnNames: Array<String>, kClass: KClass<*>) {
-
+        return
     }
 
     /** 型変換用マップ */

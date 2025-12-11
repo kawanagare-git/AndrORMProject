@@ -22,3 +22,4 @@ include(
     ":androrm-generator-ksp",
     ":shared-library",
 )
+include(":androrm-detekt-rules")

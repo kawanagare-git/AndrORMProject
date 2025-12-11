@@ -41,21 +41,17 @@ import java.time.LocalDateTime
             commonInterface = [DMLInterfaceEnum.INSERT]
         ),
         Projection(
-            entityNameExtend = "Selective", properties = [
+            entityNameExtend = "Selective",
+            properties = [
                 "employeeId",
                 "payMonth",
                 "gross",
             ],
             functions = [
-                FunctionProjection(
-                    function = MAX, args = ["gross"], alias = "MAX_GROSS"
-                ), FunctionProjection(
-                    function = AVG, args = ["gross"], alias = "AVG_GROSS"
-                ), FunctionProjection(
-                    function = MAX, args = ["deduction"], alias = "MAX_DEDUCTION"
-                ), FunctionProjection(
-                    function = AVG, args = ["deduction"], alias = "AVG_DEDUCTION"
-                )
+                FunctionProjection(function = MAX, args = ["gross"], alias = "MAX_GROSS"),
+                FunctionProjection(function = AVG, args = ["gross"], alias = "AVG_GROSS"),
+                FunctionProjection(function = MAX, args = ["deduction"], alias = "MAX_DEDUCTION"),
+                FunctionProjection(function = AVG, args = ["deduction"], alias = "AVG_DEDUCTION")
             ],
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),

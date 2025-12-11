@@ -17,12 +17,14 @@ import java.time.LocalDateTime
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
-            entityNameExtend = "Condition", properties = [
+            entityNameExtend = "Condition",
+            properties = [
                 "id",
                 "name",
                 "address",
                 "birthday",
-            ], commonInterface = [DMLInterfaceEnum.CONDITION]
+            ],
+            commonInterface = [DMLInterfaceEnum.CONDITION]
         )
     ]
 )

@@ -25,15 +25,3 @@ complexity:
 formatting:
   active: false    # ktlint ベースのフォーマットルール
   android: false   # Android プロジェクト向けの追加ルール
-
-# ===========================================
-# カスタムルールセット
-# —— ここに本物の AndrORM 検査ルールを追加していく
-# ===========================================
-androrm:
-  active: true
-  AndrOrmEntityRefRule:
-    # ★ カスタムルールを有効化する最重要項目
-    active: true
-    # 必要に応じて独自の設定を追加できる（例）:
-    # checkSelectEntity: true

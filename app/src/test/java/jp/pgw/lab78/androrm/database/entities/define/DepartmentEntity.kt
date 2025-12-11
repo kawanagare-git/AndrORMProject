@@ -22,7 +22,9 @@ import java.time.LocalDateTime
 @Projections(
     [
         Projection(
-            entityNameExtend = "Info", aliasExtend = "INF", properties = [
+            entityNameExtend = "Info",
+            aliasExtend = "INF",
+            properties = [
                 "employeeId",
                 "department",
                 "section"
@@ -33,7 +35,8 @@ import java.time.LocalDateTime
             commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.CONDITION]
         ),
         Projection(
-            entityNameExtend = "Insert", properties = [
+            entityNameExtend = "Insert",
+            properties = [
                 "employeeId",
                 "department",
                 "section",

@@ -167,12 +167,12 @@ class PropsProcessor(
      * @see SymbolProcessor.process
      */
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        infoEntered()
+        traceEntered(resolver)
         // Props 生成
         generateProps(resolver)
         // @Projection と @Projections から data class を生成
         generateDataClassFromProjections(resolver)
-        infoExiting()
+        traceExiting()
         return emptyList()
     }
 
@@ -552,20 +552,20 @@ class PropsProcessor(
             // @@EntityPackageInfo を FQN で検証
             if (annotation?.let {
                     it.annotationType.resolve().declaration.qualifiedName?.asString() == ENTITY_PACKAGE_INFO_FQN
-                } ?: false) {
-                val base = annotation?.arguments?.firstOrNull {
+                } == true) {
+                val base = annotation.arguments.firstOrNull {
                     it.name?.asString() == BASE_PACKAGE
                 }?.value
                 // サブパッケージの取得
                 // PackageInterfaceRelation から common.canonicalName に該当するものを抽出
-                val sub = PackageInterfaceRelation.values().firstOrNull() {
+                val sub = PackageInterfaceRelation.values().firstOrNull {
                     DMLInterfaceEnum.valueOf(it.name).interfaceFQN == common.canonicalName
                 }
                     // DMLInterfaceEnum から取得した列挙子の relation の値を取得
                     .let { it?.relation }
                     // EntityPackageInfo の列挙子からサブパッケージを取得
                     .let { argument ->
-                        annotation?.arguments?.firstOrNull() {
+                        annotation.arguments.firstOrNull {
                             it.name?.asString() == argument
                         }
                     }?.value
@@ -746,14 +746,14 @@ class PropsProcessor(
             .firstOrNull { it.shortName.asString() == COLUMN }
         if (columnAnnotation?.let {
                 it.annotationType.resolve().declaration.qualifiedName?.asString() == COLUMN_FQN
-            } ?: false) {
+            } == true) {
             // アノテーション引数からカラム名を取得
-            val columnName = columnAnnotation?.arguments
-                ?.firstOrNull { it.name?.asString() == COLUMN_NAME }
+            val columnName = columnAnnotation.arguments
+                .firstOrNull { it.name?.asString() == COLUMN_NAME }
                 ?.value as? String
             // アノテーション引数からカラムエイリアスを取得
-            val columnAlias = columnAnnotation?.arguments
-                ?.firstOrNull { it.name?.asString() == COLUMN_ALIAS }
+            val columnAlias = columnAnnotation.arguments
+                .firstOrNull { it.name?.asString() == COLUMN_ALIAS }
                 ?.value as? String
             // AnnotationSpec に変換
             val result = if (!columnName.isNullOrBlank() || !columnAlias.isNullOrBlank()) {

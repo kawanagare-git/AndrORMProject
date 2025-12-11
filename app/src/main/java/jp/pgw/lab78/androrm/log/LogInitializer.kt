@@ -12,19 +12,14 @@ object LogInitializer {
      * @since 2025-08-01
      */
     fun initLogDir() {
-        val logDirPath: String = if (isAndroidRuntime()) {
-            try {
-                val context = getAndroidContextSafely()
-                File(context.filesDir, "logs").absolutePath
-            } catch (e: Throwable) {
-                File("logs").absolutePath
-            }
-        } else {
+        val logDirPath: String = runCatching {
+            val context = getAndroidContextSafely()
+            File(context.filesDir, "logs").absolutePath
+        }.getOrElse {
             File("logs").absolutePath
         }
 
         val logDir = File(logDirPath)
-        println("Create log directory: ${logDir.absolutePath}")
         if (!logDir.exists()) logDir.mkdirs()
 
         System.setProperty("LOG_DIR", logDir.absolutePath)

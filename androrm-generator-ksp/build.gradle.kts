@@ -56,3 +56,7 @@ tasks.named("compileKotlin").configure {
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     sourceSets["main"].kotlin.srcDir("build/generated/ksp/main/kotlin")
 }
+
+tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+    enabled = false
+}
