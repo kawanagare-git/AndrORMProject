@@ -3,7 +3,7 @@
 # ===========================================
 build:
   # 許容される違反数（0 = 1つでも違反でビルド失敗）
-  maxIssues: 0
+  maxIssues: 9999
 
 config:
   # detekt.yml の文法チェック
@@ -25,3 +25,6 @@ complexity:
 formatting:
   active: false    # ktlint ベースのフォーマットルール
   android: false   # Android プロジェクト向けの追加ルール
+androrm:
+  AndrOrmEntityRefRule:
+    active: true

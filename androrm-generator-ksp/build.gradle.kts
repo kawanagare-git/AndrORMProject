@@ -23,6 +23,18 @@ dependencies {
     implementation(libs.kotlinpoet.ksp)
 }
 
+subprojects {
+    pluginManager.apply("io.gitlab.arturbosch.detekt")
+
+    dependencies {
+        add("detektPlugins", "io.gitlab.arturbosch.detekt:detekt-formatting:1.23.6")
+        add("detektPlugins", project(":androrm-detekt-rules"))
+
+        // ★ 追加：Detekt実行JVMのSLF4J実装（=ファイル出力できるようにする）
+        add("detektPlugins", "ch.qos.logback:logback-classic:1.5.6")
+    }
+}
+
 // === KSP META-INF サービス登録 ===
 tasks.register("generateKspMeta") {
     val outputDir = layout.buildDirectory.dir("ksp-meta")

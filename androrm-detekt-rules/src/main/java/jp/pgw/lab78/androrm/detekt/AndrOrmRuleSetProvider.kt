@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.detekt
 import io.gitlab.arturbosch.detekt.api.Config
 import io.gitlab.arturbosch.detekt.api.RuleSet
 import io.gitlab.arturbosch.detekt.api.RuleSetProvider
+import jp.pgw.lab78.androrm.detekt.log.AndrOrmJUL
 
 /**
  * ## AndrOrm Detekt ルールセットプロバイダ
@@ -30,7 +31,8 @@ class AndrOrmRuleSetProvider : RuleSetProvider {
      * @since 2025-11-30
      */
     override fun instance(config: Config): RuleSet {
-        println("### AndrOrmRuleSetProvider.instance() called")  // ★追加
+        AndrOrmJUL.initOnce()
+        AndrOrmJUL.log.info("[AndrOrmRuleSetProvider.instance] called")
         return RuleSet(
             ruleSetId,
             listOf(AndrOrmEntityRefRule(config))

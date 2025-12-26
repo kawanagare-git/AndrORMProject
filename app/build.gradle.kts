@@ -181,6 +181,14 @@ detekt {
 
 // detekt の全タスクに共通設定を適用
 tasks.withType<Detekt>().configureEach {
+    // Detekt 実行前に必ず logs ディレクトリを作る
+    doFirst {
+        val logDir = file("$projectDir/logs")
+        if (!logDir.exists()) {
+            logDir.mkdirs()
+        }
+    }
+
     config.setFrom("$rootDir/config/detekt/detekt.yml")
     // ★ Android プロジェクト対応：全ソースディレクトリを解析対象にする
     setSource(
