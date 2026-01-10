@@ -1,7 +1,9 @@
 package jp.pgw.lab78.androrm.detekt
 
 import io.gitlab.arturbosch.detekt.api.*
-import jp.pgw.lab78.androrm.detekt.AndrOrmEntityRefRule.Companion.ExtractEntity.*
+import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.invalidPropertyReference
+import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.logDebug
+import jp.pgw.lab78.androrm.detekt.AndrOrmEntityRefRule.ExtractEntity.*
 import jp.pgw.lab78.androrm.detekt.log.AndrOrmJUL
 import org.jetbrains.kotlin.psi.*
 
@@ -48,16 +50,14 @@ import org.jetbrains.kotlin.psi.*
 class AndrOrmEntityRefRule(
     config: Config = Config.empty
 ) : Rule(config) {
-    companion object {
-        /** ルール説明メッセージの共通接頭辞 */
-        const val MESSAGE_PREFIX =
-            "Select DSL で参照するプロパティは、from / join で指定した Entity に属している必要があります。"
-
-        enum class ExtractEntity(val index: Int) {
-            fromEntity(0),
-            joinedEntity(1)
-        }
+    /** 引数抽出用の列挙型 */
+    enum class ExtractEntity(val index: Int) {
+        FromEntity(0),
+        JoinedEntity(1)
     }
+
+    /** 報告済み位置情報の集合（重複報告防止用） */
+    private val reportedPositions = mutableSetOf<String>()
 
     /** ルール定義情報 */
     override val issue: Issue = Issue(
@@ -156,15 +156,16 @@ class AndrOrmEntityRefRule(
         context: SelectChainContext?
     ): SelectChainContext? {
         val name = call.calleeName() ?: return context
+        val messageDebug = logDebug(name, call.text.take(80))
         return when (name) {
             // ① Select(...) を見つけたら fromEntity を取得してコンテキスト作成
             "Select" -> {
-                AndrOrmJUL.debug("[AndrOrmEntityRefRule] processCall:${call.text.take(80)}")
+                AndrOrmJUL.debug(messageDebug)
                 createContextFromSelect(call)
             }
             // ② join(...) -> joinedEntity を追加 + ラムダのプロパティを検査
             "join" -> {
-                AndrOrmJUL.debug("[AndrOrmEntityRefRule] processCall:${call.text.take(80)}")
+                AndrOrmJUL.debug(messageDebug)
                 if (context != null) {
                     updateContextWithJoin(call, context)
                     checkLambdaPropertyRefs(call, context)
@@ -173,7 +174,7 @@ class AndrOrmEntityRefRule(
             }
             // ③ where / having -> ラムダ内のプロパティを検査
             "where", "having" -> {
-                AndrOrmJUL.debug("[AndrOrmEntityRefRule] processCall:${call.text.take(80)}")
+                AndrOrmJUL.debug(messageDebug)
                 if (context != null) {
                     checkLambdaPropertyRefs(call, context)
                 }
@@ -181,7 +182,7 @@ class AndrOrmEntityRefRule(
             }
             // ④ order -> ラムダ内のプロパティを検査
             "order" -> {
-                AndrOrmJUL.debug("[AndrOrmEntityRefRule] processCall:${call.text.take(80)}")
+                AndrOrmJUL.debug(messageDebug)
                 if (context != null) {
                     checkLambdaPropertyRefs(call, context)
                 }
@@ -204,7 +205,7 @@ class AndrOrmEntityRefRule(
         val fromName = extractEntityNameFromKClassLiteral(fromArg) ?: return null
         return SelectChainContext(
             selectCall = call,
-            fromEntityName = fromName ?: ""
+            fromEntityName = fromName
         )
     }
 
@@ -220,7 +221,7 @@ class AndrOrmEntityRefRule(
         context: SelectChainContext
     ) {
         // シグネチャ: join(joinType, joinedEntity, block)
-        val joinedArg = extractEntityExpression(call, joinedEntity) ?: return
+        val joinedArg = extractEntityExpression(call, JoinedEntity) ?: return
         val joinedName = extractEntityNameFromKClassLiteral(joinedArg) ?: return
         context.joinedEntityNames += joinedName
     }
@@ -264,17 +265,19 @@ class AndrOrmEntityRefRule(
 
                     // Select / join で指定された Entity に含まれない場合は NG
                     if (!allowedEntityNames.contains(lhsText)) {
-                        val message =
-                            "[REPORT] [INVALID PROPERTY REFERENCE] The entity `$lhsText` of" +
-                                    " the property reference `${expression.text}` does not match any of" +
-                                    " the entities specified in Select()'s FROM or JOIN clauses."
-                        report(
-                            CodeSmell(
-                                issue,
-                                Entity.from(expression),
-                                message = message
+                        val message = invalidPropertyReference(lhsText, expression.text)
+                        val filePath = expression.containingKtFile.virtualFilePath
+                        val offset = expression.textRange.startOffset
+                        val key = "$filePath:$offset"
+                        if (reportedPositions.add(key)) {
+                            report(
+                                CodeSmell(
+                                    issue,
+                                    Entity.from(expression),
+                                    message = message
+                                )
                             )
-                        )
+                        }
                         AndrOrmJUL.warning(message)
                     }
                 }
@@ -330,7 +333,7 @@ class AndrOrmEntityRefRule(
      */
     private fun extractEntityExpression(
         selectCall: KtCallExpression,
-        argumentName: ExtractEntity = fromEntity
+        argumentName: ExtractEntity = FromEntity
     ): KtExpression? {
         // 引数名指定
         val namedFromArg = selectCall.valueArguments
