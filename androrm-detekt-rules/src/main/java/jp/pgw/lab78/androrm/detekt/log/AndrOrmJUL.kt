@@ -83,7 +83,7 @@ object AndrOrmJUL {
         if (initialized) return
         initialized = true
         // 例：プロジェクト直下/app/logs に吐く（DetektはGradleから実行されるので user.dir はルートになりやすい）
-        val dir = File(System.getProperty("user.dir"), "app/logs")
+        val dir = File(System.getProperty("user.dir"), "androrm-detekt-rules/logs")
         dir.mkdirs()
 
         // ★ 日付フォーマットを ISO 風に固定

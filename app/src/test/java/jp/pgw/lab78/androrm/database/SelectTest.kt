@@ -58,27 +58,6 @@ class SelectTest {
                 }
             }
         println(SELECT.build())
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(INNER, TestSelectEntity::class, {
-                and {
-                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
-                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
-                }
-            })
-            .join(LEFT, TestAllEntity::class, {
-                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
-            })
-            .where {
-                and {
-                    TestSelectEntityWithAlias::name eq "川流"
-                    TestSelectEntity::address like "%Shinjuku%"
-                    or {
-                        TestAllEntity::insertDateTime gt
-                                LocalDateTime.parse("2025-01-01T00:00:00.000")
-                        TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
-                    }
-                }
-            }
         println(SELECT.build())
     }
 
@@ -169,17 +148,18 @@ class SelectTest {
             .order { DepartmentEntityInfo::department.asc }
         println(SELECT.build())
         SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class, {
+            .join(INNER, DepartmentEntityInfo::class) {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntity::employeeId
-            })
-            .join(LEFT, SalaryEntitySelective::class, {
+            }
+            .join(LEFT, SalaryEntitySelective::class) {
                 EmployeeEntityIdSelection::employeeId eq SalaryEntitySelective::employeeId
-            })
+            }
             .where({
                 DepartmentEntityInfo::department eq DepartmentEntity::department
                 or {
                     DepartmentEntityInfo::section eq "10"
                     DepartmentEntityInfo::section eq "20"
+                    EmployeeEntityIdSelection::employeeId between "1000" to "2000"
                 }
             })
             .having {
@@ -195,10 +175,10 @@ class SelectTest {
     @Test
     fun build5() {
         SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(LEFT, TestSelectEntity::class, {
-                TestSelectEntityWithAlias::id eq EmployeeEntity::employeeId
+            .join(LEFT, TestSelectEntity::class) {
+                TestSelectEntityWithAlias::id eq TestSelectEntity::id
                 TestSelectEntity::name like "%kawanagare"
-            })
+            }
             .where {
                 or {
                     TestSelectEntity::name like "%kawanagare"
@@ -216,7 +196,7 @@ class SelectTest {
         val joinTable: KClass<out SelectEntity> = TestSelectEntity::class
         SELECT = Select(fromTable)
             .join(
-                LEFT, joinTable, {
+                LEFT, joinTable, on = {
                     fromTable.prop("id") eq TestSelectEntity::id
                     joinTable.prop("name") like "%kawanagare"
                 })
@@ -227,6 +207,33 @@ class SelectTest {
                 }
             }
             .order { joinTable.prop("address").nullsLast }
+        println(SELECT.build())
+    }
+
+    @Test
+    fun build7() {
+        SELECT = Select(TestSelectEntityWithAlias::class)
+            .join(INNER, TestSelectEntity::class, on = {
+                and {
+                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
+                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
+                }
+            })
+            .join(LEFT, TestAllEntity::class).on {
+                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
+            }
+            .where {
+                and {
+                    TestSelectEntityWithAlias::name eq "川流"
+                    TestSelectEntity::address like "%Shinjuku%"
+                    or {
+                        TestAllEntity::insertDateTime gt
+                                LocalDateTime.parse("2025-01-01T00:00:00.000")
+                        TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
+                    }
+                    TestSelectEntityWithAlias::id between (100) and (200)
+                }
+            }
         println(SELECT.build())
     }
 

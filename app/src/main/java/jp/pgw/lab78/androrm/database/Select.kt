@@ -109,7 +109,7 @@ class Select<T : SelectEntity>(
      * ### テーブル結合を指定する
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
      * @param joinedEntity 結合するエンティティクラス（副クラス）
-     * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
+     * @param on 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
      * @since 2025-08-01
@@ -117,12 +117,12 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
-        block: ConditionBuilder.() -> Unit
+        on: ConditionBuilder.() -> Unit
     ): Select<T> {
         // 結合テーブル名取得
         val joinedTableName = joinedEntity.createTableName()
         val joinedTableAlias = joinedEntity.getAlias().ifEmpty { joinedTableName }
-        val joinCondition = ConditionBuilder().apply(block).buildList()
+        val joinCondition = ConditionBuilder().apply(on).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
                 "${joinType.name.lowercase(Locale.ROOT)} "
@@ -131,6 +131,45 @@ class Select<T : SelectEntity>(
             )
         usedEntityClasses += joinedEntity
         return this
+    }
+
+    /**
+     * ## join メソッド
+     * ### テーブル結合を指定する
+     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
+     * @param joinedEntity 結合するエンティティクラス（副クラス）
+     * @return 自身のインスタンス(this)
+     * @author Masahiro Inoue
+     * @since 2026-01-11
+     */
+    fun join(
+        joinType: JoinType,
+        joinedEntity: KClass<out SelectEntity>,
+    ): JoinCondition<T> {
+        return JoinCondition(this, joinType, joinedEntity)
+    }
+
+    /**
+     * ## JoinCondition クラス
+     * ### join メソッド内で使用する結合条件クラス
+     * @author Masahiro Inoue
+     * @since 2026-01-11
+     */
+    class JoinCondition<T : SelectEntity>(
+        private val select: Select<T>,
+        private val joinType: JoinType,
+        private val joinedEntity: KClass<out SelectEntity>,
+    ) {
+        /** ## on メソッド
+         * ### テーブル結合条件を指定する
+         * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
+         * @return 自身のインスタンス(this)
+         * @author Masahiro Inoue
+         * @since 2026-01-11
+         */
+        fun on(block: ConditionBuilder.() -> Unit): Select<T> {
+            return select.join(joinType, joinedEntity, block)
+        }
     }
 
     /**
@@ -184,13 +223,13 @@ class Select<T : SelectEntity>(
     /**
      * ## order メソッド
      * ### 集計結果検索条件を指定する
-     * @param block 並び替え DSL ブロック。`OrderBuilder` の拡張ラムダとして記述。
+     * @param by 並び替え DSL ブロック。`OrderBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun order(block: OrderDsl.() -> Unit): Select<T> {
-        val builder = OrderDsl().apply(block)
+    fun order(by: OrderDsl.() -> Unit): Select<T> {
+        val builder = OrderDsl().apply(by)
         orderColumns += builder.orders
         return this
     }

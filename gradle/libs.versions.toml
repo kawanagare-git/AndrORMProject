@@ -50,6 +50,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVer
 [libraries]
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detektApi" }
+detekt-test = { module = "io.gitlab.arturbosch.detekt:detekt-test", version.ref = "detektApi" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 
@@ -84,3 +85,4 @@ monitor = { module = "androidx.test:monitor", version.ref = "monitor" }
 kotlinpoet = { module = "com.squareup:kotlinpoet", version.ref = "kotlinpoet" }
 kotlinpoet-ksp = { module = "com.squareup:kotlinpoet-ksp", version.ref = "kotlinpoet" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompatVersion" }
+

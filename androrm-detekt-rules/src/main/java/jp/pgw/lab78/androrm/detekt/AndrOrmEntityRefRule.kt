@@ -53,7 +53,10 @@ class AndrOrmEntityRefRule(
     /** 引数抽出用の列挙型 */
     enum class ExtractEntity(val index: Int) {
         FromEntity(0),
-        JoinedEntity(1)
+        JoinedEntity(1);
+
+        override fun toString() = this.name.replaceFirstChar { it.lowercaseChar() }
+
     }
 
     /** 報告済み位置情報の集合（重複報告防止用） */
@@ -173,7 +176,7 @@ class AndrOrmEntityRefRule(
                 context
             }
             // ③ where / having -> ラムダ内のプロパティを検査
-            "where", "having" -> {
+            "where", "having", "on" -> {
                 AndrOrmJUL.debug(messageDebug)
                 if (context != null) {
                     checkLambdaPropertyRefs(call, context)
@@ -297,12 +300,28 @@ class AndrOrmEntityRefRule(
      * @since 2025-11-30
      */
     private fun extractLambda(call: KtCallExpression): KtLambdaExpression? {
-        // xxx( ..., { ... } )
-        call.lambdaArguments.firstOrNull()?.getLambdaExpression()?.let { return it }
+        // 1) trailing lambda  (where { ... })
+        call.lambdaArguments.firstOrNull()
+            ?.getLambdaExpression()
+            ?.let { return it }
 
-        // xxx( ..., block = { ... } ) または xxx({ ... })
-        val last = call.valueArguments.lastOrNull()?.getArgumentExpression()
-        if (last is KtLambdaExpression) return last
+        // 2) named argument lambda (join(..., on = { ... }))
+        for (arg in call.valueArguments) {
+            val expr = arg.getArgumentExpression()
+
+            // on = { ... }
+            if (expr is KtLambdaExpression) {
+                return expr
+            }
+
+            // on = foo({ ... }) みたいな形（将来の保険）
+            if (expr is KtCallExpression) {
+                expr.lambdaArguments.firstOrNull()
+                    ?.getLambdaExpression()
+                    ?.let { return it }
+            }
+        }
+
         return null
     }
 
@@ -337,15 +356,14 @@ class AndrOrmEntityRefRule(
     ): KtExpression? {
         // 引数名指定
         val namedFromArg = selectCall.valueArguments
-            .firstOrNull { it.getArgumentName()?.asName?.identifier == argumentName.name }
+            .firstOrNull { it.getArgumentName()?.asName?.identifier == argumentName.toString() }
         // 位置指定
         val expr = (namedFromArg ?: selectCall.valueArguments.getOrNull(argumentName.index))
             ?.getArgumentExpression()
         // エラー処理
         if (expr == null) {
-            AndrOrmJUL.log.warning(
-                "[AndrOrmEntityRefRule] WARN: argument '$argumentName' not found in:" +
-                        selectCall.text.take(80)
+            AndrOrmJUL.warning(
+                "argument '$argumentName' not found in:${selectCall.text.take(80)}"
             )
         }
         return expr

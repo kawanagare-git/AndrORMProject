@@ -216,8 +216,9 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>> :
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    infix fun <T : Entity> KProperty1<T, *>.between(start: Any) {
+    infix fun <T : Entity> KProperty1<T, *>.between(start: Any): BetweenBuilder<T> {
         BetweenBuilder(this, start)
+        return BetweenBuilder(this, start)
     }
 
     /**

@@ -2,6 +2,7 @@
 plugins {
     // ★ Android じゃなくて純粋な JVM ライブラリにする
     kotlin("jvm")
+    jacoco
 }
 
 java {
@@ -21,11 +22,9 @@ dependencies {
 
     // （必要ならテスト用依存を追加）
     testImplementation(kotlin("test"))
+    // ★ これがないと compileAndLint が存在しない
+    testImplementation(libs.detekt.test)
 }
-//// ログ出力
-//dependencies {
-//    implementation(libs.slf4j.api)
-//}
 
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     enabled = false
