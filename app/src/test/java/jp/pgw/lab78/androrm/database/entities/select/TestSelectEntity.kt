@@ -10,7 +10,7 @@ import java.time.LocalDate
 /**
  * テスト用 data クラス
  */
-@Table
+@Table(alias = "TS")
 data class TestSelectEntity(
     val id: Int,
     val name: String,

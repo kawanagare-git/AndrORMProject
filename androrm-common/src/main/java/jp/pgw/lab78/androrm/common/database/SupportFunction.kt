@@ -170,4 +170,14 @@ object SupportFunction {
      * @since 2025-10-19
      */
     fun KProperty1<*, *>.isFunctionColumn() = this.findAnnotation<Function>().isNotNull()
+
+    /**
+     * ## 所有クラス取得拡張関数
+     * @receiver KProperty1 インスタンス
+     * @return 所有クラスの KClass インスタンス
+     * @author Masahiro Inoue
+     * @since 2026-01-17
+     */
+    fun KProperty1<*, *>.ownerKClass(): KClass<*> =
+        this.parameters.first().type.classifier as KClass<*>
 }

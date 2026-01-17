@@ -7,6 +7,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -218,34 +219,6 @@ object EntityManager {
         return result
     }
 
-    /**
-     * ## プレースホルダーバインド
-     * ### クエリに設定されたプレースホルダー名のバインド値を取得
-     * ### 更にクエリのプレースホルダー名を「?」に変更する
-     * @param query クエリ文字列
-     * @param valuesMap バインド値のマップ
-     * @return クエリのプレースホルダー名を「?」に変更した文字列 と バインド値のリスト（Pair）
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun bindPlaceholders(
-        query: String,
-        valuesMap: List<Map<String, Any>>
-    ): Pair<String, List<Array<String>>> {
-        val argNames = mutableListOf<String>()
-        val queryWithPlaceholders = PLACE_HOLDER_REGEX.replace(query) {
-            argNames += it.groupValues[1]
-            "?"
-        }
-        val args = argNames.map { key ->
-            valuesMap.map {
-                it[key]?.toString() ?: error("Missing bind value for :$it")
-            }
-                .toTypedArray()
-        }
-        return queryWithPlaceholders to args
-    }
-
     fun convertToEntity(columnNames: Array<String>, kClass: KClass<*>) {
         return
     }
@@ -288,27 +261,41 @@ object EntityManager {
     /**
      * ## 値の文字列化
      * ### 指定された値を文字列化する
+     * @param valueHolder バインド値管理オブジェクト
      * @param value 変換元の値
      * @return 文字列化された値
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
     @Suppress("UNCHECKED_CAST")
-    fun formatValue(value: Any): String = when (value) {
+    fun formatValue(valueHolder: QueryWithBindValues, value: Any): String = when (value) {
         is KProperty1<*, *> -> {
             val property = value as KProperty1<out Entity, *>
-            "${property.extractClassFromProperty().getTableAlias()}.${property.getColumn()}"
+            "${property.extractClassFromProperty().getTableAlias()}.${value.getColumn()}"
         }
 
-        is String -> if (value.startsWith(":")) {
-            "$value"
-        } else {
-            "'$value'"
+        else -> {
+            valueHolder.addBindValue(value)
+            "?"
         }
-
-        is LocalDate -> "'$value'"
-        is LocalDateTime -> "'$value'"
-        is LocalTime -> "'$value'"
-        else -> value.toString()
     }
+
+//    /**
+//     * ## 値の文字列化
+//     * ### 指定された値を文字列化する
+//     * @param value 変換元の値
+//     * @return 文字列化された値
+//     * @author Masahiro Inoue
+//     * @since 2025-08-01
+//     */
+//    fun formatValue(value: Any): String = when (value) {
+//        is KProperty1<*, *> -> {
+//            val property = value as KProperty1<out Entity, *>
+//            "${property.extractClassFromProperty().getTableAlias()}.${value.getColumn()}"
+//        }
+//
+//        else -> {
+//            "?"
+//        }
+//    }
 }

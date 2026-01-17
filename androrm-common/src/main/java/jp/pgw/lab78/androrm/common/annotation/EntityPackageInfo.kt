@@ -13,5 +13,4 @@ annotation class EntityPackageInfo(
     val insertPackage: String = "insert",
     val updatePackage: String = "update",
     val upsertPackage: String = "upsert",
-    val conditionPackage: String = "condition",
 )

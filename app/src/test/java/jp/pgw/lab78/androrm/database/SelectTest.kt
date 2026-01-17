@@ -1,12 +1,12 @@
 package jp.pgw.lab78.androrm.database
 
+//import org.junit.jupiter.api.Test
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select.JoinType.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
-import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
-import org.junit.jupiter.api.Test
+import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.reflect.KClass
@@ -23,7 +23,7 @@ class SelectTest {
     }
 
     @Test
-    fun build0() {
+    fun build00() {
         SELECT = Select(TestSelectEntity::class)
         println(SELECT.build())
         SELECT = Select(TestSelectEntityWithAlias::class)
@@ -33,7 +33,7 @@ class SelectTest {
     }
 
     @Test
-    fun build1() {
+    fun build01() {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(
                 LEFT, TestSelectEntity::class, {
@@ -58,11 +58,10 @@ class SelectTest {
                 }
             }
         println(SELECT.build())
-        println(SELECT.build())
     }
 
     @Test
-    fun build2() {
+    fun build02() {
         // 最終TEST
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, {
@@ -91,10 +90,10 @@ class SelectTest {
         // 新エンティティクラス
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(
-                LEFT, EmployeeEntityJoined::class,
-                {
-                    EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
-                })
+                LEFT, EmployeeEntityJoined::class
+            ).on {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
+            }
             .order {
                 EmployeeEntityIdSelection::employeeId.asc.nullsFirst
                 EmployeeEntityJoined::name.desc
@@ -109,7 +108,7 @@ class SelectTest {
     }
 
     @Test
-    fun build3() {
+    fun build03() {
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -122,7 +121,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .where({
-                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { DepartmentEntityInfo::department.desc }
         println(SELECT.build())
@@ -138,7 +137,7 @@ class SelectTest {
     }
 
     @Test
-    fun build4() {
+    fun build04() {
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -173,10 +172,10 @@ class SelectTest {
     }
 
     @Test
-    fun build5() {
+    fun build05() {
         SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(LEFT, TestSelectEntity::class) {
-                TestSelectEntityWithAlias::id eq TestSelectEntity::id
+            .join(LEFT, TestSelectEntity::class).on {
+                TestSelectEntityWithAlias::id eq DepartmentEntityInfo::employeeId
                 TestSelectEntity::name like "%kawanagare"
             }
             .where {
@@ -191,7 +190,7 @@ class SelectTest {
     }
 
     @Test
-    fun build6() {
+    fun build06() {
         val fromTable: KClass<out SelectEntity> = TestSelectEntityWithAlias::class
         val joinTable: KClass<out SelectEntity> = TestSelectEntity::class
         SELECT = Select(fromTable)
@@ -211,7 +210,7 @@ class SelectTest {
     }
 
     @Test
-    fun build7() {
+    fun build07() {
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, on = {
                 and {
@@ -234,6 +233,47 @@ class SelectTest {
                     TestSelectEntityWithAlias::id between (100) and (200)
                 }
             }
+        println(SELECT.build())
+    }
+
+    @Test
+    fun build08() {
+        SELECT = Select(TestSelectEntity::class)
+        println(SELECT.build())
+        SELECT.where {
+            TestSelectEntity::id inList listOf(1, 2, 3, 4, 5)
+        }
+        println(SELECT.build())
+        SELECT.where {
+            TestSelectEntity::name like "川流%"
+        }
+        println(SELECT.build())
+        SELECT.order {
+            TestSelectEntity::id.asc
+        }
+        println(SELECT.build())
+    }
+
+    @Test
+    fun build09() {
+        val bindValues = TestAllEntity(
+            id = 10,
+            name = "川流%",
+            address = "新宿区",
+            birthday = LocalDate.parse("1990-01-01"),
+        )
+        SELECT = Select(TestSelectEntity::class)
+            .join(LEFT, TestAllEntity::class) {
+                TestSelectEntity::id eq TestAllEntity::id
+                TestAllEntity::birthday eq "2026-01-15"
+            }
+            .where {
+                TestSelectEntity::name like bindValues.name
+                TestSelectEntity::address eq bindValues.address
+                TestAllEntity::subId eq TestAllEntity::id
+                TestAllEntity::id ge "20"
+            }
+            .order { TestSelectEntity::id.asc }
         println(SELECT.build())
     }
 

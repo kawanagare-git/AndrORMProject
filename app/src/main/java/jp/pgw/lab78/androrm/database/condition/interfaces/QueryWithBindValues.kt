@@ -1,25 +1,31 @@
 package jp.pgw.lab78.androrm.database.condition.interfaces
 
-import jp.pgw.lab78.androrm.common.dml.interfaces.BindValuesEntity
-import kotlin.reflect.KClass
-
 /**
  * ## バインド値条件生成インターフェース
  * ### バインド値を使用する条件生成のためのインターフェース
  * @author Masahiro Inoue
  * @since 2026-01-12
  */
-interface QueryWithBindValues<T : BindValuesEntity> : QueryStructureLike {
-    /** バインド変数リスト */
-    val bindValues: MutableList<Any>
+abstract class QueryWithBindValues {
+    /** バインド変数リスト（実体） */
+    private val _bindValues: MutableList<Any?> = mutableListOf()
 
-    /**
-     * ## バインド変数定義メソッド
-     * ### 定義されたバインド値からプレースホルダに設定する
-     * @param bindValuesEntity バインド値エンティティのクラス型
-     * @return 実装した型を返す
-     * @author Masahiro Inoue
-     * @since 2026-01-12
-     */
-    fun bindValue(bindValuesEntity: KClass<out T>): QueryWithBindValues<T>
+    /** ## バインド変数リスト（取得） */
+    val bindValues: List<Any?>
+        get() = _bindValues
+
+    /** ## バインド変数リスト（追加） */
+    internal fun addBindValue(value: Any?) {
+        _bindValues += value
+    }
+
+    /** ## バインド変数リスト（データ郡追加） */
+    internal fun addBindValues(values: Iterator<Any?>) {
+        _bindValues += values
+    }
+
+    /** ## バインド変数リスト（データ郡追加） */
+    protected fun clearBindValues() {
+        _bindValues.clear()
+    }
 }

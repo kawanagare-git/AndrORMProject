@@ -34,7 +34,7 @@ import java.time.LocalDateTime
                 "gender",
                 "position",
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.CONDITION]
+            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.UPDATE]
         ),
     ]
 )

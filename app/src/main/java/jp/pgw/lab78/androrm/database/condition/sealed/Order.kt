@@ -26,9 +26,9 @@ data class Order(
      * @since 2025-10-19
      */
     override fun build(): String {
-        val columnName = column.name
-        val orderDir = if (ascending) "ASC" else "DESC"
-        val nullsClause = if (nullsLast) "NULLS LAST" else "NULLS FIRST"
+        val columnName = column.name.uppercase()
+        val orderDir = if (ascending) "asc" else "desc"
+        val nullsClause = if (nullsLast) "nulls last" else "nulls first"
         return "$columnName $orderDir $nullsClause"
     }
 }

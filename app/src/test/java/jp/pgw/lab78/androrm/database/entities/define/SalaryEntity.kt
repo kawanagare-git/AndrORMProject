@@ -55,14 +55,6 @@ import java.time.LocalDateTime
             ],
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
-        Projection(
-            entityNameExtend = "Condition", properties = [
-                "employeeId",
-                "payMonth",
-                "gross",
-            ],
-            commonInterface = [DMLInterfaceEnum.CONDITION]
-        )
     ]
 )
 @Table("SALARY", alias = "SAL")

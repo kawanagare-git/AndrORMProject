@@ -32,7 +32,7 @@ import java.time.LocalDateTime
             functions = [
                 FunctionProjection(function = COUNT, args = [], alias = "ALL_LINE")
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.CONDITION]
+            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.UPSERT]
         ),
         Projection(
             entityNameExtend = "Insert",

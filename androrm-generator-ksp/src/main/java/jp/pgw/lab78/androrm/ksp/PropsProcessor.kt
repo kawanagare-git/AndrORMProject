@@ -1139,5 +1139,5 @@ enum class PackageInterfaceRelation(val relation: String) {
     INSERT("insertPackage"),
     UPDATE("updatePackage"),
     UPSERT("upsertPackage"),
-    CONDITION("conditionPackage"),
+    BIND_VALUES("bindValuesPackage"),
 }

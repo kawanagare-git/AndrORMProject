@@ -12,7 +12,7 @@ material = "1.12.0"
 # JUnit & Mockito
 junitVersion = "4.13.2"
 junitJupiterVersion = "5.10.2"
-junitVintageEngine = "5.10.1"
+junitVintageEngine = "5.10.2"
 mockitoCore = "5.15.2"
 mockitoAndroid = "5.12.0"
 
@@ -51,6 +51,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVer
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detektApi" }
 detekt-test = { module = "io.gitlab.arturbosch.detekt:detekt-test", version.ref = "detektApi" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junitJupiterVersion" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
 

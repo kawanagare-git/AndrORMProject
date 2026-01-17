@@ -17,15 +17,17 @@ import java.time.LocalDateTime
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
-            entityNameExtend = "Condition",
+            entityNameExtend = "Comprehensive",
             properties = [
                 "id",
                 "name",
                 "address",
                 "birthday",
+                "updateDate",
+                "insertDateTime"
             ],
-            commonInterface = [DMLInterfaceEnum.CONDITION]
-        )
+            commonInterface = [DMLInterfaceEnum.INSERT, DMLInterfaceEnum.UPSERT]
+        ),
     ]
 )
 @Table
@@ -34,7 +36,8 @@ data class TestAllEntity(
     val name: String,
     val address: String,
     val birthday: LocalDate,
-    val updateDate: LocalDateTime,
-    val insertDateTime: LocalDateTime
+    val subId: Int? = null,
+    val updateDate: LocalDateTime = LocalDateTime.now(),
+    val insertDateTime: LocalDateTime = LocalDateTime.now()
 ) :
     ComprehensiveEntity

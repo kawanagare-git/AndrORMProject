@@ -7,9 +7,13 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.isColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.database.DmlConstant.ANY_CLOSE_BRACKET_REGEX
+import jp.pgw.lab78.androrm.database.DmlConstant.ANY_OPEN_BRACKET_REGEX
+import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
@@ -31,7 +35,7 @@ import kotlin.reflect.full.memberProperties
 class Select<T : SelectEntity>(
     private val fromEntity: KClass<out T>,
     private val isDistinct: Boolean = false,
-) : QueryStructureLike {
+) : QueryWithBindValues(), QueryStructureLike {
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
 
@@ -58,6 +62,12 @@ class Select<T : SelectEntity>(
 
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
+
+    /** クエリ格納 */
+    private lateinit var query: String
+
+    /** ビルドフラグ */
+    private var isBuild: Boolean = false
 
     /**
      * ## select 文を構成要素列挙クラス
@@ -119,10 +129,11 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
         on: ConditionBuilder.() -> Unit
     ): Select<T> {
+        isBuild = false
         // 結合テーブル名取得
         val joinedTableName = joinedEntity.createTableName()
         val joinedTableAlias = joinedEntity.getAlias().ifEmpty { joinedTableName }
-        val joinCondition = ConditionBuilder().apply(on).buildList()
+        val joinCondition = ConditionBuilder(this).apply(on).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
                 "${joinType.name.lowercase(Locale.ROOT)} "
@@ -146,6 +157,7 @@ class Select<T : SelectEntity>(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
     ): JoinCondition<T> {
+        isBuild = false
         return JoinCondition(this, joinType, joinedEntity)
     }
 
@@ -181,7 +193,8 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
-        val builder = ConditionBuilder().apply(block)
+        isBuild = false
+        val builder = ConditionBuilder(this).apply(block)
         // Select は builder の中身を意識せず、リストだけ取得して保持
         whereConditions += builder.buildList()
         return this
@@ -196,7 +209,8 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
-        val builder = HavingConditionBuilder().apply(block)
+        isBuild = false
+        val builder = HavingConditionBuilder(this).apply(block)
         havingConditions += builder.buildList()
         // HAVING 句が指定されると自動的に GROUP BY 句を生成する
         // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
@@ -229,6 +243,7 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun order(by: OrderDsl.() -> Unit): Select<T> {
+        isBuild = false
         val builder = OrderDsl().apply(by)
         orderColumns += builder.orders
         return this
@@ -242,57 +257,44 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     override fun build(): String {
-        val selectClause = buildString {
-            append("select ")
-            if (isDistinct) append("distinct ")
-            append(selectColumnList.joinToString(", ") { it })
-        }
-
-        /**
-         * ## 構成要素追加
-         * ## ローカル関数
-         * ### 引数に指定された内容をクエリ構成に追加する
-         * @param clauseId クエリの「句」
-         * @param separator 区切り文字列
-         * @param element 追加する要素
-         */
-        fun addClauseIfNotEmpty(
-            clauseId: SelectClause,
-            separator: CharSequence,
-            vararg element: QueryStructureLike
-        ) {
-            if (element.isNotEmpty()) {
-                val clause = element.joinToString(separator) { it.build() }.trim()
-                queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+        if (!isBuild) {
+            isBuild = true
+            val selectClause = buildString {
+                append("select ")
+                if (isDistinct) append("distinct ")
+                append(selectColumnList.joinToString(", ") { it })
             }
-        }
 
-        /**
-         * ## 構成要素追加
-         * ## ローカル関数
-         * ### 引数に指定された内容をクエリ構成に追加する
-         * @param clauseId クエリの「句」
-         * @param separator 区切り文字列
-         * @param element 追加する要素
-         */
-        fun addClauseIfNotEmpty(
-            clauseId: SelectClause,
-            separator: CharSequence,
-            element: List<QueryStructureLike>
-        ) {
-            if (element.isNotEmpty()) {
-                val clause = element.joinToString(separator) { it.build() }.trim()
-                queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+            /**
+             * ## 構成要素追加
+             * ## ローカル関数
+             * ### 引数に指定された内容をクエリ構成に追加する
+             * @param clauseId クエリの「句」
+             * @param separator 区切り文字列
+             * @param element 追加する要素
+             */
+            fun addClauseIfNotEmpty(
+                clauseId: SelectClause,
+                separator: CharSequence,
+                element: List<QueryStructureLike>
+            ) {
+                if (element.isNotEmpty()) {
+                    val clause = element.joinToString(separator) { it.build() }
+                    queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+                }
             }
-        }
 
-        addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
-        addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
-        addClauseIfNotEmpty(SelectClause.ORDER, COMMA, orderColumns.toList())
-        val otherClauses = SelectClause.entries
-            .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: "" }
-        // select 文を生成
-        return "$selectClause $otherClauses"
+            addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
+            addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
+            addClauseIfNotEmpty(SelectClause.ORDER, COMMA, orderColumns.toList())
+            val otherClauses = SelectClause.entries
+                .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
+            // select 文を生成
+            query = "$selectClause $otherClauses".replace(ANY_OPEN_BRACKET_REGEX, "(")
+                .replace(ANY_CLOSE_BRACKET_REGEX, ")")
+                .replace(MULTI_SPACE_REGEX, " ").trim()
+        }
+        return query
     }
 }
 

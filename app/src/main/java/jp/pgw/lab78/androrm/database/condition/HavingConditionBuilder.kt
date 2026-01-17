@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.database.condition.annotation.HavingDslMarker
 import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 
 /**
  * ## SQL 条件外観調整クラス
@@ -11,7 +12,8 @@ import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder
  * @since 2025-08-01
  */
 @HavingDslMarker
-class HavingConditionBuilder : BaseConditionBuilder<HavingConditionBuilder>() {
-    /** Self インスタンス生成関数 */
-    override fun createSelf() = HavingConditionBuilder()
+class HavingConditionBuilder(private val valueHolder: QueryWithBindValues) :
+    BaseConditionBuilder<HavingConditionBuilder>(valueHolder) {
+    /** Self インスタンス生成関数（自クラスを生成する） */
+    override fun createSelf() = HavingConditionBuilder(valueHolder)
 }

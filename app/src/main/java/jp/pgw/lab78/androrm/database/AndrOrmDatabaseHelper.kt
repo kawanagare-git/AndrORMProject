@@ -5,12 +5,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.interfaces.ConditionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.database.utility.EntityManager.bindPlaceholders
 import jp.pgw.lab78.androrm.database.utility.EntityManager.convertToEntity
-import jp.pgw.lab78.androrm.database.utility.EntityManager.getValueFromEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
@@ -98,16 +95,15 @@ class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    inline fun <reified T : SelectEntity, reified TC : ConditionEntity> exec(
+    inline fun <reified T : SelectEntity, reified> queryList(
         query: Select<out T>,
-        entities: TC
     ): List<T> {
-        // 条件値を格納したエンティティから値を取り出す
-        val valuesMap = getValueFromEntity(entities)
-        // 一致したプレースホルダー名を「?」に変更し、プレースホルダー名の値を定義順に取り出す
-        val (newQuery, values) = bindPlaceholders(query.build(), valuesMap)
         // select の実行（values.firstOrNull() は、values が空の時は null を返す）
-        val cursor = readableDatabase.rawQuery(newQuery, values.firstOrNull())
+        val cursor =
+            readableDatabase.rawQuery(
+                query.build(),
+                query.bindValues.map { it.toString() }.toTypedArray()
+            )
         val result = mutableListOf<T>()
         cursor.use {
             while (it.moveToFirst()) {

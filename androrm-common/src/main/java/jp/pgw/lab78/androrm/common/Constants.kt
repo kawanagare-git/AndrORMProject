@@ -1,6 +1,5 @@
 package jp.pgw.lab78.androrm.common
 
-
 /**
  * ## 定数オブジェクト
  * @author Masahiro Inoue
@@ -9,10 +8,13 @@ package jp.pgw.lab78.androrm.common
 object Constants {
     /** 空文字列 */
     const val EMPTY_STRING = ""
+
     /** 不明 */
     const val UNKNOWN = "Unknown"
+
     /** 空白 */
     const val SPACE = " "
+
     /** カンマ */
     const val COMMA = ","
 
@@ -21,7 +23,7 @@ object Constants {
      * @param query クエリ文字列
      */
     enum class LogicalOperator(val query: String) {
-        AND("and"),
-        OR("or"),
+        AND(" and "),
+        OR(" or "),
     }
 }

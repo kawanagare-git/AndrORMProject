@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
+    kspTest(project(":androrm-generator-ksp"))
 
     implementation(libs.core.ktx.v1131)
     testImplementation(libs.junit.jupiter)
@@ -64,6 +65,14 @@ android {
     packaging {
         resources {
             excludes += "kotlin/internal/internal.kotlin_builtins"
+        }
+    }
+    sourceSets {
+        getByName("test") {
+            java.srcDir("build/generated/ksp/debugUnitTest/kotlin")
+        }
+        getByName("androidTest") {
+            java.srcDir("build/generated/ksp/debugAndroidTest/kotlin")
         }
     }
 }
@@ -141,6 +150,7 @@ dependencies {
 
     // ==== 単体テスト（JVM） ====
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.jupiter.engine)
     testImplementation(libs.mockito.core)
     testImplementation(libs.junit)
     testRuntimeOnly(libs.junit.vintage.engine)

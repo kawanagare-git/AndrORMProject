@@ -2,7 +2,6 @@ package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum.CONDITION
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select
@@ -10,7 +9,6 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
-import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
 import kotlin.reflect.KProperty1
 
 /**
@@ -38,11 +36,6 @@ sealed class Condition : QueryStructureLike {
  */
 sealed class Compare : Condition() {
 
-    companion object {
-        /** 条件エンティティのクラス型 */
-        private val CONDITION_CLASS = CONDITION.kClass
-    }
-
     /**
      * ## 検索条件記述用クラス
      * ### where に使用する単一条件を指定
@@ -67,7 +60,7 @@ sealed class Compare : Condition() {
          */
         override fun build(): String {
             return "${lhsProperty.extractClassFromProperty().getTableAlias()}." +
-                    "${lhsProperty.getColumn()} ${operator.symbol} ${formatValue(value)}"
+                    "${lhsProperty.getColumn()} ${operator.symbol} $value"
         }
     }
 
@@ -95,8 +88,8 @@ sealed class Compare : Condition() {
          */
         override fun build(): String {
             val column = property.getColumn()
-            val startValue = formatValue(start)
-            val endValue = formatValue(end)
+            val startValue = start
+            val endValue = end
             return "$column BETWEEN $startValue AND $endValue"
         }
     }
