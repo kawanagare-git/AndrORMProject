@@ -1,6 +1,7 @@
 [versions]
 # Kotlin / Android Plugin
 detektApi = "1.23.6"
+gradleAndroidPluginAspectjx = "2.0.10"
 kotlin = "1.9.24"
 agp = "8.8.0"
 
@@ -15,10 +16,6 @@ junitJupiterVersion = "5.10.2"
 junitVintageEngine = "5.10.2"
 mockitoCore = "5.15.2"
 mockitoAndroid = "5.12.0"
-
-# AspectJ
-aspectjrt = "1.9.19"
-aspectjtools = "1.9.19"
 
 # Logging
 logbackAndroid = "3.0.0"
@@ -46,7 +43,6 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 android-library = { id = "com.android.library", version.ref = "agpVersion" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVersion" }
 
-
 [libraries]
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detektApi" }
@@ -61,12 +57,6 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junitVintageEngine" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
-
-# AspectJ
-aspectjrt = { module = "org.aspectj:aspectjrt", version.ref = "aspectjrt" }
-aspectjtools = { module = "org.aspectj:aspectjtools", version.ref = "aspectjtools" }
-# AspectJ Weaver (for testing)
-aspectjweaver = { module = "org.aspectj:aspectjweaver", version.ref = "aspectjrt" }
 
 # Logging
 logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }

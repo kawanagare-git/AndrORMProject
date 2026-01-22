@@ -15,17 +15,6 @@ plugins {
     alias(libs.plugins.ksp) apply false
 }
 
-buildscript {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-    }
-    dependencies {
-        classpath(libs.aspectjtools)
-    }
-}
-
 subprojects {
 
     // すべてのサブプロジェクトに detekt プラグインを適用
@@ -64,4 +53,10 @@ tasks.register("detektAll") {
             "${proj.path}:detekt"
         }
     )
+}
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
 }

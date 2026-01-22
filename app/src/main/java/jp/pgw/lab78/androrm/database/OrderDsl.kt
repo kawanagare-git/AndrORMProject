@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.annotation.OrderDslMarker
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import kotlin.reflect.KProperty1
@@ -19,7 +20,7 @@ class OrderDsl {
      *  @author Masahiro Inoue
      *  @since 2025-10-21
      */
-    val <T> KProperty1<T, *>.asc: OrderDsl
+    val KProperty1<out Entity, *>.asc: OrderDsl
         get() = this@OrderDsl.also { orders += Order(this, ascending = true) }
 
     /**
@@ -27,7 +28,7 @@ class OrderDsl {
      * @author Masahiro Inoue
      * @since 2025-10-21
      */
-    val <T> KProperty1<T, *>.desc: OrderDsl
+    val KProperty1<out Entity, *>.desc: OrderDsl
         get() = this@OrderDsl.also { orders += Order(this, ascending = false) }
 
     /**
@@ -35,7 +36,7 @@ class OrderDsl {
      * @author Masahiro Inoue
      * @since 2025-10-21
      */
-    val <T> KProperty1<T, *>.nullsLast: OrderDsl
+    val KProperty1<out Entity, *>.nullsLast: OrderDsl
         get() = this@OrderDsl.also { orders += Order(this, ascending = true, nullsLast = true) }
 
     /**
@@ -43,7 +44,7 @@ class OrderDsl {
      * @author Masahiro Inoue
      * @since 2025-10-21
      */
-    val <T> KProperty1<T, *>.nullsFirst: OrderDsl
+    val KProperty1<out Entity, *>.nullsFirst: OrderDsl
         get() = this@OrderDsl.also { orders += Order(this, ascending = true, nullsLast = false) }
 
     /**

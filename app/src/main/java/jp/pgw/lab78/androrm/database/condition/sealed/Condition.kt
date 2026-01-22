@@ -87,10 +87,7 @@ sealed class Compare : Condition() {
          * @since 2025-09-13
          */
         override fun build(): String {
-            val column = property.getColumn()
-            val startValue = start
-            val endValue = end
-            return "$column BETWEEN $startValue AND $endValue"
+            return "${property.getColumn()} between $start and $end"
         }
     }
 
@@ -235,7 +232,30 @@ data class FreeText(
      * @since 2025-08-01
      */
     override fun build(): String = text
+}
 
+/**
+ * ## GROUP BY 条件定義クラス
+ * ### GROUP BY で使用する条件の基底クラス
+ * @param column 検索条件のカラム
+ * @author Masahiro Inoue
+ * @since 2026-01-20
+ */
+data class GroupByColumn(
+    val column: KProperty1<out Entity, *>
+) : Condition() {
+    /**
+     * ## 単一条件生成メソッド
+     * ### 定義された条件から文字列を生成する
+     * @return 生成された文字列
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    override fun build(): String {
+        return column.let {
+            "${it.extractClassFromProperty().getTableAlias()}.${it.getColumn()}"
+        }
+    }
 }
 
 /**

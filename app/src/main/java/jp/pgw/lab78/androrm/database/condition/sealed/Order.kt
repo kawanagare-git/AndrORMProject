@@ -1,6 +1,10 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import kotlin.reflect.KProperty1
 
 /**
@@ -13,7 +17,7 @@ import kotlin.reflect.KProperty1
  * @since 2025-10-19
  */
 data class Order(
-    val column: KProperty1<*, *>,
+    val column: KProperty1<out Entity, *>,
     val ascending: Boolean = true,
     val nullsLast: Boolean = false
 ) : QueryStructureLike {
@@ -26,7 +30,8 @@ data class Order(
      * @since 2025-10-19
      */
     override fun build(): String {
-        val columnName = column.name.uppercase()
+        val columnName =
+            "${column.extractClassFromProperty().getTableAlias()}.${column.getColumn()}"
         val orderDir = if (ascending) "asc" else "desc"
         val nullsClause = if (nullsLast) "nulls last" else "nulls first"
         return "$columnName $orderDir $nullsClause"

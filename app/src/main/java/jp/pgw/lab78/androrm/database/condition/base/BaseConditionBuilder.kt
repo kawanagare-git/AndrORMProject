@@ -254,7 +254,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.between(pair: Pair<Any, Any>) =
-        list.add(Compare.Value(this, ComparisonOperator.BETWEEN, pair))
+        list.add(
+            Compare.Between(
+                this,
+                formatValue(valueHolder, pair.first),
+                formatValue(valueHolder, pair.second)
+            )
+        )
 
     /**
      * ## サブクエリ存在条件用関数

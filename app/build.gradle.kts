@@ -1,8 +1,5 @@
 // ＜app/build.gradle.kts＞
 import io.gitlab.arturbosch.detekt.Detekt
-import org.aspectj.bridge.IMessage
-import org.aspectj.bridge.MessageHandler
-import org.aspectj.tools.ajc.Main
 
 plugins {
     id("com.android.application")
@@ -78,64 +75,6 @@ android {
 }
 
 // --------------------------------------------------------
-// AspectJ コンパイル設定
-// --------------------------------------------------------
-val aspectjCompileClasspath by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
-dependencies {
-    aspectjCompileClasspath(libs.aspectjrt)
-    aspectjCompileClasspath(libs.aspectjtools)
-}
-
-android.applicationVariants.forEach { variant ->
-    val variantName = variant.name.replaceFirstChar {
-        if (it.isLowerCase()) it.titlecase() else it.toString()
-    }
-    val ajcTaskName = "compile${variantName}AspectJ"
-    val javaCompile = tasks.named<JavaCompile>("compile${variantName}JavaWithJavac")
-
-    tasks.register(ajcTaskName) {
-        dependsOn(javaCompile)
-        doLast {
-            val inputDir = javaCompile.get().outputs.files.singleFile
-            val aspectPath = aspectjCompileClasspath.asPath
-            val classpath = javaCompile.get().classpath.asPath
-            val bootClasspath = android.bootClasspath.joinToString(":")
-
-            val args = arrayOf(
-                "-showWeaveInfo",
-                "-source", "17",
-                "-target", "17",
-                "-inpath", inputDir.absolutePath,
-                "-aspectpath", aspectPath,
-                "-d", inputDir.absolutePath,
-                "-classpath", classpath,
-                "-bootclasspath", bootClasspath
-            )
-
-            val handler = MessageHandler(true)
-            Main().run(args, handler)
-
-            for (msg in handler.getMessages(null, true)) {
-                when (msg.kind) {
-                    IMessage.INFO -> println("AJC INFO: ${msg.message}")
-                    IMessage.WARNING -> println("AJC WARNING: ${msg.message}")
-                    IMessage.ERROR -> println("AJC ERROR: ${msg.message}")
-                    IMessage.FAIL -> println("AJC FAIL: ${msg.message}")
-                }
-            }
-        }
-    }
-
-    javaCompile.configure {
-        finalizedBy(tasks.named(ajcTaskName))
-    }
-}
-
-// --------------------------------------------------------
 // 依存関係設定
 // --------------------------------------------------------
 dependencies {
@@ -172,12 +111,6 @@ dependencies {
 dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.logback.android)
-}
-
-// AOP(AspectJ) 用
-dependencies {
-    implementation(libs.aspectjrt)
-    testImplementation(libs.aspectjweaver)
 }
 
 //// AndrORM の detekt ルール

@@ -2,7 +2,6 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
@@ -15,9 +14,9 @@ import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
+import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
-import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
 import java.util.EnumMap
@@ -33,7 +32,7 @@ import kotlin.reflect.full.memberProperties
  * @since 2025-08-01
  */
 class Select<T : SelectEntity>(
-    private val fromEntity: KClass<out T>,
+    fromEntity: KClass<out T>,
     private val isDistinct: Boolean = false,
 ) : QueryWithBindValues(), QueryStructureLike {
     /** Select クラスで使用するエンティティクラスのリスト */
@@ -58,7 +57,7 @@ class Select<T : SelectEntity>(
     private val havingConditions = mutableListOf<Condition>()
 
     /** グループ倍自動生成用リスト */
-    private val groupByColumns = mutableListOf<String>()
+    private val groupByColumns = mutableListOf<GroupByColumn>()
 
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
@@ -215,7 +214,9 @@ class Select<T : SelectEntity>(
         // HAVING 句が指定されると自動的に GROUP BY 句を生成する
         // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
         if (groupByColumns.isEmpty()) {
-            groupByColumns += detectGroupColumns()
+            detectGroupColumns().map { column ->
+                groupByColumns += GroupByColumn(column)
+            }
         }
         return this
     }
@@ -227,11 +228,11 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    private fun detectGroupColumns(): List<String> =
+    private fun detectGroupColumns() =
         usedEntityClasses.flatMap { entityClass ->
             entityClass.memberProperties
                 .filter { it.isColumn() && !it.isFunctionColumn() }
-                .map { it.getColumn() }
+                .map { it }
         }
 
     /**
@@ -286,6 +287,7 @@ class Select<T : SelectEntity>(
 
             addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
+            addClauseIfNotEmpty(SelectClause.GROUP, COMMA, groupByColumns.toList())
             addClauseIfNotEmpty(SelectClause.ORDER, COMMA, orderColumns.toList())
             val otherClauses = SelectClause.entries
                 .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
@@ -296,33 +298,15 @@ class Select<T : SelectEntity>(
         }
         return query
     }
-}
 
-/**
- * ## enumMapOf メソッド
- * ### EnumMap<K, V> のインスタンスを生成する
- * ### コンビニエンスメソッド
- * @return 生成された EnumMap のインスタンス
- * @author Masahiro Inoue
- * @since 2025-08-01
- */
-private inline fun <reified K : Enum<K>, V> enumMapOf(): EnumMap<K, V> =
-    EnumMap(K::class.java)
-
-/**
- * ## カラム生成メソッド
- * ### where メソッドや join メソッドで渡された Entity クラスの property を
- * ### カラム文字列として生成する
- * @param column 生成するカラム
- * @return 生成されたカラム名、エイリアス設定が有れば付与される
- * @author Masahiro Inoue
- * @since 2025-08-01
- */
-private fun <T : SelectEntity> generateColumn(column: KProperty1<out T, *>): String {
-    // エンティティクラスの取得
-    val entityClass = column.extractClassFromProperty()
-    // エイリアスの生成
-    val alias = entityClass.getAlias()
-    val columnName = column.getColumn()
-    return "${alias}.$columnName"
+    /**
+     * ## enumMapOf メソッド
+     * ### EnumMap<K, V> のインスタンスを生成する
+     * ### コンビニエンスメソッド
+     * @return 生成された EnumMap のインスタンス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    private inline fun <reified K : Enum<K>, V> enumMapOf(): EnumMap<K, V> =
+        EnumMap(K::class.java)
 }

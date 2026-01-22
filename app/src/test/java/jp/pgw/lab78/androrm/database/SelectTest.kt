@@ -25,11 +25,11 @@ class SelectTest {
     @Test
     fun build00() {
         SELECT = Select(TestSelectEntity::class)
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(TestSelectEntityWithAlias::class)
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(TestSelectEntity::class, isDistinct = true)
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -45,7 +45,7 @@ class SelectTest {
                     condition("name like '川流%'")
                 }
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(TestSelectEntityWithAlias::class)
             .where {
                 and {
@@ -57,7 +57,7 @@ class SelectTest {
                     TestSelectEntityWithAlias::id le 10
                 }
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -86,25 +86,14 @@ class SelectTest {
             .having {
                 TestSelectEntity::newestBirthday lt LocalDate.parse("2020-01-01")
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         // 新エンティティクラス
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(
-                LEFT, EmployeeEntityJoined::class
-            ).on {
-                EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
-            }
-            .order {
-                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
-                EmployeeEntityJoined::name.desc
-            }
-        println(SELECT.build())
         SELECT = Select(DepartmentEntityInfo::class)
             .order {
                 DepartmentEntityInfo::employeeId.asc
                 DepartmentEntityInfo::section.asc.nullsLast
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -115,7 +104,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { DepartmentEntityInfo::department.asc }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
@@ -124,7 +113,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { DepartmentEntityInfo::department.desc }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
@@ -133,7 +122,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { DepartmentEntityInfo::department.asc }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -145,7 +134,7 @@ class SelectTest {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
             })
             .order { DepartmentEntityInfo::department.asc }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class) {
                 EmployeeEntityIdSelection::employeeId eq DepartmentEntity::employeeId
@@ -158,7 +147,7 @@ class SelectTest {
                 or {
                     DepartmentEntityInfo::section eq "10"
                     DepartmentEntityInfo::section eq "20"
-                    EmployeeEntityIdSelection::employeeId between "1000" to "2000"
+                    EmployeeEntityIdSelection::employeeId between ("1000" to "2000")
                 }
             })
             .having {
@@ -168,7 +157,7 @@ class SelectTest {
                 DepartmentEntityInfo::department.nullsFirst
                 EmployeeEntityIdSelection::employeeId.nullsLast
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -183,10 +172,11 @@ class SelectTest {
                     TestSelectEntity::name like "%kawanagare"
                     TestSelectEntityWithAlias::address like "%Shinjuku%"
                     DepartmentEntityInfo::section eq "20"
+                    DepartmentEntityInfo::department between "10" and "50"
                 }
             }
             .order { TestSelectEntity::address.nullsLast }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -206,7 +196,7 @@ class SelectTest {
                 }
             }
             .order { joinTable.prop("address").nullsLast }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -233,25 +223,25 @@ class SelectTest {
                     TestSelectEntityWithAlias::id between (100) and (200)
                 }
             }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
     fun build08() {
         SELECT = Select(TestSelectEntity::class)
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT.where {
             TestSelectEntity::id inList listOf(1, 2, 3, 4, 5)
         }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT.where {
             TestSelectEntity::name like "川流%"
         }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT.order {
             TestSelectEntity::id.asc
         }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     @Test
@@ -274,7 +264,37 @@ class SelectTest {
                 TestAllEntity::id ge "20"
             }
             .order { TestSelectEntity::id.asc }
-        println(SELECT.build())
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+    }
+
+    @Test
+    fun build10() {
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .join(
+                LEFT, EmployeeEntityJoined::class
+            ).on {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
+            }
+            .order {
+                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
+                EmployeeEntityJoined::name.desc
+            }
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+    }
+
+    @Test
+    fun build11() {
+        SELECT = Select(DepartmentEntityInfo::class)
+            .where {
+                DepartmentEntityInfo::employeeId between ("1000" to "2000")
+            }
+            .having {
+                DepartmentEntityInfo::allLine gt 100000
+            }
+            .order {
+                DepartmentEntityInfo::employeeId.nullsFirst
+            }
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
     private fun KClass<out SelectEntity>.prop(name: String): KProperty1<out SelectEntity, *> =
