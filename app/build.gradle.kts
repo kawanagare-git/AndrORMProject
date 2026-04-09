@@ -107,12 +107,6 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
 
-// ログ出力
-dependencies {
-    implementation(libs.slf4j.api)
-    implementation(libs.logback.android)
-}
-
 //// AndrORM の detekt ルール
 // ==========================================================
 // detekt 共通設定（main + test + androidTest）
@@ -210,4 +204,9 @@ tasks.named("check") {
 
 tasks.named("assemble") {
     dependsOn("detekt")
+}
+
+// KSP にモジュールディレクトリを渡す
+ksp {
+    arg("androrm.moduleDir", project.projectDir.absolutePath)
 }

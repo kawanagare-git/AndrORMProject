@@ -2,10 +2,11 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
-import jp.pgw.lab78.androrm.common.database.SupportFunction.isColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.common.logging.LogLevel.*
+import jp.pgw.lab78.androrm.common.logging.LogScope.APP
 import jp.pgw.lab78.androrm.database.DmlConstant.ANY_CLOSE_BRACKET_REGEX
 import jp.pgw.lab78.androrm.database.DmlConstant.ANY_OPEN_BRACKET_REGEX
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
@@ -21,6 +22,7 @@ import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
 import java.util.EnumMap
 import java.util.Locale
+import java.util.logging.Logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -35,6 +37,9 @@ class Select<T : SelectEntity>(
     fromEntity: KClass<out T>,
     private val isDistinct: Boolean = false,
 ) : QueryWithBindValues(), QueryStructureLike {
+    /** ログ出力移譲 */
+    private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
+
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
 
@@ -100,6 +105,7 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     init {
+        logger.log(TRACE.level, "Select init:enter fromEntity=$fromEntity / isDistinct=$isDistinct")
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
         fromEntity.getColumns().forEach {
             selectColumnList += "$mainTableAlias.$it as ${mainTableAlias}_$it"
@@ -109,6 +115,7 @@ class Select<T : SelectEntity>(
             mutableListOf("from $mainTableName $mainTableAlias")
         // select 文で使用するエンティティクラスを登録
         usedEntityClasses += fromEntity
+        logger.log(TRACE.level, "Select init:returning")
     }
 
     fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
@@ -128,6 +135,10 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
         on: ConditionBuilder.() -> Unit
     ): Select<T> {
+        logger.log(
+            TRACE.level,
+            "Select join:enter joinType=$joinType / joinedEntity=$joinedEntity / on=$on"
+        )
         isBuild = false
         // 結合テーブル名取得
         val joinedTableName = joinedEntity.createTableName()
@@ -140,6 +151,7 @@ class Select<T : SelectEntity>(
                         + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         usedEntityClasses += joinedEntity
+        logger.log(TRACE.level, "Select join:returning $this")
         return this
     }
 
@@ -156,7 +168,9 @@ class Select<T : SelectEntity>(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
     ): JoinCondition<T> {
+        logger.log(TRACE.level, "Select join:enter joinType=$joinType / joinedEntity=$joinedEntity")
         isBuild = false
+        logger.log(TRACE.level, "Select join:returning $this")
         return JoinCondition(this, joinType, joinedEntity)
     }
 
@@ -171,6 +185,14 @@ class Select<T : SelectEntity>(
         private val joinType: JoinType,
         private val joinedEntity: KClass<out SelectEntity>,
     ) {
+        init {
+            select.logger.log(
+                TRACE.level,
+                "JoinCondition init:enter select=$select / joinType=$joinType / joinedEntity=$joinedEntity"
+            )
+            select.logger.log(TRACE.level, "JoinCondition init:returning")
+        }
+
         /** ## on メソッド
          * ### テーブル結合条件を指定する
          * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
@@ -179,6 +201,8 @@ class Select<T : SelectEntity>(
          * @since 2026-01-11
          */
         fun on(block: ConditionBuilder.() -> Unit): Select<T> {
+            select.logger.log(TRACE.level, "Select join:enter block=$block")
+            select.logger.log(TRACE.level, "Select join:returning $this")
             return select.join(joinType, joinedEntity, block)
         }
     }
@@ -192,10 +216,12 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
+        logger.log(TRACE.level, "Select where:enter block=$block")
         isBuild = false
         val builder = ConditionBuilder(this).apply(block)
         // Select は builder の中身を意識せず、リストだけ取得して保持
         whereConditions += builder.buildList()
+        logger.log(TRACE.level, "Select where:returning $this")
         return this
     }
 
@@ -208,6 +234,7 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
+        logger.log(TRACE.level, "Select having:enter block=$block")
         isBuild = false
         val builder = HavingConditionBuilder(this).apply(block)
         havingConditions += builder.buildList()
@@ -218,6 +245,8 @@ class Select<T : SelectEntity>(
                 groupByColumns += GroupByColumn(column)
             }
         }
+        logger.log(DEBUG.level, "Select having:groupByColumns = $groupByColumns")
+        logger.log(TRACE.level, "Select having:returning $this")
         return this
     }
 
@@ -230,9 +259,12 @@ class Select<T : SelectEntity>(
      */
     private fun detectGroupColumns() =
         usedEntityClasses.flatMap { entityClass ->
+            logger.log(DEBUG.level, "Select detectGroupColumns:entityClass = $entityClass")
             entityClass.memberProperties
-                .filter { it.isColumn() && !it.isFunctionColumn() }
-                .map { it }
+                .filter { !it.isFunctionColumn() }
+                .onEach {
+                    logger.log(DEBUG.level, "Select detectGroupColumns:it = $it")
+                }
         }
 
     /**
@@ -244,9 +276,11 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     fun order(by: OrderDsl.() -> Unit): Select<T> {
+        logger.log(TRACE.level, "Select order:enter by=$by")
         isBuild = false
         val builder = OrderDsl().apply(by)
         orderColumns += builder.orders
+        logger.log(TRACE.level, "Select order:returning $this")
         return this
     }
 
@@ -258,6 +292,7 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     override fun build(): String {
+        logger.log(TRACE.level, "Select build:enter")
         if (!isBuild) {
             isBuild = true
             val selectClause = buildString {
@@ -296,6 +331,7 @@ class Select<T : SelectEntity>(
                 .replace(ANY_CLOSE_BRACKET_REGEX, ")")
                 .replace(MULTI_SPACE_REGEX, " ").trim()
         }
+        logger.log(TRACE.level, "Select order:returning $query")
         return query
     }
 

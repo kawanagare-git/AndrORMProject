@@ -24,6 +24,8 @@ dependencies {
     testImplementation(kotlin("test"))
     // ★ これがないと compileAndLint が存在しない
     testImplementation(libs.detekt.test)
+    // ログ出力用に androrm-common を追加
+    implementation(project(":androrm-common"))
 }
 
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {

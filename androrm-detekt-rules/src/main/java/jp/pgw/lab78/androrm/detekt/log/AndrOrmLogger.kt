@@ -14,10 +14,12 @@ import java.util.logging.Level.FINEST
  * @author Masahiro Inoue
  * @since 2025-12-25
  */
-object AndrOrmJUL {
+object AndrOrmLogger {
     private var initialized = false
     private val logLevel = FINEST
-    val log: Logger = Logger.getLogger("androrm-detekt")
+
+    /** ロガーインスタンス */
+    val log: Logger = Logger.getLogger("AndrORM-detekt")
 
     /**
      * ## 英語固定ログフォーマッタ

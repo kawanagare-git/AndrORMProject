@@ -17,4 +17,5 @@ annotation class Function(
     val alias: String,
     val args: Array<String> = [],
     val raw: String = "",
+    val hideFromSelect: Boolean = false,
 )

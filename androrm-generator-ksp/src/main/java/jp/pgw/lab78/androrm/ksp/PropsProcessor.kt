@@ -5,7 +5,6 @@ import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ksp.toTypeName
-import com.squareup.kotlinpoet.ksp.writeTo
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.*
@@ -17,8 +16,10 @@ import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
-import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
-import jp.pgw.lab78.androrm.ksp.logging.KspDelegatingLogger
+import jp.pgw.lab78.androrm.ksp.helper.AnnotationHelper
+import jp.pgw.lab78.androrm.ksp.helper.ImportHelper
+import jp.pgw.lab78.androrm.ksp.helper.TypeHelper
+import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**
@@ -33,9 +34,8 @@ import jp.pgw.lab78.shared.library.Utils.isNull
  */
 class PropsProcessor(
     private val codeGenerator: CodeGenerator,
-    private val logger: KSPLogger
-) : SymbolProcessor, LoggerLike by KspDelegatingLogger(logger) {
-
+    private val logger: LoggerLike,
+) : SymbolProcessor, LoggerLike by logger {
     companion object {
         /** @Projection の変数名定義（entityNameExtend） */
         private const val EXTEND_NAME = "entityNameExtend"
@@ -149,6 +149,15 @@ class PropsProcessor(
         private val STRING_LITERAL_REGEX = "^'.*'$".toRegex()
     }
 
+    /** インポート収集ヘルパー */
+    val importHelper = ImportHelper(logger)
+
+    /** 型ヘルパー */
+    val typeHelper = TypeHelper(logger)
+
+    /** 型ヘルパー */
+    val annotationHelper = AnnotationHelper(logger)
+
     /** 自動生成するために必要な全プロパティ名 */
     private val allClassProperties = mutableMapOf<String, List<String>>()
 
@@ -242,13 +251,12 @@ class PropsProcessor(
      */
     @OptIn(KspExperimental::class)
     private fun generateDataClassFromProjections(resolver: Resolver) {
-        infoEntered()
+        traceEntered(resolver)
         // @Projection と @Projections を両方まとめて拾う
         val allProjectionClasses = sequenceOf(
             resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false),
             resolver.getSymbolsWithAnnotation(PROJECTIONS_FQN, false)
-        ).flatten()
-            .filterIsInstance<KSClassDeclaration>()
+        ).flatten().filterIsInstance<KSClassDeclaration>().toList()
         // 各クラスごとに Projection 系アノテーションを展開
         allProjectionClasses.forEach { classDecl ->
             extractProjectionsFromClass(classDecl).forEach { projection ->
@@ -257,7 +265,7 @@ class PropsProcessor(
                 processSingleProjection(classDecl, projection, resolver)
             }
         }
-        infoExiting()
+        traceExiting()
     }
 
     /**
@@ -268,7 +276,7 @@ class PropsProcessor(
      * @since 2025-08-01
      */
     private fun extractProjectionsFromClass(classDecl: KSClassDeclaration): Sequence<KSAnnotation> {
-        infoEntered()
+        traceEntered(classDecl)
         val result = classDecl.annotations.flatMap { annotation ->
             when (annotation.annotationType.resolve().declaration.qualifiedName?.asString()) {
                 PROJECTION_FQN -> listOf(annotation)
@@ -276,7 +284,7 @@ class PropsProcessor(
                 else -> emptyList()
             }
         }
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -294,10 +302,10 @@ class PropsProcessor(
         classDecl: KSClassDeclaration,
         annotation: KSAnnotation,
     ) {
-        infoEntered(classDecl, annotation)
+        traceEntered(classDecl, annotation)
         // リスト化された properties の値
         val propertiesValues =
-            collectFields(annotation)[PROPERTIES] as? List<*> ?: emptyList<String>()
+            collectProjectionArguments(annotation)[PROPERTIES] as? List<*> ?: emptyList<String>()
         // @Projection が適用されたクラスのプロパティ名一覧を取得
         val fqn = classDecl.qualifiedName?.asString() ?: run {
             this.error("Annotation target class is null.")
@@ -320,7 +328,7 @@ class PropsProcessor(
                 )
             }
         }
-        infoExiting()
+        traceExiting()
     }
 
     /**
@@ -340,10 +348,10 @@ class PropsProcessor(
         annotation: KSAnnotation,
         resolver: Resolver
     ) {
-        infoEntered(classDecl, annotation)
-        val dataClassMaterialMap = collectFields(annotation).toMutableMap()
+        traceEntered(classDecl, annotation)
+        val dataClassMaterialMap = collectProjectionArguments(annotation).toMutableMap()
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
-        val packageName = generatedPackageNameFromAnnotation(
+        val packageName = resolvePackageNameFromAnnotation(
             classDecl,
             resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
             (dataClassMaterialMap[COMMON_INTERFACE] as List<*>).firstOrNull().toString()
@@ -355,7 +363,7 @@ class PropsProcessor(
         val tableName = tableAnnotation?.let { extractTableName(it) }
             ?: classDecl.simpleName.asString().toSnakeCase()
         val tableAlias = tableAnnotation?.let {
-            geerateTableAlias(it, dataClassMaterialMap[EXTEND_ALIAS].toString())
+            generateTableAlias(it, dataClassMaterialMap[EXTEND_ALIAS].toString())
         } ?: tableName
         // @Table の生成
         tableAnnotationSpec = AnnotationSpec.builder(Table::class).apply {
@@ -383,11 +391,7 @@ class PropsProcessor(
             generateFunctionAnnotations(functionProjections, propsByName),
             interfaces
         )
-        // データクラスを kt ファイルとして出力
-        val fileDependency =
-            classDecl.containingFile?.let { Dependencies(true, it) } ?: Dependencies(false)
-        fileSpec.writeTo(codeGenerator, fileDependency)
-        infoExiting(functionProjections)
+        traceExiting(fileSpec)
     }
 
     /**
@@ -399,7 +403,7 @@ class PropsProcessor(
      * @since 2025-08-01
      */
     private fun extractProjectionList(annotation: KSAnnotation): List<KSAnnotation> {
-        infoEntered(annotation)
+        traceEntered(annotation)
         // @Projections から value を抽出
         val result = (annotation.arguments.firstOrNull { it.name?.asString() == "value" }
             // value がリストにキャスト可能か？
@@ -408,7 +412,7 @@ class PropsProcessor(
             ?.filterIsInstance<KSAnnotation>()
         // 不可能であれば 空リストを戻す
             ?: emptyList()
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -424,13 +428,13 @@ class PropsProcessor(
     private fun extractTableName(
         tableAnnotation: KSAnnotation,
     ): String? {
-        infoEntered(tableAnnotation)
+        traceEntered(tableAnnotation)
         val result = tableAnnotation.arguments
             .firstOrNull { it.name?.asString() == TABLE_NAME }
             ?.value
             ?.takeIf { it is String && it.isNotBlank() }
             ?.let { it as String }
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -444,16 +448,16 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-22
      */
-    private fun geerateTableAlias(
+    private fun generateTableAlias(
         tableAnnotation: KSAnnotation,
         extendAlias: String
     ): String? {
-        infoEntered(tableAnnotation, extendAlias)
+        traceEntered(tableAnnotation, extendAlias)
         val aliasFromAnnotation = tableAnnotation.arguments
             .firstOrNull { it.name?.asString() == TABLE_ALIAS }
             ?.value as? String
         val result = buildAlias(aliasFromAnnotation, extendAlias)
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -466,7 +470,7 @@ class PropsProcessor(
      * @since 2025-08-22
      */
     private fun collectInterfaces(dataClassMaterialMap: MutableMap<String, Any>): List<TypeName> {
-        infoEntered(dataClassMaterialMap)
+        traceEntered(dataClassMaterialMap)
         val result = buildList<TypeName> {
             (dataClassMaterialMap[COMMON_INTERFACE] as List<*>)
                 .map {
@@ -484,7 +488,7 @@ class PropsProcessor(
                 ?.takeIf { it.isNotBlank() }
                 ?.let { add(ClassName.bestGuess(it)) }
         }
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -502,7 +506,7 @@ class PropsProcessor(
         functions: List<FunctionProjection>,
         propsByName: Map<String, KSPropertyDeclaration>
     ): List<PropertySpec> {
-        infoEntered(functions, propsByName)
+        traceEntered(functions, propsByName)
         val properties = propsByName.keys
         val result = functions.map { func ->
             checkFunctionArgs(properties, func)
@@ -516,7 +520,7 @@ class PropsProcessor(
                 .addAnnotation(annotation)
                 .build()
         }
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -532,16 +536,16 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private fun generatedPackageNameFromAnnotation(
+    private fun resolvePackageNameFromAnnotation(
         classDeclaration: KSClassDeclaration,
         symbols: Sequence<KSAnnotated>,
         commonInterface: String
     ): String {
-        infoEntered(classDeclaration, symbols, commonInterface)
+        traceEntered(classDeclaration, symbols, commonInterface)
         if (commonInterface.isNullOrEmpty()) {
             return classDeclaration.packageName.asString()
         }
-        val common = generateCommonInterFace(commonInterface)
+        val common = generateCommonInterface(commonInterface)
         // パッケージアノテーションの抽出
         symbols.filterIsInstance<KSFile>().forEach {
             // @EntityPackageInfo の単純名で抽出
@@ -575,7 +579,7 @@ class PropsProcessor(
             }
         }
         val result = common.packageName
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -597,48 +601,54 @@ class PropsProcessor(
         functionProps: List<PropertySpec>,
         interfaces: List<TypeName>
     ): FileSpec {
-        infoEntered(classNameFQN, selectedProps, interfaces)
-        // 通常列を PropertySpec へ
-        val normalProps: List<PropertySpec> = selectedProps.map { it.toPropertySpec() }
-
-        // ここで「通常列 + 関数列（@Function 付き）」を合体
-        val allProps = buildList {
-            addAll(normalProps)
-            addAll(functionProps)
-        }
-
-        // クラスビルダー
-        // ファイルの構成要素としてクラスを追加し呼び出し元へ戻す
-        val result = FileSpec.builder(classNameFQN)
-            .addType(
-                TypeSpec.classBuilder(classNameFQN)
-                    .addModifiers(KModifier.DATA)
-                    .primaryConstructor(
-                        FunSpec.constructorBuilder()
-                            .apply {
-                                allProps.forEach { prop ->
-                                    addParameter(
-                                        ParameterSpec.builder(prop.name, prop.type)
-                                            .build()
-                                    )
-                                }
-                            }
-                            .build()
-                    )
-                    .addProperties(
-                        allProps.map { prop ->
-                            prop.toBuilder(prop.name, prop.type)
-                                .initializer(prop.name)
-                                .mutable(false)
-                                .build()
-                        }
-                    )
-                    .addSuperinterfaces(interfaces)
-                    .addAnnotation(tableAnnotationSpec)
-                    .build()
+        traceEntered(classNameFQN, selectedProps, functionProps, interfaces)
+        // ① 通常列 → PropertySpec（@Column / @PrimaryKey はコピー済み）
+        val normalProps = selectedProps.map { it.toPropertySpec() }
+        // ② コンストラクタに入れる列 = 通常列＋関数列
+        val ctorProps = normalProps + functionProps
+        // ③ 出力先は“従来どおり”
+        val file = codeGenerator.createNewFile(
+            dependencies = Dependencies(false),
+            packageName = classNameFQN.packageName,
+            fileName = classNameFQN.simpleName
+        )
+        file.bufferedWriter().use { w ->
+            val imports = importHelper.collectImports(tableAnnotationSpec, ctorProps, interfaces)
+            // --- パッケージ ---
+            w.appendLine("package ${classNameFQN.packageName}")
+            w.appendLine()
+            // --- インポート ---
+            imports.sorted().forEach { w.appendLine("import $it") }
+            w.appendLine()
+            // --- @Table アノテーション（そのまま文字列化）---
+            w.appendLine(annotationHelper.getSimpleName(tableAnnotationSpec))
+            // --- data class 宣言ヘッダ ---
+            val ifaceText =
+                if (interfaces.isEmpty()) ""
+                else interfaces.joinToString(", ") { typeHelper.getSimpleName(it) }
+            w.appendLine(
+                "public data class ${classNameFQN.simpleName}("
             )
-            .build()
-        infoExiting(result)
+            // --- コンストラクタ引数（★ここが核心）---
+            ctorProps.forEachIndexed { index, prop ->
+                // 付与されているアノテーションをそのまま出力
+                prop.annotations.forEach { ann ->
+                    w.appendLine("  " + annotationHelper.getSimpleName(ann))
+                }
+                val comma = if (index == ctorProps.lastIndex) "" else ","
+                // ★ val を確実に出す
+                w.appendLine("  public val ${prop.name}: ${typeHelper.getSimpleName(prop)}$comma")
+                w.appendLine()
+            }
+            w.append(")")
+            if (ifaceText.isNotBlank()) {
+                w.append(" : $ifaceText")
+            }
+            w.appendLine()
+        }
+        // ダミーの FileSpec を返す（実体は上で書き込み済み）
+        val result = FileSpec.builder(classNameFQN).build()
+        traceExiting(result)
         return result
     }
 
@@ -651,8 +661,8 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private fun collectFields(annotation: KSAnnotation): Map<String, Any> {
-        infoEntered(annotation)
+    private fun collectProjectionArguments(annotation: KSAnnotation): Map<String, Any> {
+        traceEntered(annotation)
         val result = mutableMapOf<String, Any>()
         // アノテーションの引数を取得し加工
         annotation.arguments.forEach {
@@ -728,55 +738,8 @@ class PropsProcessor(
                 }
             }
         }
-        infoExiting(result)
+        traceExiting(result)
         return result
-    }
-
-    /**
-     * ## カラムアノテーションコピー
-     * ### 参照元のプロパティを基に @Column を複製
-     * @param prop 参照元プロパティ / @Column の複製に使用
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun copyColumnAnnotation(prop: KSPropertyDeclaration): AnnotationSpec? {
-        infoEntered(prop)
-        // @Column アノテーションを探す
-        val columnAnnotation = prop.annotations
-            .firstOrNull { it.shortName.asString() == COLUMN }
-        if (columnAnnotation?.let {
-                it.annotationType.resolve().declaration.qualifiedName?.asString() == COLUMN_FQN
-            } == true) {
-            // アノテーション引数からカラム名を取得
-            val columnName = columnAnnotation.arguments
-                .firstOrNull { it.name?.asString() == COLUMN_NAME }
-                ?.value as? String
-            // アノテーション引数からカラムエイリアスを取得
-            val columnAlias = columnAnnotation.arguments
-                .firstOrNull { it.name?.asString() == COLUMN_ALIAS }
-                ?.value as? String
-            // AnnotationSpec に変換
-            val result = if (!columnName.isNullOrBlank() || !columnAlias.isNullOrBlank()) {
-                // @Column のコピー
-                AnnotationSpec.builder(ClassName.bestGuess(COLUMN_FQN))
-                    .apply {
-                        if (!columnName.isNullOrBlank()) addMember(
-                            "$COLUMN_NAME = %S",
-                            columnName
-                        )
-                        if (!columnAlias.isNullOrBlank()) addMember(
-                            "$COLUMN_ALIAS = %S",
-                            columnAlias
-                        )
-                    }.build()
-            } else {
-                null
-            }
-            infoExiting(result)
-            return result
-        }
-        infoExiting("null")
-        return null
     }
 
     /**
@@ -787,8 +750,8 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private fun generateCommonInterFace(commonInterface: String): ClassName {
-        infoEntered(commonInterface)
+    private fun generateCommonInterface(commonInterface: String): ClassName {
+        traceEntered(commonInterface)
         val result = ClassName.bestGuess(
             (DMLInterfaceEnum.valueOf(
                 ClassName.bestGuess(commonInterface)
@@ -796,7 +759,7 @@ class PropsProcessor(
             ))
                 .interfaceFQN
         )
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -809,11 +772,19 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun KSPropertyDeclaration.toPropertySpec(): PropertySpec {
-        return PropertySpec.builder(
+        traceEntered(this)
+        val builder = PropertySpec.builder(
             simpleName.asString(),
             this.type.toTypeName()
-        ).initializer(simpleName.asString())
-            .build()
+        )
+        // ★★★ 重要：元プロパティのアノテーションをすべてコピー ★★★
+        this.annotations.forEach { ksAnn ->
+            val annSpec = ksAnn.toAnnotationSpec()
+            builder.addAnnotation(annSpec)
+        }
+        val result = builder.initializer(simpleName.asString()).build()
+        traceExiting(result)
+        return result
     }
 
     /**
@@ -830,7 +801,7 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun inferLiteralTypeName(literal: String): TypeName? = when {
-        literal.equals("true", true) || literal.equals("false", true) -> BOOLEAN
+        literal.equals(true.toString(), true) || literal.equals(false.toString(), true) -> BOOLEAN
         literal.startsWith("'") && literal.endsWith("'") -> STRING
         literal.matches(Regex("^-?\\d+$")) -> LONG          // 整数リテラルは Long 寄せ
         literal.matches(Regex("^-?\\d+\\.\\d+$")) -> DOUBLE // 小数は Double
@@ -853,13 +824,14 @@ class PropsProcessor(
         func: FunctionProjection,
         propsByName: Map<String, KSPropertyDeclaration>
     ): TypeName {
+        traceEntered(func, propsByName)
         // 引数（カラム名 or リテラル）を TypeName に寄せる
         val argTypes: List<TypeName> = func.args.mapNotNull { arg ->
             propsByName[arg]?.type?.resolve()?.toTypeName()
                 ?: inferLiteralTypeName(arg)
         }
 
-        return when (func.function) {
+        val result = when (func.function) {
             // AVG は常に Double
             ColumnFunction.AVG -> DOUBLE
             // SUM は引数が整数型なら Long、浮動小数点型なら Double、その他は ANY（事実上無）
@@ -919,6 +891,8 @@ class PropsProcessor(
                 else -> STRING
             }
         }
+        traceExiting(result)
+        return result
     }
 
     /**
@@ -937,12 +911,17 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun widerType(type1: TypeName, type2: TypeName): TypeName {
-        if (type1 == type2) return type1
-        if (type1 == STRING || type2 == STRING) return STRING
-        if (type1 == DOUBLE || type2 == DOUBLE || type1 == FLOAT || type2 == FLOAT) return DOUBLE
-        if (type1 == LONG || type2 == LONG) return LONG
-        if (type1 == INT || type2 == INT) return LONG // 混在は Long に寄せる
-        return ANY
+        traceEntered(type1, type2)
+        val result = when {
+            type1 == type2 -> type1
+            type1 == STRING || type2 == STRING -> STRING
+            type1 == DOUBLE || type2 == DOUBLE || type1 == FLOAT || type2 == FLOAT -> DOUBLE
+            type1 == LONG || type2 == LONG -> LONG
+            type1 == INT || type2 == INT -> LONG // 混在は Long に寄せる
+            else -> ANY
+        }
+        traceExiting(result)
+        return result
     }
 
     /**
@@ -957,7 +936,7 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun buildFunctionAnnotation(func: FunctionProjection): AnnotationSpec {
-        infoEntered(func)
+        traceEntered(func)
         val result = AnnotationSpec.builder(Function::class).apply {
             // function
             val sqlFunc = if (func.raw.isNotBlank()) ColumnFunction.CUSTOM
@@ -973,7 +952,7 @@ class PropsProcessor(
                 addMember("$F_ARGS = [%L]", argsLiteral)
             }
         }.build()
-        infoExiting(result)
+        traceExiting(result)
         return result
     }
 
@@ -988,28 +967,28 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
-        infoEntered(name)
+        traceEntered(name)
         val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value
             ?: run {
                 // 引数が存在しない場合は null を戻す
-                infoExiting("null")
+                traceExiting("null")
                 return null
             }
         // Enum の場合は KSType から Enum を取得
         if (T::class.java.isEnum) {
             val ksType = argValue as? KSType ?: run {
                 // 引数が存在しない場合は null を戻す
-                infoExiting("null")
+                traceExiting("null")
                 return null
             }
             val enumName = ksType.declaration.simpleName.asString()
 
             @Suppress("UNCHECKED_CAST")
             val result = java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
-            infoExiting(result)
+            traceExiting(result)
             return result
         }
-        infoExiting(argValue)
+        traceExiting(argValue)
         return argValue as? T
     }
 
@@ -1027,12 +1006,12 @@ class PropsProcessor(
         properties: Set<String>,
         functionProjection: FunctionProjection
     ) {
-        infoEntered(functionProjection, properties)
+        traceEntered(functionProjection, properties)
         // プロパティ名一覧を取得
         val columnFunction = functionProjection.function
         // CUSTOM は args 検査不要
         if (columnFunction == ColumnFunction.CUSTOM) {
-            infoExiting()
+            traceExiting()
             return
         }
         // 引数のリスト化
@@ -1051,7 +1030,7 @@ class PropsProcessor(
         if (invalidArgs.isNotEmpty()) {
             error("Invalid argument for '${functionProjection.alias}': $invalidArgs")
         }
-        infoExiting()
+        traceExiting()
     }
 
     /**
@@ -1063,7 +1042,7 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun checkAggregateConflicts(annotation: KSAnnotation) {
-        infoEntered(annotation)
+        traceExiting(annotation)
         // properties を取得して正規化
         val propertiesValues: Set<String> =
             (annotation.arguments.firstOrNull { it.name?.asString() == PROPERTIES }?.value as? List<*>)
@@ -1101,29 +1080,79 @@ class PropsProcessor(
                         duplicates.joinToString(", ")
             )
         }
-        infoExiting()
+        traceExiting()
     }
-}
 
-/**
- * ## プロパティプロセッサ提供元クラス
- * ### ビルドツールから呼び出され、プロパティプロセッサのインスタンスを
- * ### ビルドツールに戻す
- * @author Masahiro Inoue
- * @since 2025-08-01
- */
-class PropsProcessorProvider : SymbolProcessorProvider {
     /**
-     * ## プロパティプロセッサ生成メソッド
-     * ### プロパティプロセッサのインスタンスを生成する
-     * @param environment シンボルプロセッサ環境（ビルドツールから渡される）
-     * @return 生成されたプロパティプロセッサのインスタンス
+     * ## KSAnnotation → AnnotationSpec 変換
+     * ### KSAnnotation を基に AnnotationSpec を生成する
+     * @receiver KSAnnotation 元データ
+     * @return AnnotationSpec 生成結果
      * @author Masahiro Inoue
-     * @since 2025-08-01
-     * @see SymbolProcessorProvider.create
+     * @since 2026-02-11
      */
-    override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
-        return PropsProcessor(environment.codeGenerator, environment.logger)
+    private fun KSAnnotation.toAnnotationSpec(): AnnotationSpec {
+        traceEntered(this)
+        // 付与したいアノテーションのクラス名を取得
+        val fqn = this.annotationType
+            .resolve()
+            .declaration
+            .qualifiedName!!
+            .asString()
+        val builder = AnnotationSpec.builder(ClassName.bestGuess(fqn))
+        // アノテーション引数を一つずつ取り出して書き換える
+        this.arguments.forEach { arg ->
+            val name = arg.name?.asString() ?: return@forEach
+            val value = arg.value
+            when (value) {
+                // 文字列：name = "xxx" の形で出力
+                is String -> builder.addMember("$name = %S", value)
+                // --- 真偽値 ---
+                is Boolean -> builder.addMember("$name = %L", value)
+                // --- 整数 ---
+                is Int -> builder.addMember("$name = %L", value)
+                // --- Enum ---
+                is Enum<*> -> builder.addMember("$name = %T.%L", value::class.java, value.name)
+                // --- 配列（例：args = ["a","b"]）---
+                is List<*> -> {
+                    val joined = value.joinToString(", ") {
+                        when (it) {
+                            is String -> """"$it""""
+                            is Enum<*> -> "${it::class.java.simpleName}.${it.name}"
+                            else -> it.toString()
+                        }
+                    }
+                    builder.addMember("$name = [%L]", joined)
+                }
+            }
+        }
+        val result = builder.build()
+        traceExiting(result)
+        return result
+    }
+
+    /**
+     * ## KSP の処理完了
+     * ### KSP の処理が完了した際に呼び出されるメソッド
+     * ### ここでは、生成したファイルをクローズしてリソースを解放する
+     * @author Masahiro Inoue
+     * @since 2026-03-13
+     */
+    override fun finish() {
+        super.finish()
+        close()
+    }
+
+    /**
+     * ## KSP のエラー発生
+     * ### KSP の処理中にエラーが発生した際に呼び出されるメソッド
+     * ### ここでは、エラー発生をログに記録し、生成したファイルをクローズしてリソースを解放する
+     * @author Masahiro Inoue
+     * @since 2026-03-13
+     */
+    override fun onError() {
+        super.onError()
+        close()
     }
 }
 
@@ -1139,5 +1168,4 @@ enum class PackageInterfaceRelation(val relation: String) {
     INSERT("insertPackage"),
     UPDATE("updatePackage"),
     UPSERT("upsertPackage"),
-    BIND_VALUES("bindValuesPackage"),
 }

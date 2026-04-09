@@ -11,5 +11,6 @@ package jp.pgw.lab78.androrm.common.database.annotation
 @Retention(AnnotationRetention.RUNTIME)
 annotation class Column(
     val name: String = "",
-    val alias: String = ""
+    val alias: String = "",
+    val hideFromSelect: Boolean = false,
 )

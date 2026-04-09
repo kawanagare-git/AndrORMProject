@@ -4,7 +4,7 @@ import io.gitlab.arturbosch.detekt.api.*
 import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.invalidPropertyReference
 import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.logDebug
 import jp.pgw.lab78.androrm.detekt.AndrOrmEntityRefRule.ExtractEntity.*
-import jp.pgw.lab78.androrm.detekt.log.AndrOrmJUL
+import jp.pgw.lab78.androrm.detekt.log.AndrOrmLogger
 import org.jetbrains.kotlin.psi.*
 
 /**
@@ -73,7 +73,7 @@ class AndrOrmEntityRefRule(
 
     override fun visitKtFile(file: KtFile) {
         super.visitKtFile(file)
-        AndrOrmJUL.log.info("[AndrOrmEntityRefRule] visitKtFile: ${file.name}")
+        AndrOrmLogger.log.info("[AndrOrmEntityRefRule] visitKtFile: ${file.name}")
     }
 
     /**
@@ -163,12 +163,12 @@ class AndrOrmEntityRefRule(
         return when (name) {
             // ① Select(...) を見つけたら fromEntity を取得してコンテキスト作成
             "Select" -> {
-                AndrOrmJUL.debug(messageDebug)
+                AndrOrmLogger.debug(messageDebug)
                 createContextFromSelect(call)
             }
             // ② join(...) -> joinedEntity を追加 + ラムダのプロパティを検査
             "join" -> {
-                AndrOrmJUL.debug(messageDebug)
+                AndrOrmLogger.debug(messageDebug)
                 if (context != null) {
                     updateContextWithJoin(call, context)
                     checkLambdaPropertyRefs(call, context)
@@ -177,7 +177,7 @@ class AndrOrmEntityRefRule(
             }
             // ③ where / having -> ラムダ内のプロパティを検査
             "where", "having", "on" -> {
-                AndrOrmJUL.debug(messageDebug)
+                AndrOrmLogger.debug(messageDebug)
                 if (context != null) {
                     checkLambdaPropertyRefs(call, context)
                 }
@@ -185,7 +185,7 @@ class AndrOrmEntityRefRule(
             }
             // ④ order -> ラムダ内のプロパティを検査
             "order" -> {
-                AndrOrmJUL.debug(messageDebug)
+                AndrOrmLogger.debug(messageDebug)
                 if (context != null) {
                     checkLambdaPropertyRefs(call, context)
                 }
@@ -281,7 +281,7 @@ class AndrOrmEntityRefRule(
                                 )
                             )
                         }
-                        AndrOrmJUL.warning(message)
+                        AndrOrmLogger.warning(message)
                     }
                 }
             }
@@ -362,7 +362,7 @@ class AndrOrmEntityRefRule(
             ?.getArgumentExpression()
         // エラー処理
         if (expr == null) {
-            AndrOrmJUL.warning(
+            AndrOrmLogger.warning(
                 "argument '$argumentName' not found in:${selectCall.text.take(80)}"
             )
         }

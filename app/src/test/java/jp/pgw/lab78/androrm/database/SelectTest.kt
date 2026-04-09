@@ -2,6 +2,8 @@ package jp.pgw.lab78.androrm.database
 
 //import org.junit.jupiter.api.Test
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.common.logging.LogLevel.DEBUG
+import jp.pgw.lab78.androrm.common.logging.LogScope.APP
 import jp.pgw.lab78.androrm.database.Select.JoinType.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
@@ -9,6 +11,7 @@ import jp.pgw.lab78.androrm.database.entities.select.*
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.logging.Logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -20,10 +23,14 @@ class SelectTest {
         @JvmStatic
         lateinit var SELECT: Select<*>
 
+        /** ログ出力移譲 */
+        private val logger: Logger by lazy { APP.create("unit_test", DEBUG) }
+
     }
 
     @Test
     fun build00() {
+        logger.log(DEBUG.level, "SelectTest#build00")
         SELECT = Select(TestSelectEntity::class)
         println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT = Select(TestSelectEntityWithAlias::class)
@@ -34,6 +41,7 @@ class SelectTest {
 
     @Test
     fun build01() {
+        logger.log(DEBUG.level, "SelectTest#build01")
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(
                 LEFT, TestSelectEntity::class, {
@@ -62,6 +70,7 @@ class SelectTest {
 
     @Test
     fun build02() {
+        logger.log(DEBUG.level, "SelectTest#build02")
         // 最終TEST
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, {
@@ -98,6 +107,7 @@ class SelectTest {
 
     @Test
     fun build03() {
+        logger.log(DEBUG.level, "SelectTest#build03")
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -127,6 +137,7 @@ class SelectTest {
 
     @Test
     fun build04() {
+        logger.log(DEBUG.level, "SelectTest#build04")
         // 最終TEST
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(INNER, DepartmentEntityInfo::class, {
@@ -162,6 +173,7 @@ class SelectTest {
 
     @Test
     fun build05() {
+        logger.log(DEBUG.level, "SelectTest#build05")
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(LEFT, TestSelectEntity::class).on {
                 TestSelectEntityWithAlias::id eq DepartmentEntityInfo::employeeId
@@ -181,6 +193,7 @@ class SelectTest {
 
     @Test
     fun build06() {
+        logger.log(DEBUG.level, "SelectTest#build06")
         val fromTable: KClass<out SelectEntity> = TestSelectEntityWithAlias::class
         val joinTable: KClass<out SelectEntity> = TestSelectEntity::class
         SELECT = Select(fromTable)
@@ -201,6 +214,7 @@ class SelectTest {
 
     @Test
     fun build07() {
+        logger.log(DEBUG.level, "SelectTest#build07")
         SELECT = Select(TestSelectEntityWithAlias::class)
             .join(INNER, TestSelectEntity::class, on = {
                 and {
@@ -228,6 +242,7 @@ class SelectTest {
 
     @Test
     fun build08() {
+        logger.log(DEBUG.level, "SelectTest#build08")
         SELECT = Select(TestSelectEntity::class)
         println("${SELECT.build()}; values = ${SELECT.bindValues}")
         SELECT.where {
@@ -246,6 +261,7 @@ class SelectTest {
 
     @Test
     fun build09() {
+        logger.log(DEBUG.level, "SelectTest#build09")
         val bindValues = TestAllEntity(
             id = 10,
             name = "川流%",
@@ -269,6 +285,7 @@ class SelectTest {
 
     @Test
     fun build10() {
+        logger.log(DEBUG.level, "SelectTest#build10")
         SELECT = Select(EmployeeEntityIdSelection::class)
             .join(
                 LEFT, EmployeeEntityJoined::class
@@ -284,6 +301,7 @@ class SelectTest {
 
     @Test
     fun build11() {
+        logger.log(DEBUG.level, "SelectTest#build11")
         SELECT = Select(DepartmentEntityInfo::class)
             .where {
                 DepartmentEntityInfo::employeeId between ("1000" to "2000")
