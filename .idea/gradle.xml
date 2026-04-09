@@ -13,6 +13,7 @@
             <option value="$PROJECT_DIR$/androrm-common" />
             <option value="$PROJECT_DIR$/androrm-detekt-rules" />
             <option value="$PROJECT_DIR$/androrm-generator-ksp" />
+            <option value="$PROJECT_DIR$/androrm-logging-ksp" />
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/shared-library" />
           </set>
