@@ -76,6 +76,15 @@ class PropsProcessor(
         /** @Column の変数名定義（alias） */
         private const val COLUMN_ALIAS = "alias"
 
+        /** @Column の変数名定義（hideFromSelect） */
+        private const val COLUMN_HIDE_FROM_SELECT = "hideFromSelect"
+
+        /** @ColumnProjection の変数名定義（property） */
+        private const val CP_PROPERTY = "property"
+
+        /** @ColumnProjection の変数名定義（hideFromSelect） */
+        private const val CP_HIDE_FROM_SELECT = "hideFromSelect"
+
         /** @FunctionPrpjection の変数名定義（function） */
         private const val FP_FUNCTION = "function"
 
@@ -85,11 +94,14 @@ class PropsProcessor(
         /** @FunctionPrpjection の変数名定義（alias） */
         private const val FP_ALIAS = "alias"
 
-        /** @Function の変数名定義（returnHint） */
-        private const val FP_RETURN_HINT = "returnHint"
+        /** @FunctionPrpjection の変数名定義（hideFromSelect） */
+        private const val FP_HIDE_FROM_SELECT = "hideFromSelect"
 
         /** @FunctionPrpjection の変数名定義（raw） */
         private const val FP_RAW = "raw"
+
+        /** @Function の変数名定義（returnHint） */
+        private const val FP_RETURN_HINT = "returnHint"
 
         /** @Function の変数名定義（columnFunction） */
         private const val F_COLUMN_FUNCTION = "columnFunction"
@@ -207,8 +219,10 @@ class PropsProcessor(
 
             classDecl.getAllProperties().forEach { property ->
                 val propName = property.simpleName.asString()
-                val entryName = "${propName}_${className}_${packageName}"
-                    .replace(".", "_") // パッケージ名に含まれる . を _ に変換
+                val entryName = "${propName}_${className}_${packageName}".replace(
+                    ".",
+                    "_"
+                ) // パッケージ名に含まれる . を _ に変換
                 val entry = "$entryName(\"$propName\", \"${packageName}.$className\")"
                 enumEntries += entry
             }
@@ -304,27 +318,28 @@ class PropsProcessor(
     ) {
         traceEntered(classDecl, annotation)
         // リスト化された properties の値
-        val propertiesValues =
-            collectProjectionArguments(annotation)[PROPERTIES] as? List<*> ?: emptyList<String>()
+        val columnProjections =
+            (collectProjectionArguments(annotation)[PROPERTIES] as? List<*>)?.filterIsInstance<ColumnProjection>()
+                ?: emptyList()
+
+        val propertyNames = columnProjections.map { it.property }
         // @Projection が適用されたクラスのプロパティ名一覧を取得
         val fqn = classDecl.qualifiedName?.asString() ?: run {
             this.error("Annotation target class is null.")
             return
         }
         // ただし、allClassProperties に登録済みならば、allClassProperties からプロパティ名一覧を取得
-        val properties = allClassProperties[fqn]
-            ?: classDecl.getAllProperties().map {
-                // プロパティ名を取得
-                it.simpleName.asString()
-            }.toList()
+        val properties = allClassProperties[fqn] ?: classDecl.getAllProperties().map {
+            // プロパティ名を取得
+            it.simpleName.asString()
+        }.toList()
         // allClassProperties[fqn] が、null 時の再代入
         allClassProperties[fqn] = properties
         // properties に指定されたプロパティ名の検査
-        propertiesValues.forEach { property ->
+        propertyNames.forEach { property ->
             if (!properties.contains(property)) {
                 error(
-                    "property '$property' is not declared in class",
-                    classDecl.simpleName.asString()
+                    "property '$property' is not declared in class", classDecl.simpleName.asString()
                 )
             }
         }
@@ -344,9 +359,7 @@ class PropsProcessor(
      * @since 2025-08-01
      */
     private fun processSingleProjection(
-        classDecl: KSClassDeclaration,
-        annotation: KSAnnotation,
-        resolver: Resolver
+        classDecl: KSClassDeclaration, annotation: KSAnnotation, resolver: Resolver
     ) {
         traceEntered(classDecl, annotation)
         val dataClassMaterialMap = collectProjectionArguments(annotation).toMutableMap()
@@ -356,12 +369,12 @@ class PropsProcessor(
             resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
             (dataClassMaterialMap[COMMON_INTERFACE] as List<*>).firstOrNull().toString()
         )
-        val createClassName = classDecl.simpleName.asString() +
-                dataClassMaterialMap[EXTEND_NAME].toString()
-        val tableAnnotation = classDecl.annotations
-            .firstOrNull { it.shortName.asString() == TABLE }
-        val tableName = tableAnnotation?.let { extractTableName(it) }
-            ?: classDecl.simpleName.asString().toSnakeCase()
+        val createClassName =
+            classDecl.simpleName.asString() + dataClassMaterialMap[EXTEND_NAME].toString()
+        val tableAnnotation = classDecl.annotations.firstOrNull { it.shortName.asString() == TABLE }
+        val tableName =
+            tableAnnotation?.let { extractTableName(it) } ?: classDecl.simpleName.asString()
+                .toSnakeCase()
         val tableAlias = tableAnnotation?.let {
             generateTableAlias(it, dataClassMaterialMap[EXTEND_ALIAS].toString())
         } ?: tableName
@@ -370,15 +383,21 @@ class PropsProcessor(
             addMember("$TABLE_NAME = %S", tableName)
             addMember("$TABLE_ALIAS = %S", tableAlias)
         }.build()
+        val columnProjections =
+            (dataClassMaterialMap[PROPERTIES] as? List<*>)?.filterIsInstance<ColumnProjection>()
+                ?: emptyList()
+        val selectedPropertyNames = columnProjections.map { it.property }.toSet()
+
+        val hideFromSelectByProperty = columnProjections.associate {
+            it.property to it.hideFromSelect
+        }
         // properties 部分（通常列）の抽出
         val selectedProps = classDecl.getAllProperties()
-            .filter {
-                (dataClassMaterialMap[PROPERTIES] as List<*>).contains(it.simpleName.asString())
-            }.toList()
+            .filter { it.simpleName.asString() in selectedPropertyNames }.toList()
         // functions 部分（関数列）の抽出
-        val functionProjections = (dataClassMaterialMap[FUNCTIONS] as? List<*>)
-            ?.filterIsInstance<FunctionProjection>()
-            ?: emptyList()
+        val functionProjections =
+            (dataClassMaterialMap[FUNCTIONS] as? List<*>)?.filterIsInstance<FunctionProjection>()
+                ?: emptyList()
         // プロパティ名 → KSPropertyDeclaration のマップを生成
         val propsByName: Map<String, KSPropertyDeclaration> =
             classDecl.getAllProperties().associateBy { it.simpleName.asString() }
@@ -388,6 +407,7 @@ class PropsProcessor(
         val fileSpec = createDataClassFile(
             ClassName(packageName, createClassName),
             selectedProps,
+            hideFromSelectByProperty,
             generateFunctionAnnotations(functionProjections, propsByName),
             interfaces
         )
@@ -429,11 +449,9 @@ class PropsProcessor(
         tableAnnotation: KSAnnotation,
     ): String? {
         traceEntered(tableAnnotation)
-        val result = tableAnnotation.arguments
-            .firstOrNull { it.name?.asString() == TABLE_NAME }
-            ?.value
-            ?.takeIf { it is String && it.isNotBlank() }
-            ?.let { it as String }
+        val result =
+            tableAnnotation.arguments.firstOrNull { it.name?.asString() == TABLE_NAME }?.value?.takeIf { it is String && it.isNotBlank() }
+                ?.let { it as String }
         traceExiting(result)
         return result
     }
@@ -449,13 +467,11 @@ class PropsProcessor(
      * @since 2025-08-22
      */
     private fun generateTableAlias(
-        tableAnnotation: KSAnnotation,
-        extendAlias: String
+        tableAnnotation: KSAnnotation, extendAlias: String
     ): String? {
         traceEntered(tableAnnotation, extendAlias)
-        val aliasFromAnnotation = tableAnnotation.arguments
-            .firstOrNull { it.name?.asString() == TABLE_ALIAS }
-            ?.value as? String
+        val aliasFromAnnotation =
+            tableAnnotation.arguments.firstOrNull { it.name?.asString() == TABLE_ALIAS }?.value as? String
         val result = buildAlias(aliasFromAnnotation, extendAlias)
         traceExiting(result)
         return result
@@ -472,20 +488,16 @@ class PropsProcessor(
     private fun collectInterfaces(dataClassMaterialMap: MutableMap<String, Any>): List<TypeName> {
         traceEntered(dataClassMaterialMap)
         val result = buildList<TypeName> {
-            (dataClassMaterialMap[COMMON_INTERFACE] as List<*>)
-                .map {
-                    add(
-                        ClassName.bestGuess(
-                            DMLInterfaceEnum.valueOf(
-                                ClassName
-                                    .bestGuess(it.toString())
-                                    .simpleName
-                            ).interfaceFQN
-                        )
+            (dataClassMaterialMap[COMMON_INTERFACE] as List<*>).map {
+                add(
+                    ClassName.bestGuess(
+                        DMLInterfaceEnum.valueOf(
+                            ClassName.bestGuess(it.toString()).simpleName
+                        ).interfaceFQN
                     )
-                }
-            (dataClassMaterialMap[CUSTOM_INTERFACE] as? String)
-                ?.takeIf { it.isNotBlank() }
+                )
+            }
+            (dataClassMaterialMap[CUSTOM_INTERFACE] as? String)?.takeIf { it.isNotBlank() }
                 ?.let { add(ClassName.bestGuess(it)) }
         }
         traceExiting(result)
@@ -503,8 +515,7 @@ class PropsProcessor(
      * @since 2025-08-22
      */
     private fun generateFunctionAnnotations(
-        functions: List<FunctionProjection>,
-        propsByName: Map<String, KSPropertyDeclaration>
+        functions: List<FunctionProjection>, propsByName: Map<String, KSPropertyDeclaration>
     ): List<PropertySpec> {
         traceEntered(functions, propsByName)
         val properties = propsByName.keys
@@ -517,8 +528,7 @@ class PropsProcessor(
             // alias をキャメルケース に変換して PropertySpec を生成
             PropertySpec.builder(func.alias.toCamelCase(), typeName)
                 // @Function とプロパティを結び付け
-                .addAnnotation(annotation)
-                .build()
+                .addAnnotation(annotation).build()
         }
         traceExiting(result)
         return result
@@ -598,12 +608,19 @@ class PropsProcessor(
     private fun createDataClassFile(
         classNameFQN: ClassName,
         selectedProps: List<KSPropertyDeclaration>,
+        hideFromSelectByProperty: Map<String, Boolean>,
         functionProps: List<PropertySpec>,
         interfaces: List<TypeName>
     ): FileSpec {
-        traceEntered(classNameFQN, selectedProps, functionProps, interfaces)
+        traceEntered(
+            classNameFQN, selectedProps, hideFromSelectByProperty, functionProps, interfaces
+        )
         // ① 通常列 → PropertySpec（@Column / @PrimaryKey はコピー済み）
-        val normalProps = selectedProps.map { it.toPropertySpec() }
+        val normalProps = selectedProps.map { prop ->
+            prop.toPropertySpec(
+                hideFromSelect = hideFromSelectByProperty[prop.simpleName.asString()] == true
+            )
+        }
         // ② コンストラクタに入れる列 = 通常列＋関数列
         val ctorProps = normalProps + functionProps
         // ③ 出力先は“従来どおり”
@@ -623,12 +640,9 @@ class PropsProcessor(
             // --- @Table アノテーション（そのまま文字列化）---
             w.appendLine(annotationHelper.getSimpleName(tableAnnotationSpec))
             // --- data class 宣言ヘッダ ---
-            val ifaceText =
-                if (interfaces.isEmpty()) ""
-                else interfaces.joinToString(", ") { typeHelper.getSimpleName(it) }
-            w.appendLine(
-                "public data class ${classNameFQN.simpleName}("
-            )
+            val ifaceText = if (interfaces.isEmpty()) ""
+            else interfaces.joinToString(", ") { typeHelper.getSimpleName(it) }
+            w.appendLine("public data class ${classNameFQN.simpleName}(")
             // --- コンストラクタ引数（★ここが核心）---
             ctorProps.forEachIndexed { index, prop ->
                 // 付与されているアノテーションをそのまま出力
@@ -669,6 +683,20 @@ class PropsProcessor(
             val argName = it.name?.asString()
             val value = it.value
             when (argName) {
+                PROPERTIES -> {
+                    val projections = (value as? List<*>)?.mapNotNull { v ->
+                        (v as? KSAnnotation)?.let { ksAnn ->
+                            ColumnProjection(
+                                property = ksAnn.argumentOf<String>(CP_PROPERTY) ?: EMPTY_STRING,
+                                hideFromSelect = ksAnn.argumentOf<Boolean>(CP_HIDE_FROM_SELECT)
+                                    ?: false
+                            )
+                        }
+                    } ?: emptyList()
+
+                    result[argName] = projections
+                }
+
                 FUNCTIONS -> {
                     // List<KSAnnotation> を List<FunctionProjection> に変換
                     val projections = (value as? List<*>)?.mapNotNull { v ->
@@ -677,15 +705,13 @@ class PropsProcessor(
                             val raw = ksAnn.argumentOf<String>(FP_RAW) ?: EMPTY_STRING
                             if (func.isNull() && raw.isEmpty()) {
                                 error(
-                                    "@FunctionProjection requires either " +
-                                            "'function' or 'raw' to be specified",
+                                    "@FunctionProjection requires either " + "'function' or 'raw' to be specified",
                                     ksAnn,
                                     ksAnn.argumentOf<ColumnFunction>(FP_FUNCTION) ?: "null"
                                 )
                             }
                             FunctionProjection(
-                                function = func
-                                    ?: ColumnFunction.CUSTOM,
+                                function = func ?: ColumnFunction.CUSTOM,
                                 args = ksAnn.argumentOf<List<String>>(FP_ARGS)?.toTypedArray()
                                     ?: emptyArray(),
                                 alias = ksAnn.argumentOf<String>(FP_ALIAS) ?: EMPTY_STRING,
@@ -698,8 +724,7 @@ class PropsProcessor(
                     result[argName] = projections
                 }
 
-                COMMON_INTERFACE,
-                CUSTOM_INTERFACE -> {
+                COMMON_INTERFACE, CUSTOM_INTERFACE -> {
                     // 配列対応（String または DMLInterfaceEnum の配列）
                     val listValue: List<Any> = (value as? List<*>)?.mapNotNull { element ->
                         when (element) {
@@ -754,10 +779,8 @@ class PropsProcessor(
         traceEntered(commonInterface)
         val result = ClassName.bestGuess(
             (DMLInterfaceEnum.valueOf(
-                ClassName.bestGuess(commonInterface)
-                    .simpleName
-            ))
-                .interfaceFQN
+                ClassName.bestGuess(commonInterface).simpleName
+            )).interfaceFQN
         )
         traceExiting(result)
         return result
@@ -771,16 +794,21 @@ class PropsProcessor(
      * @author Masahiro Inoue
      * @since 2025-09-05
      */
-    private fun KSPropertyDeclaration.toPropertySpec(): PropertySpec {
-        traceEntered(this)
+    private fun KSPropertyDeclaration.toPropertySpec(hideFromSelect: Boolean = false): PropertySpec {
+        traceEntered(this, hideFromSelect)
         val builder = PropertySpec.builder(
-            simpleName.asString(),
-            this.type.toTypeName()
+            simpleName.asString(), this.type.toTypeName()
         )
         // ★★★ 重要：元プロパティのアノテーションをすべてコピー ★★★
         this.annotations.forEach { ksAnn ->
-            val annSpec = ksAnn.toAnnotationSpec()
-            builder.addAnnotation(annSpec)
+            val annotationName = ksAnn.annotationType.resolve().declaration.simpleName.asString()
+
+            if (annotationName == COLUMN) {
+                copyColumnAnnotation(this, hideFromSelect)?.let { builder.addAnnotation(it) }
+            } else {
+                val annSpec = ksAnn.toAnnotationSpec()
+                builder.addAnnotation(annSpec)
+            }
         }
         val result = builder.initializer(simpleName.asString()).build()
         traceExiting(result)
@@ -821,55 +849,39 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun resolveReturnType(
-        func: FunctionProjection,
-        propsByName: Map<String, KSPropertyDeclaration>
+        func: FunctionProjection, propsByName: Map<String, KSPropertyDeclaration>
     ): TypeName {
         traceEntered(func, propsByName)
         // 引数（カラム名 or リテラル）を TypeName に寄せる
         val argTypes: List<TypeName> = func.args.mapNotNull { arg ->
-            propsByName[arg]?.type?.resolve()?.toTypeName()
-                ?: inferLiteralTypeName(arg)
+            propsByName[arg]?.type?.resolve()?.toTypeName() ?: inferLiteralTypeName(arg)
         }
 
         val result = when (func.function) {
             // AVG は常に Double
             ColumnFunction.AVG -> DOUBLE
             // SUM は引数が整数型なら Long、浮動小数点型なら Double、その他は ANY（事実上無）
-            ColumnFunction.SUM -> LONG
-                .takeIf { argTypes.all { it == INT || it == LONG } }
-                ?: DOUBLE.takeIf { argTypes.any { it == DOUBLE || it == FLOAT } }
-                ?: ANY
+            ColumnFunction.SUM -> LONG.takeIf { argTypes.all { it == INT || it == LONG } }
+                ?: DOUBLE.takeIf { argTypes.any { it == DOUBLE || it == FLOAT } } ?: ANY
             // MAX / MIN は引数の型に依存
-            ColumnFunction.MAX,
-            ColumnFunction.MIN -> argTypes.firstOrNull() ?: ANY
+            ColumnFunction.MAX, ColumnFunction.MIN -> argTypes.firstOrNull() ?: ANY
             // COUNT は常に Long
-            ColumnFunction.COUNT,
-            ColumnFunction.COUNT_ALL -> LONG
+            ColumnFunction.COUNT, ColumnFunction.COUNT_ALL -> LONG
             // GROUP_CONCAT は常に String
             ColumnFunction.GROUP_CONCAT -> STRING
             // null 判定関数は引数の型に依存（広い方に寄せる）
-            ColumnFunction.COALESCE,
-            ColumnFunction.IFNULL,
-            ColumnFunction.NULLIF -> argTypes.reduceOrNull(::widerType) ?: ANY
+            ColumnFunction.COALESCE, ColumnFunction.IFNULL, ColumnFunction.NULLIF -> argTypes.reduceOrNull(
+                ::widerType
+            ) ?: ANY
             // LENGTH は常に Int
             ColumnFunction.LENGTH -> INT
             // 文字列関数は常に String
-            ColumnFunction.LOWER,
-            ColumnFunction.UPPER,
-            ColumnFunction.REPLACE,
-            ColumnFunction.SUBSTR,
-            ColumnFunction.CONCAT,
-            ColumnFunction.TRIM,
-            ColumnFunction.LTRIM,
-            ColumnFunction.RTRIM -> STRING
+            ColumnFunction.LOWER, ColumnFunction.UPPER, ColumnFunction.REPLACE, ColumnFunction.SUBSTR, ColumnFunction.CONCAT, ColumnFunction.TRIM, ColumnFunction.LTRIM, ColumnFunction.RTRIM -> STRING
             // 数学関数
             ColumnFunction.RANDOM -> LONG
             ColumnFunction.ROUND -> DOUBLE
             // 日付/時刻関数は常に String
-            ColumnFunction.DATE,
-            ColumnFunction.TIME,
-            ColumnFunction.DATETIME,
-            ColumnFunction.STRFTIME -> STRING
+            ColumnFunction.DATE, ColumnFunction.TIME, ColumnFunction.DATETIME, ColumnFunction.STRFTIME -> STRING
             // 日付/時刻関数（数値型を返すもの）
             ColumnFunction.JULIANDAY -> DOUBLE
             // ABS は引数の型に依存
@@ -951,6 +963,8 @@ class PropsProcessor(
                 val argsLiteral = func.args.joinToString(", ") { "\"$it\"" }
                 addMember("$F_ARGS = [%L]", argsLiteral)
             }
+            // hideFromSelect
+            addMember("hideFromSelect = %L", func.hideFromSelect)
         }.build()
         traceExiting(result)
         return result
@@ -968,12 +982,11 @@ class PropsProcessor(
      */
     inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
         traceEntered(name)
-        val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value
-            ?: run {
-                // 引数が存在しない場合は null を戻す
-                traceExiting("null")
-                return null
-            }
+        val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value ?: run {
+            // 引数が存在しない場合は null を戻す
+            traceExiting("null")
+            return null
+        }
         // Enum の場合は KSType から Enum を取得
         if (T::class.java.isEnum) {
             val ksType = argValue as? KSType ?: run {
@@ -983,8 +996,8 @@ class PropsProcessor(
             }
             val enumName = ksType.declaration.simpleName.asString()
 
-            @Suppress("UNCHECKED_CAST")
-            val result = java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
+            @Suppress("UNCHECKED_CAST") val result =
+                java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
             traceExiting(result)
             return result
         }
@@ -1003,8 +1016,7 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     private fun checkFunctionArgs(
-        properties: Set<String>,
-        functionProjection: FunctionProjection
+        properties: Set<String>, functionProjection: FunctionProjection
     ) {
         traceEntered(functionProjection, properties)
         // プロパティ名一覧を取得
@@ -1043,41 +1055,34 @@ class PropsProcessor(
      */
     private fun checkAggregateConflicts(annotation: KSAnnotation) {
         traceExiting(annotation)
+        val projectionArgs = collectProjectionArguments(annotation)
         // properties を取得して正規化
         val propertiesValues: Set<String> =
-            (annotation.arguments.firstOrNull { it.name?.asString() == PROPERTIES }?.value as? List<*>)
-                ?.mapNotNull { it as? String }
-                ?.map { it.trim().lowercase() }
-                ?.toSet()
-                ?: emptySet()
+            (projectionArgs[PROPERTIES] as? List<*>)?.filterIsInstance<ColumnProjection>()
+                ?.map { it.property.trim().lowercase() }?.toSet() ?: emptySet()
         // functions を取得
         val functionsValues: List<KSAnnotation> =
-            (annotation.arguments.firstOrNull { it.name?.asString() == FUNCTIONS }?.value as? List<*>)
-                ?.mapNotNull { it as? KSAnnotation }
+            (annotation.arguments.firstOrNull { it.name?.asString() == FUNCTIONS }?.value as? List<*>)?.mapNotNull { it as? KSAnnotation }
                 ?: emptyList()
         // functions の args を平坦化して正規化
-        val functionTargetColsNormalized: Set<String> = functionsValues
-            .filter { funcAnnotation ->
-                val funcEnum = funcAnnotation.arguments.firstOrNull {
-                    it.name?.asString() == FP_FUNCTION
-                }?.value as? ColumnFunction
-                funcEnum != ColumnFunction.CUSTOM
-            }
-            .flatMap { funcAnnotation ->
-                (funcAnnotation.arguments.firstOrNull {
-                    it.name?.asString() == FP_ARGS
-                }?.value as? List<*>)
-                    ?.mapNotNull { it as? String }
-                    ?.map { arg -> arg.trim().substringAfterLast('.').lowercase() }
-                    ?: emptyList()
-            }
-            .toSet()
+        val functionTargetColsNormalized: Set<String> = functionsValues.filter { funcAnnotation ->
+            val funcEnum = funcAnnotation.arguments.firstOrNull {
+                it.name?.asString() == FP_FUNCTION
+            }?.value as? ColumnFunction
+            funcEnum != ColumnFunction.CUSTOM
+        }.flatMap { funcAnnotation ->
+            (funcAnnotation.arguments.firstOrNull {
+                it.name?.asString() == FP_ARGS
+            }?.value as? List<*>)?.mapNotNull { it as? String }
+                ?.map { arg -> arg.trim().substringAfterLast('.').lowercase() } ?: emptyList()
+        }.toSet()
         // 重複検出
         val duplicates = propertiesValues.intersect(functionTargetColsNormalized)
         if (duplicates.isNotEmpty()) {
             warning(
-                "Projection contains column(s) that are both in properties and used as aggregate targets: " +
-                        duplicates.joinToString(", ")
+                "Projection contains column(s) that are both in properties and used as aggregate targets: " + duplicates.joinToString(
+                    ", "
+                )
             )
         }
         traceExiting()
@@ -1094,11 +1099,7 @@ class PropsProcessor(
     private fun KSAnnotation.toAnnotationSpec(): AnnotationSpec {
         traceEntered(this)
         // 付与したいアノテーションのクラス名を取得
-        val fqn = this.annotationType
-            .resolve()
-            .declaration
-            .qualifiedName!!
-            .asString()
+        val fqn = this.annotationType.resolve().declaration.qualifiedName!!.asString()
         val builder = AnnotationSpec.builder(ClassName.bestGuess(fqn))
         // アノテーション引数を一つずつ取り出して書き換える
         this.arguments.forEach { arg ->
@@ -1127,6 +1128,51 @@ class PropsProcessor(
             }
         }
         val result = builder.build()
+        traceExiting(result)
+        return result
+    }
+
+    /**
+     * ## @Column アノテーションのコピー
+     * ### KSPropertyDeclaration に付与された @Column アノテーションを基に AnnotationSpec を生成する
+     * ### ただし、引数の columnName と columnAlias は元のアノテーションからコピーし、hideFromSelect は引数で指定された値を使用する
+     * @param prop KSPropertyDeclaration 元データ
+     * @param hideFromSelect hideFromSelect の値
+     * @return 生成された @Column アノテーションの AnnotationSpec / 元のプロパティに @Column が付与されていない場合は null
+     * @author Masahiro Inoue
+     * @since 2026-04-14
+     */
+    private fun copyColumnAnnotation(
+        prop: KSPropertyDeclaration,
+        hideFromSelect: Boolean
+    ): AnnotationSpec? {
+        traceEntered(prop, hideFromSelect)
+        // KSPropertyDeclaration から @Column アノテーションを抽出
+        val columnAnnotation = prop.annotations.firstOrNull {
+            it.shortName.asString() == COLUMN &&
+                    it.annotationType.resolve().declaration.qualifiedName?.asString() == COLUMN_FQN
+        }
+        // @Column アノテーションが存在しない場合は null を戻す
+        if (columnAnnotation == null) {
+            traceExiting("null")
+            return null
+        }
+        // 引数 columnName を抽出
+        val columnName = columnAnnotation.arguments
+            .firstOrNull { it.name?.asString() == COLUMN_NAME }
+            ?.value as? String
+        // columnAlias を抽出。null でも空文字でもない場合はコピー、そうでない場合は空文字を使用
+        val columnAlias = columnAnnotation.arguments
+            .firstOrNull { it.name?.asString() == COLUMN_ALIAS }
+            ?.value as? String ?: EMPTY_STRING
+        // 新しい @Column アノテーションを生成（hideFromSelect は引数で指定された値を使用）
+        val result = AnnotationSpec.builder(Column::class).apply {
+            if (!columnName.isNullOrBlank()) {
+                addMember("$COLUMN_NAME = %S", columnName)
+            }
+            addMember("$COLUMN_ALIAS = %S", columnAlias)
+            addMember("$COLUMN_HIDE_FROM_SELECT = %L", hideFromSelect)
+        }.build()
         traceExiting(result)
         return result
     }
@@ -1164,8 +1210,5 @@ class PropsProcessor(
  * @since 2025-08-01
  */
 enum class PackageInterfaceRelation(val relation: String) {
-    SELECT("selectPackage"),
-    INSERT("insertPackage"),
-    UPDATE("updatePackage"),
-    UPSERT("upsertPackage"),
+    SELECT("selectPackage"), INSERT("insertPackage"), UPDATE("updatePackage"), UPSERT("upsertPackage"),
 }
