@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
@@ -25,9 +26,9 @@ import java.time.LocalDateTime
             entityNameExtend = "Info",
             aliasExtend = "INF",
             properties = [
-                "employeeId",
-                "department",
-                "section"
+                ColumnProjection("employeeId"),
+                ColumnProjection("department"),
+                ColumnProjection("section")
             ],
             functions = [
                 FunctionProjection(function = COUNT, args = [], alias = "ALL_LINE")
@@ -37,13 +38,13 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "Insert",
             properties = [
-                "employeeId",
-                "department",
-                "section",
-                "createdAt",
-                "createdBy",
-                "updatedAt",
-                "updatedBy"
+                ColumnProjection("employeeId"),
+                ColumnProjection("department"),
+                ColumnProjection("section"),
+                ColumnProjection("createdAt"),
+                ColumnProjection("createdBy"),
+                ColumnProjection("updatedAt"),
+                ColumnProjection("updatedBy")
             ],
             commonInterface = [DMLInterfaceEnum.INSERT]
         ),

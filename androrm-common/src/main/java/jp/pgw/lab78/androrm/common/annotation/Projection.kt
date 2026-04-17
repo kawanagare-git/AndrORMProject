@@ -22,8 +22,8 @@ annotation class Projection(
     val entityNameExtend: String,
     /** テーブルエイリアス拡張名 */
     val aliasExtend: String = "",
-    /** クラスに定義するプロパティ名 */
-    val properties: Array<String>,
+    /** クラスに定義するプロパティ情報 */
+    val properties: Array<ColumnProjection>,
     /** エンティティに関数を使用する場合に指定 */
     val functions: Array<FunctionProjection> = [],
     /** 共通インターフェス */

@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Table
@@ -13,18 +14,18 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "IdOnly",
             aliasExtend = "ID",
-            properties = ["id"],
+            properties = [ColumnProjection("id")],
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
             entityNameExtend = "Comprehensive",
             properties = [
-                "id",
-                "name",
-                "address",
-                "birthday",
-                "updateDate",
-                "insertDateTime"
+                ColumnProjection("id"),
+                ColumnProjection("name"),
+                ColumnProjection("address"),
+                ColumnProjection("birthday"),
+                ColumnProjection("updateDate"),
+                ColumnProjection("insertDateTime")
             ],
             commonInterface = [DMLInterfaceEnum.INSERT, DMLInterfaceEnum.UPSERT]
         ),

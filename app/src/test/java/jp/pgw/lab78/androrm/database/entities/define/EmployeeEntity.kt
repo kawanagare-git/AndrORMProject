@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
@@ -22,17 +23,17 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "IdSelection",
             aliasExtend = "ID",
-            properties = ["employeeId"],
+            properties = [ColumnProjection("employeeId")],
             commonInterface = [DMLInterfaceEnum.SELECT]
         ),
         Projection(
             entityNameExtend = "",
             properties = [
-                "employeeId",
-                "name",
-                "address",
-                "gender",
-                "position",
+                ColumnProjection("employeeId"),
+                ColumnProjection("name"),
+                ColumnProjection("address"),
+                ColumnProjection("gender"),
+                ColumnProjection("position"),
             ],
             commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.UPDATE]
         ),

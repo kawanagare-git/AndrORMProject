@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
 import jp.pgw.lab78.androrm.common.GenerateProps
+import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
@@ -23,29 +24,29 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "Upsert",
             properties = [
-                "employeeId",
-                "payMonth",
-                "createdAt"
+                ColumnProjection("employeeId"),
+                ColumnProjection("payMonth"),
+                ColumnProjection("createdAt")
             ],
             commonInterface = [DMLInterfaceEnum.UPSERT]
         ),
         Projection(
             entityNameExtend = "Insert",
             properties = [
-                "employeeId",
-                "payMonth",
-                "gross",
-                "updatedAt",
-                "updatedBy"
+                ColumnProjection("employeeId"),
+                ColumnProjection("payMonth"),
+                ColumnProjection("gross"),
+                ColumnProjection("updatedAt"),
+                ColumnProjection("updatedBy")
             ],
             commonInterface = [DMLInterfaceEnum.INSERT]
         ),
         Projection(
             entityNameExtend = "Selective",
             properties = [
-                "employeeId",
-                "payMonth",
-                "gross",
+                ColumnProjection("employeeId"),
+                ColumnProjection("payMonth"),
+                ColumnProjection("gross"),
             ],
             functions = [
                 FunctionProjection(function = MAX, args = ["gross"], alias = "MAX_GROSS"),
