@@ -29,7 +29,8 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "",
             properties = [
-                ColumnProjection("employeeId", hideFromSelect = true),
+                ColumnProjection("employeeId", hideFromSelect = false),
+                ColumnProjection("employeeSubId", hideFromSelect = true),
                 ColumnProjection("name"),
                 ColumnProjection("address"),
                 ColumnProjection("gender"),
@@ -43,6 +44,8 @@ import java.time.LocalDateTime
 data class EmployeeEntity(
     /** 社員ID */
     val employeeId: String,
+    /** 社員副ID */
+    val employeeSubId: String,
     /** 氏名 */
     val name: String,
     /** 住所 */

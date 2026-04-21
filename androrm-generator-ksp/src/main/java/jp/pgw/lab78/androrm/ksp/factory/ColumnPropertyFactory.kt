@@ -6,6 +6,7 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.ksp.toTypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
@@ -57,6 +58,8 @@ class ColumnPropertyFactory : LoggerLike by logger {
             prop.simpleName.asString(),
             prop.type.toTypeName()
         )
+        // @Column を追加するためのフラグ。プロパティに @Column が存在しない場合は、デフォルトの @Column を追加する
+        var shouldAddDefaultColumnAnnotation = true
         // KSPropertyDeclaration から @Column を検索し、引数を抽出して AnnotationSpec を生成する
         prop.annotations.forEach { ksAnn ->
             val annotationName =
@@ -64,9 +67,13 @@ class ColumnPropertyFactory : LoggerLike by logger {
             // @Column の場合、引数を抽出して AnnotationSpec を生成する
             if (annotationName == COLUMN) {
                 copyColumnAnnotation(prop, hideFromSelect)?.let { builder.addAnnotation(it) }
+                shouldAddDefaultColumnAnnotation = false
             } else {
                 builder.addAnnotation(ksAnn.toAnnotationSpec())
             }
+        }
+        if (shouldAddDefaultColumnAnnotation) {
+            builder.addAnnotation(buildFallbackColumnAnnotation(prop, hideFromSelect))
         }
         // プロパティの PropertySpec を生成する
         val result = builder
@@ -158,6 +165,33 @@ class ColumnPropertyFactory : LoggerLike by logger {
         }
         // AnnotationSpec を生成して返す
         val result = builder.build()
+        traceExiting(result)
+        return result
+    }
+
+    /**
+     * ## @Column 補完メソッド
+     * ### KSPropertyDeclaration からデフォルトの @Column を生成するためのメソッド
+     * ### プロパティ名をスネークケースに変換して、name 引数として使用する。
+     * ### alias 引数は空文字列を使用する。hideFromSelect 引数は引数として渡された値を使用する。
+     * @param prop 対象プロパティの宣言
+     * @param hideFromSelect プロパティが SELECT から隠されるべきかどうかを示すフラグ
+     * @return 生成されたデフォルトの @Column の AnnotationSpec オブジェクト
+     * @author Masahiro Inoue
+     * @since 2026-04-21
+     */
+    private fun buildFallbackColumnAnnotation(
+        prop: KSPropertyDeclaration,
+        hideFromSelect: Boolean
+    ): AnnotationSpec {
+        traceEntered(prop, hideFromSelect)
+        // プロパティ名をスネークケースに変換して、name 引数として使用する
+        val generatedColumnName = prop.simpleName.asString().toSnakeCase()
+        // デフォルトの @Column を生成する。name 引数はプロパティ名をスネークケースに変換して使用し、alias 引数は空文字列を使用する。hideFromSelect 引数は引数として渡された値を使用する。
+        val result = AnnotationSpec.builder(Column::class).apply {
+            addMember("name = %S", generatedColumnName)
+            addMember("hideFromSelect = %L", hideFromSelect)
+        }.build()
         traceExiting(result)
         return result
     }

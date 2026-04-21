@@ -22,6 +22,7 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionExtractor
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionValidator
 import jp.pgw.lab78.androrm.ksp.resolver.InterfaceResolver
+import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
 
 /**
  * ## AndrORM プロパティプロセッサクラス
@@ -42,27 +43,6 @@ class PropsProcessor(
 
         /** プロパティ名一覧 Enum 名 */
         private const val GENERATED_PROPERTIES = "AllClassProperties"
-
-        /** @Table の変数名定義（name） */
-        private const val TABLE_NAME = "name"
-
-        /** @Table の変数名定義（alias） */
-        private const val TABLE_ALIAS = "alias"
-
-        /** @Function の変数名定義（columnFunction） */
-        private const val F_COLUMN_FUNCTION = "columnFunction"
-
-        /** @Function の変数名定義（args） */
-        private const val F_ARGS = "args"
-
-        /** @Function の変数名定義（alias） */
-        private const val F_ALIAS = "alias"
-
-        /** @FunctionPrpjection の変数名定義（raw） */
-        private const val F_RAW = "raw"
-
-        /** @EntityPackageInfo の変数名定義（basePackage） */
-        private const val BASE_PACKAGE = "basePackage"
 
         /** @GenerateProps */
         private val GENERATE_PROPS = GenerateProps::class.qualifiedName!!
@@ -142,14 +122,19 @@ class PropsProcessor(
     /** 自動生成するために必要な全プロパティ名 */
     private val allClassProperties = mutableMapOf<String, List<String>>()
 
-    /** @Table 生成 */
-    private lateinit var tableAnnotationSpec: AnnotationSpec
-
     /** Column プロパティ生成 */
     private val columnPropertyFactory = ColumnPropertyFactory()
 
     /** Function プロパティ生成 */
     private val functionPropertyFactory = FunctionPropertyFactory()
+
+    /** data class 生成 */
+    private val dataClassWriter = DataClassWriter(
+        codeGenerator = codeGenerator,
+        importHelper = importHelper,
+        annotationHelper = annotationHelper,
+        typeHelper = typeHelper,
+    )
 
     /**
      * ## AndrORM アノテーションプロセスメソッド
@@ -280,9 +265,9 @@ class PropsProcessor(
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
         val createClassName = classDecl.simpleName.asString() + definition.entityNameExtend
         // @Table の生成
-        tableAnnotationSpec = tableAnnotationFactory.create(classDecl, definition.aliasExtend)
+        val tableAnnotationSpec = tableAnnotationFactory.create(classDecl, definition.aliasExtend)
+        // プロパティ名一覧と、プロパティ名 → hideFromSelect のマップを生成
         val selectedPropertyNames = definition.properties.map { it.property }.toSet()
-
         val hideFromSelectByProperty = definition.properties.associate {
             it.property to it.hideFromSelect
         }
@@ -292,17 +277,29 @@ class PropsProcessor(
         // プロパティ名 → KSPropertyDeclaration のマップを生成
         val propsByName: Map<String, KSPropertyDeclaration> =
             classDecl.getAllProperties().associateBy { it.simpleName.asString() }
+        // 通常列の PropertySpec を生成（@Column / @PrimaryKey はコピー済み）
+        val normalProps = selectedProps.map { prop ->
+            columnPropertyFactory.create(
+                prop,
+                hideFromSelect = hideFromSelectByProperty[prop.simpleName.asString()] == true
+            )
+        }
+        // functions 部分（関数列）の抽出と PropertySpec 生成
+        val functionProps = functionPropertyFactory.createAll(
+            definition.functions,
+            propsByName
+        )
         // マーカーインターフェースの抽出
         val interfaces = interfaceResolver.collectInterfaces(definition)
-        // data class の構成を定義
-        val fileSpec = createDataClassFile(
-            ClassName(packageName, createClassName),
-            selectedProps,
-            hideFromSelectByProperty,
-            functionPropertyFactory.createAll(definition.functions, propsByName),
-            interfaces
+        // createClassName という名前で、packageName パッケージに、tableAnnotationSpec アノテーション、normalProps プロパティ、functionProps プロパティ、interfaces インターフェースを持つ data class を生成する
+        dataClassWriter.write(
+            classNameFQN = ClassName(packageName, createClassName),
+            tableAnnotationSpec = tableAnnotationSpec,
+            normalProps = normalProps,
+            functionProps = functionProps,
+            interfaces = interfaces
         )
-        traceExiting(fileSpec)
+        traceExiting(createClassName)
     }
 
     /**
@@ -326,139 +323,6 @@ class PropsProcessor(
                     add(ClassName.bestGuess(custom))
                 }
         }
-        traceExiting(result)
-        return result
-    }
-
-    /**
-     * ## パッケージ名生成メソッド
-     * ### @EntityPackageInfo と @Projection の commonInterface を
-     * ### 基にパッケージ名を生成
-     * ### ただし、@EntityPackageInfo や @Projection の commonInterface が
-     * ### 定義されていない場合 @Projection が付与されたクラスのパッケージ名を返す
-     * @param classDeclaration クラス定義情報
-     * @param symbols @EntityPackageInfo で絞り込んだアノテーションのシンボル
-     * @param commonInterface @Projection に定義された commonInterface の値
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun resolvePackageNameFromAnnotation(
-        classDeclaration: KSClassDeclaration,
-        symbols: Sequence<KSAnnotated>,
-        commonInterface: String
-    ): String {
-        traceEntered(classDeclaration, symbols, commonInterface)
-        if (commonInterface.isNullOrEmpty()) {
-            return classDeclaration.packageName.asString()
-        }
-        val common = generateCommonInterface(commonInterface)
-        // パッケージアノテーションの抽出
-        symbols.filterIsInstance<KSFile>().forEach {
-            // @EntityPackageInfo の単純名で抽出
-                symbol ->
-            val annotation = symbol.annotations.firstOrNull {
-                it.shortName.asString() == ENTITY_PACKAGE_INFO
-            }
-            // @@EntityPackageInfo を FQN で検証
-            if (annotation?.let {
-                    it.annotationType.resolve().declaration.qualifiedName?.asString() == ENTITY_PACKAGE_INFO_FQN
-                } == true) {
-                val base = annotation.arguments.firstOrNull {
-                    it.name?.asString() == BASE_PACKAGE
-                }?.value
-                // サブパッケージの取得
-                // PackageInterfaceRelation から common.canonicalName に該当するものを抽出
-                val sub = PackageInterfaceRelation.values().firstOrNull {
-                    DMLInterfaceEnum.valueOf(it.name).interfaceFQN == common.canonicalName
-                }
-                    // DMLInterfaceEnum から取得した列挙子の relation の値を取得
-                    .let { it?.relation }
-                    // EntityPackageInfo の列挙子からサブパッケージを取得
-                    .let { argument ->
-                        annotation.arguments.firstOrNull {
-                            it.name?.asString() == argument
-                        }
-                    }?.value
-                val result = "$base.$sub"
-                infoExiting(result)
-                return result
-            }
-        }
-        val result = common.packageName
-        traceExiting(result)
-        return result
-    }
-
-    /**
-     * ## データクラス生成メソッド
-     * ### 指定されたクラスから、指定されたプロパティのみを含む
-     * ### データクラスを KotlinPoet で生成する
-     * @param classNameFQN 生成するクラス名（FQN）
-     * @param selectedProps プロパティ一覧（KSP の KSPropertyDeclaration）
-     * @param functionProjections 関数列
-     * @param interfaces 実装するインターフェス
-     * @return FileSpec（Kotlin ファイル）
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun createDataClassFile(
-        classNameFQN: ClassName,
-        selectedProps: List<KSPropertyDeclaration>,
-        hideFromSelectByProperty: Map<String, Boolean>,
-        functionProps: List<PropertySpec>,
-        interfaces: List<TypeName>
-    ): FileSpec {
-        traceEntered(
-            classNameFQN, selectedProps, hideFromSelectByProperty, functionProps, interfaces
-        )
-        // ① 通常列 → PropertySpec（@Column / @PrimaryKey はコピー済み）
-        val normalProps = selectedProps.map { prop ->
-            columnPropertyFactory.create(
-                prop,
-                hideFromSelect = hideFromSelectByProperty[prop.simpleName.asString()] == true
-            )
-        }
-        // ② コンストラクタに入れる列 = 通常列＋関数列
-        val ctorProps = normalProps + functionProps
-        // ③ 出力先は“従来どおり”
-        val file = codeGenerator.createNewFile(
-            dependencies = Dependencies(false),
-            packageName = classNameFQN.packageName,
-            fileName = classNameFQN.simpleName
-        )
-        file.bufferedWriter().use { w ->
-            val imports = importHelper.collectImports(tableAnnotationSpec, ctorProps, interfaces)
-            // --- パッケージ ---
-            w.appendLine("package ${classNameFQN.packageName}")
-            w.appendLine()
-            // --- インポート ---
-            imports.sorted().forEach { w.appendLine("import $it") }
-            w.appendLine()
-            // --- @Table アノテーション（そのまま文字列化）---
-            w.appendLine(annotationHelper.getSimpleName(tableAnnotationSpec))
-            // --- data class 宣言ヘッダ ---
-            val ifaceText = if (interfaces.isEmpty()) ""
-            else interfaces.joinToString(", ") { typeHelper.getSimpleName(it) }
-            w.appendLine("public data class ${classNameFQN.simpleName}(")
-            // --- コンストラクタ引数（★ここが核心）---
-            ctorProps.forEachIndexed { index, prop ->
-                // 付与されているアノテーションをそのまま出力
-                prop.annotations.forEach { ann ->
-                    w.appendLine("  " + annotationHelper.getSimpleName(ann))
-                }
-                val comma = if (index == ctorProps.lastIndex) "" else ","
-                // ★ val を確実に出す
-                w.appendLine("  public val ${prop.name}: ${typeHelper.getSimpleName(prop)}$comma")
-                w.appendLine()
-            }
-            w.append(")")
-            if (ifaceText.isNotBlank()) {
-                w.append(" : $ifaceText")
-            }
-            w.appendLine()
-        }
-        // ダミーの FileSpec を返す（実体は上で書き込み済み）
-        val result = FileSpec.builder(classNameFQN).build()
         traceExiting(result)
         return result
     }
