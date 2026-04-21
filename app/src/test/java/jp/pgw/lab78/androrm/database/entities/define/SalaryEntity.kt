@@ -24,7 +24,7 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "Upsert",
             properties = [
-                ColumnProjection("employeeId"),
+                ColumnProjection("employeeId", hideFromSelect = true),
                 ColumnProjection("payMonth"),
                 ColumnProjection("createdAt")
             ],

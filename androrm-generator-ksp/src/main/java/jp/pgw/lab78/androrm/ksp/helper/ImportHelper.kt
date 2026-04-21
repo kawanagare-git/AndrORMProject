@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.ksp.helper
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
+import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
@@ -12,7 +13,7 @@ import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
  * @author Masahiro Inoue
  * @since 2026-02-26
  */
-class ImportHelper(logger: LoggerLike) : LoggerLike by logger {
+class ImportHelper() : LoggerLike by logger {
     /**
      * ## インポート収集
      * ### コンストラクタのプロパティとインターフェースから必要なインポートを収集する

@@ -1,0 +1,164 @@
+package jp.pgw.lab78.androrm.ksp.factory
+
+import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.ksp.toTypeName
+import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
+import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
+
+/**
+ * ## Column プロパティファクトリークラス
+ * ### KSPropertyDeclaration から @Column アノテーションを生成するためのクラス
+ * ### @Column アノテーションの引数（name、alias、hideFromSelect）を抽出し、適切な値を設定して AnnotationSpec を生成する
+ * @author Masahiro Inoue
+ * @since 2026-04-21
+ */
+class ColumnPropertyFactory : LoggerLike by logger {
+
+    companion object {
+        /** @Column */
+        private val COLUMN = Column::class.simpleName!!
+
+        /** @Column(FQN) */
+        private val COLUMN_FQN = Column::class.qualifiedName!!
+
+        /** @Column の変数名定義（name） */
+        private const val COLUMN_NAME = "name"
+
+        /** @Column の変数名定義（alias） */
+        private const val COLUMN_ALIAS = "alias"
+
+        /** @Column の変数名定義（hideFromSelect） */
+        private const val COLUMN_HIDE_FROM_SELECT = "hideFromSelect"
+
+    }
+
+    /**
+     * ## @Column 生成メソッド
+     * ### KSPropertyDeclaration から @Column アノテーションを生成するためのメソッド
+     * ### @Column の引数（name、alias、hideFromSelect）を抽出し、適切な値を設定して AnnotationSpec を生成する
+     * @param prop 対象プロパティの宣言
+     * @param hideFromSelect プロパティが SELECT から隠されるべきかどうかを示すフラグ（デフォルトは false）
+     * @return 生成されたプロパティの PropertySpec オブジェクト
+     * @author Masahiro Inoue
+     * @since 2026-04-21
+     */
+    fun create(
+        prop: KSPropertyDeclaration,
+        hideFromSelect: Boolean = false
+    ): PropertySpec {
+        traceEntered(prop, hideFromSelect)
+        // KSPropertyDeclaration からプロパティの型と名前を取得し、PropertySpec のビルダーを作成する
+        val builder = PropertySpec.builder(
+            prop.simpleName.asString(),
+            prop.type.toTypeName()
+        )
+        // KSPropertyDeclaration から @Column を検索し、引数を抽出して AnnotationSpec を生成する
+        prop.annotations.forEach { ksAnn ->
+            val annotationName =
+                ksAnn.annotationType.resolve().declaration.simpleName.asString()
+            // @Column の場合、引数を抽出して AnnotationSpec を生成する
+            if (annotationName == COLUMN) {
+                copyColumnAnnotation(prop, hideFromSelect)?.let { builder.addAnnotation(it) }
+            } else {
+                builder.addAnnotation(ksAnn.toAnnotationSpec())
+            }
+        }
+        // プロパティの PropertySpec を生成する
+        val result = builder
+            .initializer(prop.simpleName.asString())
+            .build()
+        traceExiting(result)
+        return result
+    }
+
+    /**
+     * ## @Column コピー生成メソッド
+     * ### KSPropertyDeclaration から @Column を検索し、引数を抽出して AnnotationSpec を生成するためのメソッド
+     * @param prop 対象プロパティの宣言
+     * @param hideFromSelect プロパティが SELECT から隠されるべきかどうかを示すフラグ
+     * @return 生成された @Column の AnnotationSpec オブジェクト。@Column が存在しない場合は null を返す。
+     * @author Masahiro Inoue
+     * @since 2026-04-21
+     */
+    private fun copyColumnAnnotation(
+        prop: KSPropertyDeclaration,
+        hideFromSelect: Boolean
+    ): AnnotationSpec? {
+        traceEntered(prop, hideFromSelect)
+        // KSPropertyDeclaration から @Column を検索する
+        val columnAnnotation = prop.annotations.firstOrNull {
+            it.shortName.asString() == COLUMN &&
+                    it.annotationType.resolve().declaration.qualifiedName?.asString() == COLUMN_FQN
+        }
+        // @Column が存在しない場合は null を返す
+        if (columnAnnotation == null) {
+            traceExiting("null")
+            return null
+        }
+        // @Column の引数を抽出し、AnnotationSpec を生成する
+        val columnName = columnAnnotation.arguments
+            .firstOrNull { it.name?.asString() == COLUMN_NAME }
+            ?.value as? String
+        // @Column alias 引数 を抽出し、適切な値を設定する。null または空白の場合は、プロパティ名をスネークケースに変換して使用する
+        val columnAlias = columnAnnotation.arguments
+            .firstOrNull { it.name?.asString() == COLUMN_ALIAS }
+            ?.value as? String ?: EMPTY_STRING
+        // columnAlias が null または空白の場合は、プロパティ名をスネークケースに変換して使用する
+        val result = AnnotationSpec.builder(Column::class).apply {
+            if (!columnName.isNullOrBlank()) {
+                addMember("$COLUMN_NAME = %S", columnName)
+            }
+            addMember("$COLUMN_ALIAS = %S", columnAlias)
+            addMember("$COLUMN_HIDE_FROM_SELECT = %L", hideFromSelect)
+        }.build()
+        traceExiting(result)
+        return result
+    }
+
+    /**
+     * ## アノテーション変換メソッド
+     * ### KSAnnotation オブジェクトを AnnotationSpec に変換するためのメソッド
+     * ### アノテーションの引数を適切に処理して、AnnotationSpec のメンバーとして追加する
+     * @receiver KSAnnotation オブジェクト
+     * @return 変換された AnnotationSpec オブジェクト
+     * @author Masahiro Inoue
+     * @since 2026-04-21
+     */
+    private fun KSAnnotation.toAnnotationSpec(): AnnotationSpec {
+        traceEntered(this)
+        // アノテーションの完全修飾名を取得し、AnnotationSpec のビルダーを作成する
+        val fqn = this.annotationType.resolve().declaration.qualifiedName!!.asString()
+        val builder = AnnotationSpec.builder(com.squareup.kotlinpoet.ClassName.bestGuess(fqn))
+        // アノテーションの引数を走査し、適切に処理して AnnotationSpec のメンバーとして追加する
+        this.arguments.forEach { arg ->
+            val name = arg.name?.asString() ?: return@forEach
+            val value = arg.value
+            // 引数の型に応じて、AnnotationSpec のメンバーとして追加する
+            when (value) {
+                is String -> builder.addMember("$name = %S", value)
+                is Boolean -> builder.addMember("$name = %L", value)
+                is Int -> builder.addMember("$name = %L", value)
+                is Enum<*> -> builder.addMember("$name = %T.%L", value::class.java, value.name)
+                is List<*> -> {
+                    val joined = value.joinToString(", ") {
+                        when (it) {
+                            is String -> "\"$it\""
+                            is Enum<*> -> "${it::class.java.simpleName}.${it.name}"
+                            else -> it.toString()
+                        }
+                    }
+                    builder.addMember("$name = [%L]", joined)
+                }
+            }
+        }
+        // AnnotationSpec を生成して返す
+        val result = builder.build()
+        traceExiting(result)
+        return result
+    }
+}

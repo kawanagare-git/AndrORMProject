@@ -6,6 +6,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_FULLY_
 import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_SIMPLE_NAME
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
@@ -15,7 +16,7 @@ import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
  * @author Masahiro Inoue
  * @since 2026-02-27
  */
-class AnnotationHelper(logger: LoggerLike) : LoggerLike by logger {
+class AnnotationHelper() : LoggerLike by logger {
     /**
      * ## アノテーションの値取得
      * ### アノテーションのメンバーから値を取得する

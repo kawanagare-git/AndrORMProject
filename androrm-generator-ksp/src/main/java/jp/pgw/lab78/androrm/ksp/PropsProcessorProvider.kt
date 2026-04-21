@@ -3,10 +3,7 @@ package jp.pgw.lab78.androrm.ksp
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
-import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
-import jp.pgw.lab78.androrm.common.Constants.LOG_DIRECTORY
-import jp.pgw.lab78.androrm.common.Constants.LOG_ROOT
-import jp.pgw.lab78.androrm.ksp.logging.CompositeLogger
+import jp.pgw.lab78.androrm.ksp.logging.CreateLogger
 
 /**
  * ## プロパティプロセッサ提供元クラス
@@ -26,14 +23,9 @@ class PropsProcessorProvider : SymbolProcessorProvider {
      * @see SymbolProcessorProvider.create
      */
     override fun create(environment: SymbolProcessorEnvironment): SymbolProcessor {
+        CreateLogger.initialize(environment)
         return PropsProcessor(
             environment.codeGenerator,
-            CompositeLogger(
-                environment.logger,
-                environment.options["androrm.moduleDir"] ?: EMPTY_STRING,
-                LOG_ROOT,
-                LOG_DIRECTORY
-            ),
         )
     }
 }

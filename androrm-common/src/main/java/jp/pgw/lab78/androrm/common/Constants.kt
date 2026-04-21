@@ -21,12 +21,6 @@ object Constants {
     /** カンマ + スペース */
     const val COMMA_SPACE = "$COMMA$SPACE"
 
-    /** ログルートディレクトリ */
-    const val LOG_ROOT = "build"
-
-    /** ログルートディレクトリ */
-    const val LOG_DIRECTORY = "logs"
-
     /**
      * ## ログタグ
      * ### ログ出力時のタグを定義する列挙クラス

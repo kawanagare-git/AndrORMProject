@@ -29,7 +29,7 @@ import java.time.LocalDateTime
         Projection(
             entityNameExtend = "",
             properties = [
-                ColumnProjection("employeeId"),
+                ColumnProjection("employeeId", hideFromSelect = true),
                 ColumnProjection("name"),
                 ColumnProjection("address"),
                 ColumnProjection("gender"),
