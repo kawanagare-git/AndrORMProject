@@ -3,10 +3,14 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.isHiddenFromSelect
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.logging.LogLevel.*
 import jp.pgw.lab78.androrm.common.logging.LogScope.APP
+import jp.pgw.lab78.androrm.common.meta.EntityMeta
+import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
+import jp.pgw.lab78.androrm.common.meta.PropertyMeta
 import jp.pgw.lab78.androrm.database.DmlConstant.ANY_CLOSE_BRACKET_REGEX
 import jp.pgw.lab78.androrm.database.DmlConstant.ANY_OPEN_BRACKET_REGEX
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
@@ -17,11 +21,10 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
-import jp.pgw.lab78.androrm.database.utility.EntityManager.createTableName
-import jp.pgw.lab78.androrm.database.utility.EntityManager.getAlias
-import jp.pgw.lab78.androrm.database.utility.EntityManager.getColumns
+import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import java.util.EnumMap
 import java.util.Locale
+import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -43,11 +46,20 @@ class Select<T : SelectEntity>(
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
 
-    /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
-    private val mainTableName = fromEntity.createTableName()
+    /** Entity メタ情報生成 */
+    private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
 
-    /** テーブル名：付与アノテーション または クラス名をスネークケース（大文字）に変換 */
-    private val mainTableAlias = fromEntity.getAlias().ifEmpty { mainTableName }
+    /** Entity メタ情報検証 */
+    private val entityMetaValidator = EntityMetaValidator()
+
+    /** 主 Entity の正規化済みメタ情報 */
+    private val mainEntityMeta = runtimeEntityMetaFactory.create(fromEntity)
+
+    /** テーブル名 */
+    private val mainTableName = mainEntityMeta.tableName
+
+    /** テーブルエイリアス */
+    private val mainTableAlias = mainEntityMeta.tableAlias
 
     /** クエリの構文を管理するマップ */
     private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
@@ -106,10 +118,14 @@ class Select<T : SelectEntity>(
      */
     init {
         logger.log(TRACE.level, "Select init:enter fromEntity=$fromEntity / isDistinct=$isDistinct")
+        // 主 Entity のメタ情報を検証
+        validateEntityMeta(mainEntityMeta)
         // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        fromEntity.getColumns().forEach {
-            selectColumnList += "$mainTableAlias.$it as ${mainTableAlias}_$it"
-        }
+        mainEntityMeta.properties
+            .filterNot { it.hideFromSelect }
+            .forEach { propertyMeta ->
+                selectColumnList += buildSelectExpression(mainEntityMeta, propertyMeta)
+            }
         // from 句とテーブル名の定義を設定
         queryStructureMap[SelectClause.SELECT] =
             mutableListOf("from $mainTableName $mainTableAlias")
@@ -141,8 +157,11 @@ class Select<T : SelectEntity>(
         )
         isBuild = false
         // 結合テーブル名取得
-        val joinedTableName = joinedEntity.createTableName()
-        val joinedTableAlias = joinedEntity.getAlias().ifEmpty { joinedTableName }
+        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
+        validateEntityMeta(joinedEntityMeta)
+
+        val joinedTableName = joinedEntityMeta.tableName
+        val joinedTableAlias = joinedEntityMeta.tableAlias
         val joinCondition = ConditionBuilder(this).apply(on).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
@@ -262,6 +281,7 @@ class Select<T : SelectEntity>(
             logger.log(DEBUG.level, "Select detectGroupColumns:entityClass = $entityClass")
             entityClass.memberProperties
                 .filter { !it.isFunctionColumn() }
+                .filterNot { it.isHiddenFromSelect() }
                 .onEach {
                     logger.log(DEBUG.level, "Select detectGroupColumns:it = $it")
                 }
@@ -282,6 +302,83 @@ class Select<T : SelectEntity>(
         orderColumns += builder.orders
         logger.log(TRACE.level, "Select order:returning $this")
         return this
+    }
+
+    /**
+     * ## EntityMeta 検証
+     * ### 共通 Validator の結果を runtime 例外に変換する
+     * @param entityMeta 検証対象 Entity メタ情報
+     * @throws IllegalArgumentException 検証エラーがある場合にスローされる例外
+     * @author Masahiro Inoue
+     * @since 2026-04-28
+     */
+    private fun validateEntityMeta(entityMeta: EntityMeta) {
+        val validationResult = entityMetaValidator.validate(entityMeta)
+        // 警告があればログに出力
+        validationResult.warnings.forEach { warningMessage ->
+            logger.log(WARNING, warningMessage)
+        }
+        // エラーがあれば例外をスロー
+        if (validationResult.hasErrors) {
+            throw IllegalArgumentException(
+                validationResult.errors.joinToString(System.lineSeparator())
+            )
+        }
+    }
+
+    /**
+     * ## SELECT 句用式生成
+     * ### PropertyMeta から SELECT 句断片を生成する
+     * @param entityMeta 対象 Entity のメタ情報
+     * @param propertyMeta 対象プロパティのメタ情報
+     * @return 生成された SELECT 句断片
+     * @author Masahiro Inoue
+     * @since 2026-04-28
+     */
+    private fun buildSelectExpression(entityMeta: EntityMeta, propertyMeta: PropertyMeta): String {
+        return if (!propertyMeta.isFunction) {
+            // 通常カラムの場合、テーブルエイリアスとカラム名を組み合わせてエイリアスを付与して返す
+            "$mainTableAlias.${propertyMeta.columnName} as ${mainTableAlias}_${propertyMeta.aliasName}"
+        } else {
+            // 関数列の場合、関数式を生成
+            val functionExpression = propertyMeta.rawFunction.takeIf { it.isNotBlank() }
+                ?: run {
+                    // 関数タイプが必要な場合、関数タイプを取得
+                    val functionType = propertyMeta.functionType
+                        ?: error("Function type is missing for property '${propertyMeta.propertyName}'.")
+                    // 関数引数を解決して関数式を生成
+                    val args = propertyMeta.functionArgs
+                        .map { arg -> resolveFunctionArgument(entityMeta, arg) }
+                        .toTypedArray()
+                    // 関数式を生成
+                    functionType.createQuery(*args)
+                }
+            // 関数式にエイリアスを付与して返す
+            "$functionExpression as ${mainTableAlias}_${propertyMeta.aliasName}"
+        }
+    }
+
+    /**
+     * ## 関数引数解決
+     * ### 関数引数がプロパティ名ならカラム参照へ変換し
+     * ### それ以外（文字列リテラル等）はそのまま返す
+     * @param entityMeta 対象 Entity のメタ情報
+     * @param arg 関数引数として指定された文字列
+     * @return 解決された関数引数（カラム参照または元の文字列）
+     * @author Masahiro Inoue
+     * @since 2026-04-28
+     */
+    private fun resolveFunctionArgument(entityMeta: EntityMeta, arg: String): String {
+        // 引数がプロパティ名に一致するか確認し、一致する場合はテーブルエイリアスとカラム名を組み合わせた参照に変換する
+        val propertyMeta = entityMeta.properties.firstOrNull { it.propertyName == arg }
+        // 一致するプロパティがない場合は引数をそのまま返す（文字列リテラルや数値リテラルなど）
+        return if (propertyMeta != null) {
+            // プロパティ名に一致する場合、テーブルエイリアスとカラム名を組み合わせた参照に変換して返す
+            "$mainTableAlias.${propertyMeta.columnName}"
+        } else {
+            // 引数をそのまま返す
+            arg
+        }
     }
 
     /**

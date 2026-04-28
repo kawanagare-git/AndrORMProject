@@ -149,67 +149,10 @@ class PropsProcessor(
      */
     override fun process(resolver: Resolver): List<KSAnnotated> {
         traceEntered(resolver)
-        // Props 生成
-        generateProps(resolver)
         // @Projection と @Projections から data class を生成
         generateDataClassFromProjections(resolver)
         traceExiting()
         return emptyList()
-    }
-
-    /**
-     * ## プロパティ一覧生成メソッド
-     * ### @GenerateProps を抽出しプロパティ一覧を
-     * ### Kotlin ファイルとして出力する
-     * ### 2025/07/31 KSP 上でアノテーション変数に配列を指定しても正しく取得できない
-     * ### 加えて、モジュール間の参照の関係で、循環してしまうので、
-     * ### 下記の enum クラスの生成は意味をなさない。
-     * @param resolver アノテーション解析機能を提供
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun generateProps(resolver: Resolver) {
-        val symbols = resolver.getSymbolsWithAnnotation(GENERATE_PROPS)
-        val classDecls = symbols.filterIsInstance<KSClassDeclaration>()
-        val enumEntries = mutableListOf<String>()
-
-        for (classDecl in classDecls) {
-            val className = classDecl.simpleName.asString()
-            val packageName = classDecl.packageName.asString()
-
-            classDecl.getAllProperties().forEach { property ->
-                val propName = property.simpleName.asString()
-                val entryName = "${propName}_${className}_${packageName}".replace(
-                    ".", "_"
-                ) // パッケージ名に含まれる . を _ に変換
-                val entry = "$entryName(\"$propName\", \"${packageName}.$className\")"
-                enumEntries += entry
-            }
-        }
-        val uniqueEnumEntries = enumEntries.distinct()
-        // 空なら出力しない
-        if (enumEntries.isEmpty()) return
-        val fileSpec = """
-        |package $GENERATED_PACKAGE
-        |
-        |/**
-        | * 自動生成された、全エンティティのプロパティ列挙型。
-        | */
-        |public enum class $GENERATED_PROPERTIES(
-        |    public val propertyName: String,
-        |    public val className: String,
-        |) {
-        |    ${uniqueEnumEntries.joinToString(",\n    ")};
-        |}
-    """.trimMargin()
-        // enum クラスの生成
-        codeGenerator.createNewFile(
-            dependencies = Dependencies(false),
-            packageName = GENERATED_PACKAGE,
-            fileName = GENERATED_PROPERTIES
-        ).bufferedWriter().use { writer ->
-            writer.write(fileSpec)
-        }
     }
 
     /**

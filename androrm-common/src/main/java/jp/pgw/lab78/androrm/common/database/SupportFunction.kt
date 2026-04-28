@@ -180,4 +180,18 @@ object SupportFunction {
      */
     fun KProperty1<*, *>.ownerKClass(): KClass<*> =
         this.parameters.first().type.classifier as KClass<*>
+
+    /**
+     * ## SELECT 非表示判定
+     * ### プロパティが SELECT 句から除外対象か判定
+     * ### @Function と @Column の両方を確認し、hideFromSelect の設定値を戻す
+     * @receiver KProperty1 インスタンス
+     * @return true SELECT 句から除外する / false 抽出対象
+     * @author Masahiro Inoue
+     * @since 2026-04-28
+     */
+    fun KProperty1<*, *>.isHiddenFromSelect(): Boolean =
+        this.findAnnotation<Function>()?.hideFromSelect
+            ?: this.findAnnotation<Column>()?.hideFromSelect
+            ?: false
 }
