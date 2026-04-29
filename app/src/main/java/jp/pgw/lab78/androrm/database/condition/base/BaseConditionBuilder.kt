@@ -315,12 +315,23 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
 
     /**
      * ## 単一条件用関数
+     * ### 条件式を自由記述するための関数
      * @param text 検索条件の自由記述
+     * @param values プレースホルダに対応するバインド値
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    fun condition(text: String) {
+    fun condition(text: String, vararg values: Any) {
+        // プレースホルダとバインド値の個数を検査
+        val placeholderCount = text.count { it == '?' }
+        // プレースホルダの個数とバインド値の個数が一致しない場合は例外をスロー
+        require(placeholderCount == values.size) {
+            "The number of placeholders '?' and bind values does not match. " +
+                    "text='$text', placeholders=$placeholderCount, values=${values.size}"
+        }
+        // 条件式をリストに追加し、バインド値を管理オブジェクトに登録
         list.add(FreeText(text))
+        values.forEach { value -> valueHolder.addBindValue(value) }
     }
 
     /**

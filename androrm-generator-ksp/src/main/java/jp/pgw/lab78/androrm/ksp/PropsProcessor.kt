@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.annotation.*
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.ksp.factory.ColumnPropertyFactory
 import jp.pgw.lab78.androrm.ksp.factory.FunctionPropertyFactory
 import jp.pgw.lab78.androrm.ksp.factory.TableAnnotationFactory
@@ -17,6 +18,7 @@ import jp.pgw.lab78.androrm.ksp.helper.ImportHelper
 import jp.pgw.lab78.androrm.ksp.helper.TypeHelper
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
+import jp.pgw.lab78.androrm.ksp.meta.KspEntityMetaFactory
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionArgumentParser
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionExtractor
@@ -128,6 +130,12 @@ class PropsProcessor(
     /** Function プロパティ生成 */
     private val functionPropertyFactory = FunctionPropertyFactory()
 
+    /** KSP Entity メタ情報生成 */
+    private val kspEntityMetaFactory = KspEntityMetaFactory()
+
+    /** Entity メタ情報検証 */
+    private val entityMetaValidator = EntityMetaValidator()
+
     /** data class 生成 */
     private val dataClassWriter = DataClassWriter(
         codeGenerator = codeGenerator,
@@ -156,9 +164,9 @@ class PropsProcessor(
     }
 
     /**
-     * ## data class 生成エントリポイント
+     * ## エンティティ(data class)生成エントリポイント
      * ### @Projection / @Projections を探索し、
-     * ### 対応する data class を生成する
+     * ### 対応するエンティティを生成する
      * - @Projection: 単一の射影指定
      * - @Projections: 複数の射影指定
      * @param resolver KSP のアノテーション解析リゾルバ
@@ -172,12 +180,24 @@ class PropsProcessor(
         val allProjectionClasses = projectionExtractor.findProjectionClasses(resolver)
         // 各クラスごとに Projection 系アノテーションを展開
         allProjectionClasses.forEach { classDecl ->
-            projectionExtractor.extractFromClass(classDecl).forEach { annotation ->
+            // クラスに付与された @Projection / @Projections を抽出
+            val annotations = projectionExtractor.extractFromClass(classDecl)
+            for (annotation in annotations) {
+                // アノテーション引数を解析して ProjectionDefinition を生成
                 val definition = projectionArgumentParser.parse(annotation)
                 projectionValidator.validateAggregateConflicts(definition)
                 projectionValidator.validateProperties(
                     classDecl, definition, allClassProperties
                 )
+                // ProjectionDefinition から EntityMeta を生成して検証
+                val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
+                val validationResult = entityMetaValidator.validate(entityMeta)
+                validationResult.warnings.forEach { warning(it) }
+                // エラーがある場合はログに出力して次のアノテーションへ
+                if (validationResult.hasErrors) {
+                    validationResult.errors.forEach { error(it) }
+                    continue
+                }
                 processSingleProjection(classDecl, definition, resolver)
             }
         }
@@ -185,11 +205,11 @@ class PropsProcessor(
     }
 
     /**
-     * ## data class 生成処理
-     * ### @Projection の内容から新しい data class を構築しファイル出力する
+     * ## エンティティ(data class) 生成処理
+     * ### @Projection の内容から新しいエンティティを構築しファイル出力する
      * - properties → 通常の列
      * - functions → 関数列（SUM, AVG, …）
-     *   - プロパティ化 + @Function アノテーション付与を別メソッドで処理
+     * #### プロパティ化 + @Function アノテーション付与を別メソッドで処理
      * @param classDecl @Projection が適用されたクラス
      * @param definition 対象 @Projection
      * @param resolver KSP のアノテーション解析リゾルバ

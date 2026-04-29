@@ -8,6 +8,11 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN
+import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_ALIAS
+import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_FQN
+import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_HIDE_FROM_SELECT
+import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
@@ -19,24 +24,6 @@ import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
  * @since 2026-04-21
  */
 class ColumnPropertyFactory : LoggerLike by logger {
-
-    companion object {
-        /** @Column */
-        private val COLUMN = Column::class.simpleName!!
-
-        /** @Column(FQN) */
-        private val COLUMN_FQN = Column::class.qualifiedName!!
-
-        /** @Column の変数名定義（name） */
-        private const val COLUMN_NAME = "name"
-
-        /** @Column の変数名定義（alias） */
-        private const val COLUMN_ALIAS = "alias"
-
-        /** @Column の変数名定義（hideFromSelect） */
-        private const val COLUMN_HIDE_FROM_SELECT = "hideFromSelect"
-
-    }
 
     /**
      * ## @Column 生成メソッド

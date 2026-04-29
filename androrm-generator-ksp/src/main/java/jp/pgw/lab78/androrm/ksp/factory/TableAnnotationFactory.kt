@@ -6,6 +6,9 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE
+import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE_ALIAS
+import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
@@ -18,17 +21,6 @@ import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
  */
 class TableAnnotationFactory(
 ) : LoggerLike by logger {
-
-    companion object {
-        /** @Table のシンプルネーム */
-        private const val TABLE = "Table"
-
-        /** @Table の変数名定義（name） */
-        private const val TABLE_NAME = "name"
-
-        /** @Table の変数名定義（alias） */
-        private const val TABLE_ALIAS = "alias"
-    }
 
     /**
      * ## アノテーション生成メソッド

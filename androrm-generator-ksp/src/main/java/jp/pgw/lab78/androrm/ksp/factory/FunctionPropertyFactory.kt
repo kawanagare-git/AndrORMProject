@@ -1,13 +1,18 @@
 package jp.pgw.lab78.androrm.ksp.factory
 
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.ksp.toTypeName
+import com.squareup.kotlinpoet.AnnotationSpec
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.PropertySpec
+import com.squareup.kotlinpoet.TypeName
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
-import jp.pgw.lab78.androrm.common.annotation.ReturnHint
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toCamelCase
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.ksp.common.Constants.F_ALIAS
+import jp.pgw.lab78.androrm.ksp.common.Constants.F_ARGS
+import jp.pgw.lab78.androrm.ksp.common.Constants.F_COLUMN_FUNCTION
+import jp.pgw.lab78.androrm.ksp.common.Constants.F_RAW
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
@@ -19,13 +24,6 @@ import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
  * @since 2026-04-21
  */
 class FunctionPropertyFactory : LoggerLike by logger {
-
-    companion object {
-        private const val F_COLUMN_FUNCTION = "columnFunction"
-        private const val F_ARGS = "args"
-        private const val F_ALIAS = "alias"
-        private const val F_RAW = "raw"
-    }
 
     /**
      * ## @Function リスト生成メソッド
@@ -107,61 +105,11 @@ class FunctionPropertyFactory : LoggerLike by logger {
         traceEntered(func, propsByName)
         // 関数の種類（ColumnFunction）と引数の型に基づいて、適切な戻り値の型を決定するロジックを実装する
         val argTypes = func.args.mapNotNull { arg ->
-            propsByName[arg]?.type?.resolve()?.toTypeName() ?: inferLiteralTypeName(arg)
+            propsByName[arg]?.type?.resolve()?.declaration?.qualifiedName?.asString()
+                ?: inferLiteralTypeName(arg)
         }
         // ColumnFunction に基づいて戻り値の型を決定するロジックを実装する
-        val result = when (func.function) {
-            ColumnFunction.AVG -> DOUBLE
-            ColumnFunction.SUM -> LONG.takeIf { argTypes.all { it == INT || it == LONG } }
-                ?: DOUBLE.takeIf { argTypes.any { it == DOUBLE || it == FLOAT } }
-                ?: ANY
-
-            ColumnFunction.MAX,
-            ColumnFunction.MIN -> argTypes.firstOrNull() ?: ANY
-
-            ColumnFunction.COUNT,
-            ColumnFunction.COUNT_ALL -> LONG
-
-            ColumnFunction.GROUP_CONCAT -> STRING
-            ColumnFunction.COALESCE,
-            ColumnFunction.IFNULL,
-            ColumnFunction.NULLIF -> argTypes.reduceOrNull(::widerType) ?: ANY
-
-            ColumnFunction.LENGTH -> INT
-            ColumnFunction.LOWER,
-            ColumnFunction.UPPER,
-            ColumnFunction.REPLACE,
-            ColumnFunction.SUBSTR,
-            ColumnFunction.CONCAT,
-            ColumnFunction.TRIM,
-            ColumnFunction.LTRIM,
-            ColumnFunction.RTRIM -> STRING
-
-            ColumnFunction.RANDOM -> LONG
-            ColumnFunction.ROUND -> DOUBLE
-            ColumnFunction.DATE,
-            ColumnFunction.TIME,
-            ColumnFunction.DATETIME,
-            ColumnFunction.STRFTIME -> STRING
-
-            ColumnFunction.JULIANDAY -> DOUBLE
-            ColumnFunction.ABS -> {
-                when (val t = argTypes.firstOrNull()) {
-                    LONG, INT -> LONG
-                    DOUBLE, FLOAT -> DOUBLE
-                    else -> DOUBLE
-                }
-            }
-
-            ColumnFunction.CUSTOM -> when (func.returnHint) {
-                ReturnHint.STRING -> STRING
-                ReturnHint.INT -> INT
-                ReturnHint.LONG -> LONG
-                ReturnHint.DOUBLE -> DOUBLE
-                ReturnHint.BOOLEAN -> BOOLEAN
-                else -> STRING
-            }
-        }
+        val result = func.function.getReturnType(argTypes).let { ClassName.bestGuess(it) }
         traceExiting(result)
         return result
     }
@@ -175,40 +123,19 @@ class FunctionPropertyFactory : LoggerLike by logger {
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
-    private fun inferLiteralTypeName(literal: String): TypeName? {
+    private fun inferLiteralTypeName(literal: String): String? {
         traceEntered(literal)
         // 引数が真偽値、文字列リテラル、整数リテラル、浮動小数点リテラルのいずれかに一致するかをチェックし、対応する型を返すロジックを実装する
         val result = when {
-            literal.equals("true", true) || literal.equals("false", true) -> BOOLEAN
-            literal.startsWith("'") && literal.endsWith("'") -> STRING
-            literal.matches(Regex("^-?\\d+$")) -> LONG
-            literal.matches(Regex("^-?\\d+\\.\\d+$")) -> DOUBLE
-            else -> null
-        }
-        traceExiting(result)
-        return result
-    }
+            literal.equals("true", true) || literal.equals(
+                "false",
+                true
+            ) -> Boolean::class.qualifiedName
 
-    /**
-     * ## 型の広い方を決定するメソッド
-     * ### 2 つの型を比較し、より広い方の型を返すためのメソッド
-     * ### 型の広さの順序を定義し、引数の型に基づいて適切な型を返すロジックを実装する
-     * @param type1 比較対象の最初の型を表す TypeName オブジェクト
-     * @param type2 比較対象の2番目の型を表す TypeName オブジェクト
-     * @return 2 つの型のうち、より広い方の型を表す TypeName オブジェクト
-     * @author Masahiro Inoue
-     * @since 2026-04-21
-     */
-    private fun widerType(type1: TypeName, type2: TypeName): TypeName {
-        traceEntered(type1, type2)
-        // 型の広さの順序を定義し、引数の型に基づいて適切な型を返すロジックを実装する
-        val result = when {
-            type1 == type2 -> type1
-            type1 == STRING || type2 == STRING -> STRING
-            type1 == DOUBLE || type2 == DOUBLE || type1 == FLOAT || type2 == FLOAT -> DOUBLE
-            type1 == LONG || type2 == LONG -> LONG
-            type1 == INT || type2 == INT -> LONG
-            else -> ANY
+            literal.startsWith("'") && literal.endsWith("'") -> String::class.qualifiedName
+            literal.matches(Regex("^-?\\d+$")) -> Long::class.qualifiedName
+            literal.matches(Regex("^-?\\d+\\.\\d+$")) -> Double::class.qualifiedName
+            else -> null
         }
         traceExiting(result)
         return result

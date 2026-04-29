@@ -50,7 +50,7 @@ class SelectTest {
             .where {
                 or {
                     TestSelectEntity::name like "kawanagare%"
-                    condition("name like '川流%'")
+                    condition("name like ?", "川流%")
                 }
             }
         println("${SELECT.build()}; values = ${SELECT.bindValues}")

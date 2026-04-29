@@ -49,6 +49,7 @@ import java.time.LocalDateTime
                 ColumnProjection("gross"),
             ],
             functions = [
+                FunctionProjection(function = SUM, args = ["gross"], alias = "TOTAL_GROSS"),
                 FunctionProjection(function = MAX, args = ["gross"], alias = "MAX_GROSS"),
                 FunctionProjection(function = AVG, args = ["gross"], alias = "AVG_GROSS"),
                 FunctionProjection(function = MAX, args = ["deduction"], alias = "MAX_DEDUCTION"),
