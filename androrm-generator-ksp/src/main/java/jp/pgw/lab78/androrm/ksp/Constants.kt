@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.ksp.common
+package jp.pgw.lab78.androrm.ksp
 
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table

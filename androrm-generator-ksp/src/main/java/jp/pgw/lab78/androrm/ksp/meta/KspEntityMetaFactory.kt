@@ -8,14 +8,14 @@ import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
-import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN
-import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_ALIAS
-import jp.pgw.lab78.androrm.ksp.common.Constants.COLUMN_NAME
-import jp.pgw.lab78.androrm.ksp.common.Constants.FP_ALIAS_FALLBACK
-import jp.pgw.lab78.androrm.ksp.common.Constants.FUNCTION
-import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE
-import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE_ALIAS
-import jp.pgw.lab78.androrm.ksp.common.Constants.TABLE_NAME
+import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
+import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_ALIAS
+import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_NAME
+import jp.pgw.lab78.androrm.ksp.Constants.FP_ALIAS_FALLBACK
+import jp.pgw.lab78.androrm.ksp.Constants.FUNCTION
+import jp.pgw.lab78.androrm.ksp.Constants.TABLE
+import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
+import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
@@ -51,8 +51,9 @@ class KspEntityMetaFactory : LoggerLike by logger {
         // クラスのプロパティを名前でマップ化
         val sourcePropertiesByName = classDecl.getAllProperties()
             .associateBy { it.simpleName.asString() }
-        //
+        // 通常カラムの PropertyMeta を生成
         val columnMetas = definition.properties.map { columnProjection ->
+            // プロジェクション定義のプロパティ名に対応する KSPropertyDeclaration をクラス定義から取得。存在しない場合はエラー
             val sourceProperty = sourcePropertiesByName[columnProjection.property]
                 ?: error(
                     "Property '${columnProjection.property}' is not declared in ${classDecl.qualifiedName?.asString()}."

@@ -9,10 +9,10 @@ import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toCamelCase
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
-import jp.pgw.lab78.androrm.ksp.common.Constants.F_ALIAS
-import jp.pgw.lab78.androrm.ksp.common.Constants.F_ARGS
-import jp.pgw.lab78.androrm.ksp.common.Constants.F_COLUMN_FUNCTION
-import jp.pgw.lab78.androrm.ksp.common.Constants.F_RAW
+import jp.pgw.lab78.androrm.ksp.Constants.F_ALIAS
+import jp.pgw.lab78.androrm.ksp.Constants.F_ARGS
+import jp.pgw.lab78.androrm.ksp.Constants.F_COLUMN_FUNCTION
+import jp.pgw.lab78.androrm.ksp.Constants.F_RAW
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
