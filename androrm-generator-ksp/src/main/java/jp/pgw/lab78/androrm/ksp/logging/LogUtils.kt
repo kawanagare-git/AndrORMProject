@@ -34,9 +34,10 @@ object LogUtils {
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    fun concat(args: List<Any?>, separator: String) = if (args.isNotEmpty()) {
-        args.joinToString(separator) { stringifyForLog(it) }
-    } else ""
+    fun concat(args: List<Any?>, separator: String) =
+        args.map(::normalizeDetail)
+            .filter { it.isNotEmpty() }
+            .joinToString(separator) { stringifyForLog(it) }
 
     /**
      * ## オブジェクト文字列化メソッド
@@ -89,4 +90,30 @@ object LogUtils {
         }
         return stackTrace[endIndex].methodName
     }
+
+    /**
+     * ## 詳細情報正規化メソッド
+     * ### ログ出力する詳細情報を正規化
+     * @param args ログ出力する詳細情報
+     * @return 正規化された詳細情報文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-01
+     */
+    fun normalizeDetail(args: Any?): String = args.toSingleLineLogString()
+
+    /**
+     * ## 1 行ログ文字列化メソッド
+     * ### ログ出力する文字列を 1 行に整形する
+     * @receiver ログ出力する文字列
+     * @return 1 行に整形されたログ文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-01
+     */
+    fun Any?.toSingleLineLogString(): String =
+        this.toString()
+            .replace("\r\n", " ")
+            .replace('\n', ' ')
+            .replace('\r', ' ')
+            .replace(Regex("\\s{2,}"), " ")
+            .trim()
 }

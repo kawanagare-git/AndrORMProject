@@ -29,9 +29,9 @@ class ProjectionValidator() : LoggerLike by logger {
         definition: ProjectionDefinition,
         allClassProperties: MutableMap<String, List<String>>
     ) {
-        traceEntered(classDecl, definition)
+        logTraceEntered(classDecl, definition)
         val fqn = classDecl.qualifiedName?.asString() ?: run {
-            error("Annotation target class is null.")
+            logError("Annotation target class is null.")
             return
         }
         val declaredProperties = allClassProperties[fqn]
@@ -39,24 +39,27 @@ class ProjectionValidator() : LoggerLike by logger {
                 .also { allClassProperties[fqn] = it }
         definition.properties.map { it.property }.forEach { property ->
             if (!declaredProperties.contains(property)) {
-                error(
+                logError(
                     "property '$property' is not declared in class",
-                    classDecl.simpleName.asString()
+                    classDecl.qualifiedName!!.asString()
                 )
             }
         }
-        traceExiting()
+        logTraceExiting()
     }
 
     /**
      * ## 集約関数の競合検証メソッド
-     * ### プロジェクション定義のプロパティと、集約関数のターゲット列が重複していないかを検証する
+     * ### プロジェクション定義の通常列と、集約関数のターゲット列が重複していないかを検証する
      * @param definition プロジェクション定義
      * @author Masahiro Inoue
      * @since 2026-04-17
      */
-    fun validateAggregateConflicts(definition: ProjectionDefinition) {
-        traceEntered(definition)
+    fun validateAggregateConflicts(
+        classDecl: KSClassDeclaration,
+        definition: ProjectionDefinition
+    ) {
+        logTraceEntered(definition)
         val propertiesValues = definition.properties
             .map { it.property.trim().lowercase() }
             .toSet()
@@ -70,11 +73,12 @@ class ProjectionValidator() : LoggerLike by logger {
             .toSet()
         val duplicates = propertiesValues.intersect(functionTargetColsNormalized)
         if (duplicates.isNotEmpty()) {
-            warning(
-                "Projection contains column(s) that are both in properties and used as aggregate targets: " +
+            logWarning(
+                "Projection in '${classDecl.qualifiedName?.asString()}' contains column(s) " +
+                        "that are both in properties and used as aggregate targets: " +
                         duplicates.joinToString(", ")
             )
         }
-        traceExiting()
+        logTraceExiting()
     }
 }

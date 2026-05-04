@@ -2,12 +2,16 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.KSPLogger
 import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
-import jp.pgw.lab78.androrm.common.Constants.Element.METHOD
 import jp.pgw.lab78.androrm.common.Constants.Log.*
 import jp.pgw.lab78.androrm.common.Constants.ModuleLabel.KSP
-import jp.pgw.lab78.androrm.common.logging.LogLevel.*
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateTraceMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateWarningMessage
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.concat
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.getMethodName
+import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
 import java.nio.file.Path
 
 /**
@@ -50,11 +54,12 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun info(infoMessage: String, vararg details: Any) {
+    override fun logInfo(infoMessage: String, vararg details: Any) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.info(
-                "${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} $infoMessage",
-                concat(details.toList(), COMMA_SPACE)
+            it.logInfo(
+                generateInfoMessage(infoMessage, methodName),
+                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
             )
         }
     }
@@ -66,9 +71,10 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun infoEntered(infoMessage: String) {
+    override fun logInfoEntered(infoMessage: String) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.infoEntered("${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} ${ENTERED.tag}")
+            it.logInfoEntered("${generateInfoMessage(infoMessage, methodName)}: ${ENTERED.tag}")
         }
     }
 
@@ -79,9 +85,10 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun infoExiting(infoMessage: String) {
+    override fun logInfoExiting(infoMessage: String) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.infoExiting("${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} ${EXITING.tag}")
+            it.logInfoExiting("${generateInfoMessage(infoMessage, methodName)}: ${EXITING.tag}")
         }
     }
 
@@ -93,11 +100,12 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun warning(warnMessage: String, vararg details: Any) {
+    override fun logWarning(warnMessage: String, vararg details: Any) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.warning(
-                "${KSP.tag} ${WARN.tag}: ${METHOD.tag}: ${getMethodName()} $warnMessage",
-                concat(details.toList(), COMMA_SPACE)
+            it.logWarning(
+                generateWarningMessage(warnMessage, methodName),
+                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
             )
         }
     }
@@ -110,11 +118,12 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun error(errMessage: String, vararg details: Any) {
+    override fun logError(errMessage: String, vararg details: Any) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.error(
-                "${KSP.tag} ${ERROR.tag}: ${METHOD.tag}: ${getMethodName()} $errMessage",
-                concat(details.toList(), COMMA_SPACE)
+            it.logError(
+                generateErrorMessage(errMessage, methodName),
+                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
             )
         }
     }
@@ -127,11 +136,12 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-31
      */
-    override fun debug(debugMessage: String, vararg details: Any) {
+    override fun logDebug(debugMessage: String, vararg details: Any) {
+        val methodName = getMethodName()
         loggers.forEach {
-            it.debug(
-                "${KSP.tag} ${DEBUG.tag}: ${METHOD.tag}: ${getMethodName()} $debugMessage",
-                concat(details.toList(), COMMA_SPACE)
+            it.logDebug(
+                generateDebugMessage(debugMessage, methodName),
+                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
             )
         }
     }
@@ -143,11 +153,15 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun traceEntered(vararg details: Any) {
+    override fun logTraceEntered(vararg details: Any) {
         loggers.forEach {
-            it.traceEntered(
-                "${KSP.tag} ${TRACE.tag}: ${METHOD.tag}: ${getMethodName()} ${ENTERED.tag}",
-                concat(details.toList(), COMMA_SPACE)
+            it.logTraceEntered(
+                "${generateTraceMessage(getMethodName())}: ${ENTERED.tag}" +
+                        if (details.isEmpty()) {
+                            ""
+                        } else {
+                            ": ${concat(details.toList(), COMMA_SPACE).toSingleLineLogString()}"
+                        }
             )
         }
     }
@@ -159,9 +173,13 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun traceExiting(result: Any?) {
-        loggers.forEach {
-            it.traceExiting("${KSP.tag} ${TRACE.tag}: ${METHOD.tag}: ${getMethodName()} ${EXITING.tag} ${result?.toString() ?: ""}")
+    override fun logTraceExiting(result: Any?) {
+        val methodName = getMethodName()
+        loggers.forEach { it ->
+            it.logTraceExiting(
+                "${generateTraceMessage(methodName)}: ${EXITING.tag}" +
+                        (result?.let { res -> ": ${res.toSingleLineLogString()}" } ?: "")
+            )
         }
     }
 

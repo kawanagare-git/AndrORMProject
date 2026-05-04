@@ -210,3 +210,6 @@ tasks.named("assemble") {
 ksp {
     arg("androrm.moduleDir", project.projectDir.absolutePath)
 }
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}

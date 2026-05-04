@@ -7,7 +7,7 @@ import java.util.logging.Level
  * @author Masahiro Inoue
  * @since 2026-01-25
  */
-enum class LogLevel(val levelOrder: Int, val level: Level) {
+enum class LogLevel(private val levelOrder: Int, val level: Level) {
     /** TRACEレベル */
     TRACE(1, Level.FINEST),
 

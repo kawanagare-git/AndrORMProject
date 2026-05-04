@@ -36,7 +36,7 @@ class TableAnnotationFactory(
         classDecl: KSClassDeclaration,
         aliasExtend: String
     ): AnnotationSpec {
-        traceEntered(classDecl, aliasExtend)
+        logTraceEntered(classDecl, aliasExtend)
         // KSClassDeclaration から @Table アノテーションを検索する
         val tableAnnotation = classDecl.annotations
             .firstOrNull { it.shortName.asString() == TABLE }
@@ -52,7 +52,7 @@ class TableAnnotationFactory(
             addMember("$TABLE_NAME = %S", tableName)
             addMember("$TABLE_ALIAS = %S", tableAlias)
         }.build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -67,14 +67,14 @@ class TableAnnotationFactory(
     fun extractTableName(
         tableAnnotation: KSAnnotation,
     ): String? {
-        traceEntered(tableAnnotation)
+        logTraceEntered(tableAnnotation)
         // @Table アノテーションの引数から name を抽出し、テーブル名を取得する
         val result = tableAnnotation.arguments
             .firstOrNull { it.name?.asString() == TABLE_NAME }
             ?.value
             ?.takeIf { it is String && it.isNotBlank() }
             ?.let { it as String }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -91,14 +91,14 @@ class TableAnnotationFactory(
         tableAnnotation: KSAnnotation,
         extendAlias: String
     ): String? {
-        traceEntered(tableAnnotation, extendAlias)
+        logTraceEntered(tableAnnotation, extendAlias)
         // @Table アノテーションの引数から alias を抽出し、テーブルエイリアスを取得する
         val aliasFromAnnotation = tableAnnotation.arguments
             .firstOrNull { it.name?.asString() == TABLE_ALIAS }
             ?.value as? String
         // アノテーションから取得したエイリアスと、引数で渡されたエイリアスの拡張部分を組み合わせて、最終的なテーブルエイリアスを生成する
         val result = buildAlias(aliasFromAnnotation, extendAlias)
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 

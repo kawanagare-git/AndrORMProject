@@ -219,10 +219,6 @@ object EntityManager {
         return result
     }
 
-    fun convertToEntity(columnNames: Array<String>, kClass: KClass<*>) {
-        return
-    }
-
     /** 型変換用マップ */
     private val fieldToColumnMap = mapOf(
         Int::class to "INTEGER",

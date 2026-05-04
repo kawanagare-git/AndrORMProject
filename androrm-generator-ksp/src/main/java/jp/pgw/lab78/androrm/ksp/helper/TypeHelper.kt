@@ -24,9 +24,9 @@ class TypeHelper() : LoggerLike by logger {
      * @since 2026-02-27
      */
     fun getSimpleName(prop: PropertySpec): String {
-        traceEntered(prop)
+        logTraceEntered(prop)
         val result = getSimpleName(prop.type)
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -39,7 +39,7 @@ class TypeHelper() : LoggerLike by logger {
      * @since 2026-02-27
      */
     fun getSimpleName(type: TypeName): String {
-        traceEntered(type)
+        logTraceEntered(type)
         val base = when (type) {
             is ClassName -> type.simpleNames.joinToString(".") // ネスト型対応
             is ParameterizedTypeName -> {
@@ -54,7 +54,7 @@ class TypeHelper() : LoggerLike by logger {
             }
         }
         val result = if (type.isNullable) "$base?" else base
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 }

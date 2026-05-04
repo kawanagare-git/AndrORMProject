@@ -26,7 +26,7 @@ class AnnotationHelper() : LoggerLike by logger {
      * @since 2026-02-26
      */
     fun getSimpleName(annotationSpec: AnnotationSpec): String {
-        traceEntered(annotationSpec)
+        logTraceEntered(annotationSpec)
         val annTypeFqn = annotationSpec.typeName.toString()
         val annTypeSimple = (annotationSpec.typeName as? ClassName)?.simpleNames?.joinToString(".")
             ?: annTypeFqn.substringAfterLast(".")
@@ -40,7 +40,7 @@ class AnnotationHelper() : LoggerLike by logger {
 
             else -> changeSimpleName(annotationSpec, annTypeFqn, annTypeSimple)
         }
-        traceEntered(result)
+        logTraceEntered(result)
         return result
     }
 
@@ -59,9 +59,9 @@ class AnnotationHelper() : LoggerLike by logger {
         annTypeFqn: String,
         annTypeSimple: String
     ): String {
-        traceEntered(annotationSpec, annTypeFqn, annTypeSimple)
+        logTraceEntered(annotationSpec, annTypeFqn, annTypeSimple)
         val result = annotationSpec.toString().replaceFirst("@$annTypeFqn", "@$annTypeSimple")
-        traceEntered(result)
+        logTraceEntered(result)
         return result
     }
 
@@ -76,14 +76,14 @@ class AnnotationHelper() : LoggerLike by logger {
      * @since 2026-03-09
      */
     private fun getFunctionAnnotation(annotationSpec: AnnotationSpec): String {
-        traceEntered(annotationSpec)
+        logTraceEntered(annotationSpec)
         val fqnClassName =
             checkNotNull(ColumnFunction::class.qualifiedName) { ERROR_COLUMN_FUNCTION_FULLY_QUALIFIED_NAME }
         val simpleClassName =
             checkNotNull(ColumnFunction::class.simpleName) { ERROR_COLUMN_FUNCTION_SIMPLE_NAME }
-        debug("Replace string", "base = $annotationSpec", fqnClassName, "->", simpleClassName)
+        logDebug("Replace string", "base = $annotationSpec", fqnClassName, "->", simpleClassName)
         val result = annotationSpec.toString().replaceFirst(fqnClassName, simpleClassName)
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 

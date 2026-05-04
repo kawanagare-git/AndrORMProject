@@ -7,7 +7,6 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
-import jp.pgw.lab78.androrm.database.utility.EntityManager.convertToEntity
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
@@ -107,33 +106,11 @@ class AndrOrmDatabaseHelper(
         val result = mutableListOf<T>()
         cursor.use {
             while (it.moveToFirst()) {
-                val propertiesMap = convertToEntity(it.columnNames, T::class)
                 result += T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
             }
         }
         return result
     }
-
-//    fun <T : InsertEntity> execInsert(entity: T, vararg entities: T) {
-//        val allEntities = listOf(entity) + entities
-//
-//        val insertResult = Insert.build(allEntities) // insertResult.query: String, insertResult.binds: List<Map<String, Any>>
-//
-//        writableDatabase.beginTransaction()
-//        try {
-//            val stmt = writableDatabase.compileStatement(insertResult.query)
-//            for (bindMap in insertResult.binds) {
-//                bindMap.entries.forEachIndexed { index, (_, value) ->
-//                    stmt.bindObject(index + 1, value)
-//                }
-//                stmt.executeInsert()
-//                stmt.clearBindings()
-//            }
-//            writableDatabase.setTransactionSuccessful()
-//        } finally {
-//            writableDatabase.endTransaction()
-//        }
-//    }
 
     data class InsertResult(
         val query: String,  // 例: INSERT INTO EMPLOYEE (ID, NAME) VALUES (?, ?)

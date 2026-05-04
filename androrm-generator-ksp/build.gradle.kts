@@ -72,3 +72,15 @@ extensions.configure<KotlinJvmProjectExtension>("kotlin") {
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     enabled = false
 }
+
+dependencies {
+    testImplementation(kotlin("test"))
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+    testImplementation(libs.mockito.core)
+    testImplementation(libs.mockito.kotlin)
+}
+
+tasks.test {
+    useJUnitPlatform()
+}

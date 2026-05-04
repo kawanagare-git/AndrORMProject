@@ -48,7 +48,7 @@ class DataClassWriter(
         functionProps: List<PropertySpec>,
         interfaces: List<TypeName>
     ) {
-        traceEntered(classNameFQN, tableAnnotationSpec, normalProps, functionProps, interfaces)
+        logTraceEntered(classNameFQN, tableAnnotationSpec, normalProps, functionProps, interfaces)
         // コンストラクタのプロパティは、通常のプロパティと関数プロパティを結合したリストとする
         val constructorProps = normalProps + functionProps
         // データクラスのコードを生成する
@@ -100,6 +100,6 @@ class DataClassWriter(
             }
             writer.appendLine()
         }
-        traceExiting(classNameFQN)
+        logTraceExiting(classNameFQN)
     }
 }

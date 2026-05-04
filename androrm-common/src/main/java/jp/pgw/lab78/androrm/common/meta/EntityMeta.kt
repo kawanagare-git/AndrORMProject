@@ -13,6 +13,8 @@ package jp.pgw.lab78.androrm.common.meta
  * @since 2026-04-27
  */
 data class EntityMeta(
+    /** 定義元のクラス又は実装クラスの FQN */
+    val defineEntityQualifiedName: String,
     /** Kotlin 上の Entity 名 */
     val entityName: String,
     /** DB 上のテーブル名 */

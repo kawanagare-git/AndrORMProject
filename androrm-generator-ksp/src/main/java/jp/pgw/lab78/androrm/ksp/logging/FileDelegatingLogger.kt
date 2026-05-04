@@ -1,6 +1,15 @@
 package jp.pgw.lab78.androrm.ksp.logging
 
 import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
+import jp.pgw.lab78.androrm.common.Constants.Log.*
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateTraceMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateWarningMessage
+import jp.pgw.lab78.androrm.ksp.logging.LogUtils.concat
+import jp.pgw.lab78.androrm.ksp.logging.LogUtils.getMethodName
+import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
 import java.io.BufferedWriter
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -47,8 +56,11 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun info(infoMessage: String, vararg details: Any) {
-        append("$infoMessage, ${details.joinToString(COMMA_SPACE)}")
+    override fun logInfo(infoMessage: String, vararg details: Any) {
+        append(infoMessage.ifEmpty {
+            "${generateInfoMessage(infoMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+        })
     }
 
     /**
@@ -58,8 +70,10 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun infoEntered(infoMessage: String) {
-        append(infoMessage)
+    override fun logInfoEntered(infoMessage: String) {
+        append(infoMessage.ifEmpty {
+            "${generateInfoMessage(infoMessage, getMethodName())}: ${ENTERED.tag}"
+        })
     }
 
     /**
@@ -69,8 +83,10 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun infoExiting(infoMessage: String) {
-        append(infoMessage)
+    override fun logInfoExiting(infoMessage: String) {
+        append(infoMessage.ifEmpty {
+            "${generateInfoMessage(infoMessage, getMethodName())}: ${EXITING.tag}"
+        })
     }
 
     /**
@@ -81,8 +97,11 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun warning(warnMessage: String, vararg details: Any) {
-        append("$warnMessage, ${details.joinToString(COMMA_SPACE)}")
+    override fun logWarning(warnMessage: String, vararg details: Any) {
+        append(warnMessage.ifEmpty {
+            "${generateWarningMessage(warnMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+        })
     }
 
     /**
@@ -93,8 +112,11 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun error(errMessage: String, vararg details: Any) {
-        append("$errMessage, ${details.joinToString(COMMA_SPACE)}")
+    override fun logError(errMessage: String, vararg details: Any) {
+        append(errMessage.ifEmpty {
+            "${generateErrorMessage(errMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+        })
     }
 
     /**
@@ -105,8 +127,11 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-31
      */
-    override fun debug(debugMessage: String, vararg details: Any) {
-        append("$debugMessage, ${details.joinToString(COMMA_SPACE)}")
+    override fun logDebug(debugMessage: String, vararg details: Any) {
+        append(debugMessage.ifEmpty {
+            "${generateDebugMessage(debugMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+        })
     }
 
     /**
@@ -116,8 +141,20 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun traceEntered(vararg details: Any) {
-        append(details.joinToString(COMMA_SPACE))
+    override fun logTraceEntered(vararg details: Any) {
+        append(
+            if (details.size == 1 && details[0] is String) {
+                details[0].toString()
+            } else {
+                "${generateTraceMessage(getMethodName())}: ${ENTERED.tag}" +
+                        if (details.isEmpty()) {
+                            ""
+                        } else {
+                            val detailsSub = details.toList().subList(1, details.size - 1)
+                            ": ${concat(detailsSub, COMMA_SPACE).toSingleLineLogString()}"
+                        }
+            }
+        )
     }
 
     /**
@@ -127,8 +164,15 @@ class FileDelegatingLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    override fun traceExiting(result: Any?) {
-        append(result.toString())
+    override fun logTraceExiting(result: Any?) {
+        append(
+            if (result is String) {
+                result
+            } else {
+                "${generateTraceMessage(getMethodName())}: ${EXITING.tag}" +
+                        (result?.let { res -> ": ${res.toSingleLineLogString()}" } ?: "")
+            }
+        )
     }
 
     /**

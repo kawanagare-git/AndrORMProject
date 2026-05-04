@@ -50,11 +50,11 @@ class InterfaceResolver() : LoggerLike by logger {
         symbols: Sequence<KSAnnotated>,
         commonInterface: DMLInterfaceEnum?
     ): String {
-        traceEntered(classDeclaration, symbols, commonInterface ?: EMPTY_STRING)
+        logTraceEntered(classDeclaration, symbols, commonInterface ?: EMPTY_STRING)
         // commonInterface が空の場合は、クラスの package 名を返す
         if (commonInterface == null) {
             val result = classDeclaration.packageName.asString()
-            traceExiting(result)
+            logTraceExiting(result)
             return result
         }
         // commonInterface から FQN を解決する
@@ -85,13 +85,13 @@ class InterfaceResolver() : LoggerLike by logger {
                     }
 
                 val result = "$base.$sub"
-                traceExiting(result)
+                logTraceExiting(result)
                 return result
             }
         }
         // @EntityPackageInfo アノテーションが存在しない、または commonInterface に対応する relation が定義されていない場合は、commonInterface の FQN を package 名として返す
         val result = common.packageName
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -103,12 +103,12 @@ class InterfaceResolver() : LoggerLike by logger {
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
-    fun generateCommonInterface(commonInterface: DMLInterfaceEnum): ClassName {
-        traceEntered(commonInterface ?: EMPTY_STRING)
+    private fun generateCommonInterface(commonInterface: DMLInterfaceEnum): ClassName {
+        logTraceEntered(commonInterface)
         // commonInterface が空の場合は、デフォルトのインターフェースを返す
         val result = ClassName.bestGuess(commonInterface.interfaceFQN)
         // commonInterface から FQN を解決して返す
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -116,13 +116,13 @@ class InterfaceResolver() : LoggerLike by logger {
      * ## interface 一覧生成
      * ### commonInterface / customInterface から
      * ### 実装対象の interface 一覧を構築する
-     * @param dataClassMaterialMap データクラスのマテリアルマップ。commonInterface と customInterface を含む
+     * @param definition データクラスのマテリアルマップ。commonInterface と customInterface を含む
      * @return 実装対象の interface 一覧の TypeName のリスト
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
     fun collectInterfaces(definition: ProjectionDefinition): List<TypeName> {
-        traceEntered(definition)
+        logTraceEntered(definition)
         // commonInterface と customInterface から、実装対象の interface 一覧を構築する
         val result = buildList<TypeName> {
             definition.commonInterfaces.forEach { common ->
@@ -131,7 +131,7 @@ class InterfaceResolver() : LoggerLike by logger {
             definition.customInterfaces.filter { it.isNotBlank() }
                 .forEach { custom -> add(ClassName.bestGuess(custom)) }
         }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 }

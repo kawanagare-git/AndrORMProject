@@ -2,12 +2,15 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.KSPLogger
 import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
-import jp.pgw.lab78.androrm.common.Constants.Element.METHOD
 import jp.pgw.lab78.androrm.common.Constants.Log.*
-import jp.pgw.lab78.androrm.common.Constants.ModuleLabel.KSP
-import jp.pgw.lab78.androrm.common.logging.LogLevel.*
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateTraceMessage
+import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateWarningMessage
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.concat
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.getMethodName
+import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
 
 /**
  * ## KSP ロガー委譲クラス
@@ -25,32 +28,36 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun info(infoMessage: String, vararg details: Any) {
-        val infoMessageDetails = concat(details.toList(), COMMA_SPACE)
+    override fun logInfo(infoMessage: String, vararg details: Any) {
         logger.info(infoMessage.ifEmpty {
-            "${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} $infoMessageDetails"
+            "${generateInfoMessage(infoMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
         })
     }
 
     /**
      * ## エントリーログ出力メソッド
      * ### メソッド実行時のログ出力用の簡易メソッド
-     * @param args メソッド引数群
+     * @param infoMessage メソッド引数群
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun infoEntered(infoMessage: String) =
-        logger.info(infoMessage.ifEmpty { "${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} ${ENTERED.tag}" })
+    override fun logInfoEntered(infoMessage: String) =
+        logger.info(infoMessage.ifEmpty {
+            "${generateInfoMessage(infoMessage, getMethodName())}: ${ENTERED.tag}"
+        })
 
     /**
      * ## イグジットログ出力メソッド
      * ### メソッド完了時のログ出力用の簡易メソッド
-     * @param result メソッド実行結果
+     * @param infoMessage メソッド実行結果
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun infoExiting(infoMessage: String) {
-        logger.info(infoMessage.ifEmpty { "${KSP.tag} ${INFO.tag}: ${METHOD.tag}: ${getMethodName()} ${EXITING.tag}" })
+    override fun logInfoExiting(infoMessage: String) {
+        logger.info(infoMessage.ifEmpty {
+            "${generateInfoMessage(infoMessage, getMethodName())}: ${EXITING.tag}"
+        })
     }
 
     /**
@@ -61,10 +68,10 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun warning(warnMessage: String, vararg details: Any) {
-        val warnMessageDetails = concat(details.toList(), COMMA_SPACE)
+    override fun logWarning(warnMessage: String, vararg details: Any) {
         logger.warn(warnMessage.ifEmpty {
-            "${KSP.tag} ${WARN.tag}: ${METHOD.tag}: ${getMethodName()} $warnMessage $warnMessageDetails"
+            "${generateWarningMessage(warnMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
         })
     }
 
@@ -76,10 +83,10 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun error(errMessage: String, vararg details: Any) {
-        val errMessageDetails = concat(details.toList(), COMMA_SPACE)
+    override fun logError(errMessage: String, vararg details: Any) {
         logger.error(errMessage.ifEmpty {
-            "${KSP.tag} ${ERROR.tag}: ${METHOD.tag}: ${getMethodName()} $errMessageDetails"
+            "${generateErrorMessage(errMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
         })
     }
 
@@ -91,10 +98,10 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-03-31
      */
-    override fun debug(debugMessage: String, vararg details: Any) {
-        val errMessageDetails = concat(details.toList(), COMMA_SPACE)
+    override fun logDebug(debugMessage: String, vararg details: Any) {
         logger.warn(debugMessage.ifEmpty {
-            "${KSP.tag} ${ERROR.tag}: ${METHOD.tag}: ${getMethodName()} $errMessageDetails"
+            "${generateDebugMessage(debugMessage, getMethodName())}: " +
+                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
         })
     }
 
@@ -105,11 +112,24 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun traceEntered(vararg details: Any) {
-        val traceDetails = concat(details.toList(), COMMA_SPACE)
-        logger.warn(traceDetails.ifEmpty {
-            "${KSP.tag} ${TRACE.tag}: ${ENTERED.tag} ${METHOD.tag}: ${getMethodName()}"
-        })
+    override fun logTraceEntered(vararg details: Any) {
+        logger.warn(
+            when {
+                details.size == 1 && details[0] is String -> {
+                    details[0].toString()
+                }
+
+                else -> {
+                    "${generateTraceMessage(getMethodName())}: ${ENTERED.tag} " +
+                            if (details.isEmpty()) {
+                                ""
+                            } else {
+                                val detailsSub = details.toList().subList(1, details.size - 1)
+                                ": ${concat(detailsSub, COMMA_SPACE).toSingleLineLogString()}"
+                            }
+                }
+            }
+        )
     }
 
     /**
@@ -119,10 +139,15 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @author Masahiro Inoue
      * @since 2026-02-27
      */
-    override fun traceExiting(result: Any?) {
+    override fun logTraceExiting(result: Any?) {
         logger.warn(
-            result.toString()
-                .ifEmpty { "${KSP.tag} ${TRACE.tag}: ${EXITING.tag} ${METHOD.tag}: ${getMethodName()}" })
+            if (result is String) {
+                result
+            } else {
+                "${generateTraceMessage(getMethodName())}: ${EXITING.tag}" +
+                        (result?.let { res -> ": ${res.toSingleLineLogString()}" } ?: "")
+            }
+        )
     }
 
     /**

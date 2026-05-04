@@ -3,12 +3,12 @@ package jp.pgw.lab78.androrm.ksp.logging
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 
 interface LoggerLike : AutoCloseable {
-    fun info(infoMessage: String, vararg details: Any)
-    fun infoEntered(infoMessage: String = EMPTY_STRING)
-    fun infoExiting(infoMessage: String = EMPTY_STRING)
-    fun warning(warnMessage: String, vararg details: Any)
-    fun error(errMessage: String, vararg details: Any)
-    fun debug(debugMessage: String, vararg details: Any)
-    fun traceEntered(vararg details: Any)
-    fun traceExiting(result: Any? = null)
+    fun logInfo(infoMessage: String, vararg details: Any)
+    fun logInfoEntered(infoMessage: String = EMPTY_STRING)
+    fun logInfoExiting(infoMessage: String = EMPTY_STRING)
+    fun logWarning(warnMessage: String, vararg details: Any)
+    fun logError(errMessage: String, vararg details: Any)
+    fun logDebug(debugMessage: String, vararg details: Any)
+    fun logTraceEntered(vararg details: Any)
+    fun logTraceExiting(result: Any? = null)
 }

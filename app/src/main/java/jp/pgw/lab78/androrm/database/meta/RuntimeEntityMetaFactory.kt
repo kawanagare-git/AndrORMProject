@@ -32,30 +32,30 @@ class RuntimeEntityMetaFactory {
      * @return 生成された EntityMeta
      */
     fun <T : SelectEntity> create(entityClass: KClass<out T>): EntityMeta {
+        // テーブル情報の解決
         val tableAnnotation = entityClass.findAnnotation<Table>()
-
+        // テーブル名の解決
         val tableName = tableAnnotation?.name
             ?.takeIf { it.isNotBlank() }
             ?: entityClass.simpleNameToSnakeCase()
-
+        // テーブルエイリアスの解決
         val tableAlias = tableAnnotation?.alias
             ?.takeIf { it.isNotBlank() }
             ?: tableName
-
+        // クラスの主コンストラクタを取得。存在しない場合はエラー
         val constructor = entityClass.primaryConstructor
             ?: error("No primary constructor for ${entityClass.qualifiedName}")
-
+        // クラスのプロパティを名前でマップ化
         val propertiesByName = entityClass.memberProperties.associateBy { it.name }
-
+        // コンストラクタのパラメータに対応するプロパティを突き合わせて PropertyMeta を生成。存在しない場合はエラー
         val properties = constructor.parameters.map { param ->
             val property = propertiesByName[param.name]
                 ?: error("Property '${param.name}' is not declared in ${entityClass.qualifiedName}")
-
-            @Suppress("UNCHECKED_CAST")
             (property as KProperty1<out SelectEntity, *>).toPropertyMeta()
         }
-
+        // EntityMeta を生成して返す
         return EntityMeta(
+            defineEntityQualifiedName = entityClass.qualifiedName.orEmpty(),
             entityName = entityClass.simpleName.orEmpty(),
             tableName = tableName,
             tableAlias = tableAlias,

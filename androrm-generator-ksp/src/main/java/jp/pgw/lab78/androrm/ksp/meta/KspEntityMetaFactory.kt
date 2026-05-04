@@ -40,7 +40,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
      * @since 2026-04-29
      */
     fun create(classDecl: KSClassDeclaration, definition: ProjectionDefinition): EntityMeta {
-        traceEntered(classDecl, definition)
+        logTraceEntered(classDecl, definition)
         // テーブル情報の解決
         val tableAnnotation = classDecl.annotations.firstOrNull {
             it.shortName.asString() == TABLE
@@ -55,7 +55,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
         val columnMetas = definition.properties.map { columnProjection ->
             // プロジェクション定義のプロパティ名に対応する KSPropertyDeclaration をクラス定義から取得。存在しない場合はエラー
             val sourceProperty = sourcePropertiesByName[columnProjection.property]
-                ?: error(
+                ?: logError(
                     "Property '${columnProjection.property}' is not declared in ${classDecl.qualifiedName?.asString()}."
                 )
             // プロジェクション定義とクラス定義を突き合わせて PropertyMeta を生成
@@ -70,12 +70,13 @@ class KspEntityMetaFactory : LoggerLike by logger {
         }
         // EntityMeta を生成して返却
         val result = EntityMeta(
+            defineEntityQualifiedName = classDecl.qualifiedName?.asString().orEmpty(),
             entityName = classDecl.simpleName.asString() + definition.entityNameExtend,
             tableName = tableName,
             tableAlias = tableAlias,
             properties = columnMetas + functionMetas
         )
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -92,7 +93,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
         property: KSPropertyDeclaration,
         projection: ColumnProjection
     ): PropertyMeta {
-        traceEntered(property, projection)
+        logTraceEntered(property, projection)
         // @Column と @Function の両方をチェック（両方付いている場合は両方の情報を持つ）
         val columnAnnotation = property.annotations.firstOrNull {
             it.shortName.asString() == COLUMN
@@ -127,7 +128,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
             functionArgs = emptyList(),
             rawFunction = ""
         )
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -145,7 +146,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
     private fun createFunctionMeta(
         projection: FunctionProjection
     ): PropertyMeta {
-        traceEntered(projection)
+        logTraceEntered(projection)
         // エイリアスは ProjectionDefinition の alias 引数から解決。なければ FP_ALIAS_FALLBACK を使用
         val aliasName = projection.alias.ifBlank { FP_ALIAS_FALLBACK }
         // PropertyMeta を生成して返却
@@ -161,7 +162,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
             functionArgs = projection.args.toList(),
             rawFunction = projection.raw
         )
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 

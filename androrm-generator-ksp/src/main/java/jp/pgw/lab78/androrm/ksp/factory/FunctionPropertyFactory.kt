@@ -39,12 +39,12 @@ class FunctionPropertyFactory : LoggerLike by logger {
         functions: List<FunctionProjection>,
         propsByName: Map<String, KSPropertyDeclaration>
     ): List<PropertySpec> {
-        traceEntered(functions, propsByName)
+        logTraceEntered(functions, propsByName)
         // プロパティ名のセットを取得する
         val properties = propsByName.keys
         // 各 FunctionProjection について、引数の検査、戻り値の型の解決、@Function の生成を行い、PropertySpec を作成する
         val result = functions.map { func ->
-            checkFunctionArgs(properties, func)
+            checkFunctionArgs(func, properties)
             val typeName = resolveReturnType(func, propsByName)
             val annotation = buildFunctionAnnotation(func)
             // PropertySpec を作成する
@@ -52,7 +52,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
                 .addAnnotation(annotation)
                 .build()
         }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -66,7 +66,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
      * @since 2026-04-21
      */
     private fun buildFunctionAnnotation(func: FunctionProjection): AnnotationSpec {
-        traceEntered(func)
+        logTraceEntered(func)
         // FunctionProjection から @Function を生成するためのビルダーを作成し、引数を設定して AnnotationSpec を生成する
         val result = AnnotationSpec.builder(Function::class).apply {
             val sqlFunc =
@@ -84,7 +84,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
             // hideFromSelect 引数を設定する
             addMember("hideFromSelect = %L", func.hideFromSelect)
         }.build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -102,7 +102,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
         func: FunctionProjection,
         propsByName: Map<String, KSPropertyDeclaration>
     ): TypeName {
-        traceEntered(func, propsByName)
+        logTraceEntered(func, propsByName)
         // 関数の種類（ColumnFunction）と引数の型に基づいて、適切な戻り値の型を決定するロジックを実装する
         val argTypes = func.args.mapNotNull { arg ->
             propsByName[arg]?.type?.resolve()?.declaration?.qualifiedName?.asString()
@@ -110,7 +110,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
         }
         // ColumnFunction に基づいて戻り値の型を決定するロジックを実装する
         val result = func.function.getReturnType(argTypes).let { ClassName.bestGuess(it) }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -124,7 +124,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
      * @since 2026-04-21
      */
     private fun inferLiteralTypeName(literal: String): String? {
-        traceEntered(literal)
+        logTraceEntered(literal)
         // 引数が真偽値、文字列リテラル、整数リテラル、浮動小数点リテラルのいずれかに一致するかをチェックし、対応する型を返すロジックを実装する
         val result = when {
             literal.equals("true", true) || literal.equals(
@@ -137,7 +137,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
             literal.matches(Regex("^-?\\d+\\.\\d+$")) -> Double::class.qualifiedName
             else -> null
         }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -148,37 +148,84 @@ class FunctionPropertyFactory : LoggerLike by logger {
      * ### 引数がプロパティ名のセットに含まれていない場合、
      * ### リテラルとして有効な形式（真偽値、文字列リテラル、整数リテラル、浮動小数点リテラルのいずれか）であるかをチェックし、
      * ### そうでない場合はエラーをスローするロジックを実装する
-     * @param properties プロパティ名のセット
      * @param functionProjection 対象の FunctionProjection オブジェクト
-     * @throws IllegalArgumentException 関数プロジェクションの引数がプロパティ名のセットに含まれておらず、かつリテラルとして有効な形式でもない場合にスローされる例外
+     * @param propertyNames プロパティ名のセット
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
     private fun checkFunctionArgs(
-        properties: Set<String>,
-        functionProjection: FunctionProjection
+        functionProjection: FunctionProjection,
+        propertyNames: Collection<String>,
     ) {
-        traceEntered(functionProjection, properties)
-        // 関数プロジェクションの引数が、プロパティ名のセットに含まれているか、またはリテラルとして有効な形式であるかを検査するためのロジックを実装する
-        val columnFunction = functionProjection.function
-        if (columnFunction == ColumnFunction.CUSTOM) {
-            traceExiting()
-            return
+        logTraceEntered(propertyNames, functionProjection)
+        // 関数プロジェクションの引数を全走査
+        functionProjection.args.forEach { arg ->
+            if (!isSupportedFunctionArg(arg, propertyNames)) {
+                logError(
+                    buildString {
+                        append("Function argument '")
+                        append(arg)
+                        append("' in projection function '")
+                        append(functionProjection.alias)
+                        append("' is invalid. ")
+                        append("Allowed values are property names, string literals, numeric literals, and boolean literals.")
+                    }
+                )
+            }
         }
-        // 引数がプロパティ名のセットに含まれていない場合、リテラルとして有効な形式（真偽値、文字列リテラル、整数リテラル、浮動小数点リテラルのいずれか）であるかをチェックし、そうでない場合はエラーをスローするロジックを実装する
-        val args = functionProjection.args.toList()
-        // 引数が1つだけの場合は、単一の引数として検査し、複数の場合はすべての引数を検査する
-        val invalidArgs = if (columnFunction.isSingleArgument) {
-            args.firstOrNull()?.takeIf {
-                !it.matches(Regex("'[^']*'")) && it !in properties
-            }?.let { listOf(it) } ?: emptyList()
-        } else {
-            args.filter { !it.matches(Regex("'[^']*'")) && it !in properties }
-        }
-        // 無効な引数が存在する場合はエラーをスローする
-        if (invalidArgs.isNotEmpty()) {
-            error("Invalid argument for '${functionProjection.alias}': $invalidArgs")
-        }
-        traceExiting()
+        logTraceExiting()
     }
+
+    /**
+     * ## サポート関数引数判定メソッド
+     * ### 関数でサポートされている引数であるかを判定するメソッド
+     * @param arg 引数
+     * @param propertyNames プロパティ名のリスト
+     * @return 引数がサポートされている場合は true、そうでない場合は false
+     * @author Masahiro Inoue
+     * @since 2026-05-02
+     */
+    private fun isSupportedFunctionArg(
+        arg: String,
+        propertyNames: Collection<String>,
+    ): Boolean {
+        // 引数文字列を先頭と末尾の空白文字を除去
+        val trimmed = arg.trim()
+        return trimmed in propertyNames ||
+                isStringLiteral(trimmed) ||
+                isBooleanLiteral(trimmed) ||
+                isNumericLiteral(trimmed)
+    }
+
+    /**
+     * ## 文字列リテラル判定
+     * ### 文字列が文字列値として扱えるか判定
+     * @param value 対象の文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-02
+     */
+    private fun isStringLiteral(value: String): Boolean =
+        value.length >= 2 && value.startsWith("'") && value.endsWith("'")
+
+    /**
+     * ## ブール値リテラル判定
+     * ### 文字列がブール値として扱えるか判定
+     * @param value 対象の文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-02
+     */
+    private fun isBooleanLiteral(value: String): Boolean =
+        value.equals("true", ignoreCase = true) ||
+                value.equals("false", ignoreCase = true)
+
+    /**
+     * ## 数字リテラル判定
+     * ### 文字列が数字として扱えるか判定
+     * @param value 対象の文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-02
+     */
+    private fun isNumericLiteral(value: String): Boolean =
+        value.matches(Regex("""[+-]?\d+""")) ||
+                value.matches(Regex("""[+-]?\d+\.\d+"""))
 }

@@ -28,7 +28,7 @@ class ImportHelper() : LoggerLike by logger {
         constructorProps: List<PropertySpec>,
         interfaces: List<TypeName>
     ): Set<String> {
-        traceEntered(constructorProps, interfaces)
+        logTraceEntered(constructorProps, interfaces)
         val imports = mutableSetOf<String>()
         // Table アノテーション
         imports += tableAnnotation.typeName.toString()
@@ -58,7 +58,7 @@ class ImportHelper() : LoggerLike by logger {
             .filter { "." in it }
             .filterNot { it.startsWith("kotlin.") }
             .toSet()
-        traceExiting()
+        logTraceExiting()
         return result
     }
 }

@@ -78,7 +78,7 @@ class ProjectionArgumentParser() : LoggerLike by logger {
      * @since 2026-04-17
      */
     fun parse(annotation: KSAnnotation): ProjectionDefinition {
-        traceEntered(annotation)
+        logTraceEntered(annotation)
 
         var entityNameExtend = EMPTY_STRING
         var aliasExtend = EMPTY_STRING
@@ -116,7 +116,7 @@ class ProjectionArgumentParser() : LoggerLike by logger {
                             val func = ksAnn.argumentOf<ColumnFunction>(FP_FUNCTION)
                             val raw = ksAnn.argumentOf<String>(FP_RAW) ?: EMPTY_STRING
                             if (func.isNull() && raw.isEmpty()) {
-                                error(
+                                logError(
                                     "@FunctionProjection requires either 'function' or 'raw' to be specified",
                                     ksAnn
                                 )
@@ -170,7 +170,7 @@ class ProjectionArgumentParser() : LoggerLike by logger {
             commonInterfaces = commonInterfaces,
             customInterfaces = customInterfaces
         )
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -186,19 +186,19 @@ class ProjectionArgumentParser() : LoggerLike by logger {
      * @since 2026-04-17
      */
     private inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
-        traceEntered(name)
+        logTraceEntered(name)
         // 引数リストから指定された名前の引数を検索し、その値を取得。
         // 引数が見つからない場合は null を返す
         val argValue = arguments.firstOrNull {
             it.name?.asString() == name
         }?.value ?: run {
-            traceExiting(UNKNOWN)
+            logTraceExiting(UNKNOWN)
             return null
         }
         // T が Enum 型の場合、KSType から Enum 名を抽出して適切に変換
         if (T::class.java.isEnum) {
             val ksType = argValue as? KSType ?: run {
-                traceExiting(UNKNOWN)
+                logTraceExiting(UNKNOWN)
                 return null
             }
             // KSType から Enum 名を抽出して、Java の Enum.valueOf を使用して T 型の Enum 値に変換
@@ -207,10 +207,10 @@ class ProjectionArgumentParser() : LoggerLike by logger {
             @Suppress("UNCHECKED_CAST")
             val result =
                 java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
-            traceExiting(result)
+            logTraceExiting(result)
             return result
         }
-        traceExiting(argValue)
+        logTraceExiting(argValue)
         return argValue as? T
     }
 }

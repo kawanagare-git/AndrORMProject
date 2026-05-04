@@ -4,7 +4,6 @@ import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isHiddenFromSelect
-import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.logging.LogLevel.*
 import jp.pgw.lab78.androrm.common.logging.LogScope.APP
@@ -27,7 +26,6 @@ import java.util.Locale
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
 
 /**
@@ -48,9 +46,6 @@ class Select<T : SelectEntity>(
 
     /** Entity メタ情報生成 */
     private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
-
-    /** Entity メタ情報検証 */
-    private val entityMetaValidator = EntityMetaValidator()
 
     /** 主 Entity の正規化済みメタ情報 */
     private val mainEntityMeta = runtimeEntityMetaFactory.create(fromEntity)
@@ -134,7 +129,7 @@ class Select<T : SelectEntity>(
         logger.log(TRACE.level, "Select init:returning")
     }
 
-    fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
+//    fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
 
     /**
      * ## join メソッド
@@ -313,7 +308,7 @@ class Select<T : SelectEntity>(
      * @since 2026-04-28
      */
     private fun validateEntityMeta(entityMeta: EntityMeta) {
-        val validationResult = entityMetaValidator.validate(entityMeta)
+        val validationResult = EntityMetaValidator().validate(entityMeta)
         // 警告があればログに出力
         validationResult.warnings.forEach { warningMessage ->
             logger.log(WARNING, warningMessage)

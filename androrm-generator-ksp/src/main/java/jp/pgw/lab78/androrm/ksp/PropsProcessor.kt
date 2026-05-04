@@ -133,9 +133,6 @@ class PropsProcessor(
     /** KSP Entity メタ情報生成 */
     private val kspEntityMetaFactory = KspEntityMetaFactory()
 
-    /** Entity メタ情報検証 */
-    private val entityMetaValidator = EntityMetaValidator()
-
     /** data class 生成 */
     private val dataClassWriter = DataClassWriter(
         codeGenerator = codeGenerator,
@@ -156,10 +153,10 @@ class PropsProcessor(
      * @see SymbolProcessor.process
      */
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        traceEntered(resolver)
+        logTraceEntered(resolver)
         // @Projection と @Projections から data class を生成
         generateDataClassFromProjections(resolver)
-        traceExiting()
+        logTraceExiting()
         return emptyList()
     }
 
@@ -175,7 +172,7 @@ class PropsProcessor(
      */
     @OptIn(KspExperimental::class)
     private fun generateDataClassFromProjections(resolver: Resolver) {
-        traceEntered(resolver)
+        logTraceEntered(resolver)
         // @Projection と @Projections を両方まとめて拾う
         val allProjectionClasses = projectionExtractor.findProjectionClasses(resolver)
         // 各クラスごとに Projection 系アノテーションを展開
@@ -185,23 +182,24 @@ class PropsProcessor(
             for (annotation in annotations) {
                 // アノテーション引数を解析して ProjectionDefinition を生成
                 val definition = projectionArgumentParser.parse(annotation)
-                projectionValidator.validateAggregateConflicts(definition)
+                projectionValidator.validateAggregateConflicts(classDecl, definition)
                 projectionValidator.validateProperties(
                     classDecl, definition, allClassProperties
                 )
                 // ProjectionDefinition から EntityMeta を生成して検証
                 val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
-                val validationResult = entityMetaValidator.validate(entityMeta)
-                validationResult.warnings.forEach { warning(it) }
+                // Entity メタ情報検証
+                val validationResult = EntityMetaValidator().validate(entityMeta)
+                validationResult.warnings.forEach { logWarning(it) }
                 // エラーがある場合はログに出力して次のアノテーションへ
                 if (validationResult.hasErrors) {
-                    validationResult.errors.forEach { error(it) }
+                    validationResult.errors.forEach { logError(it) }
                     continue
                 }
                 processSingleProjection(classDecl, definition, resolver)
             }
         }
-        traceExiting()
+        logTraceExiting()
     }
 
     /**
@@ -219,7 +217,7 @@ class PropsProcessor(
     private fun processSingleProjection(
         classDecl: KSClassDeclaration, definition: ProjectionDefinition, resolver: Resolver
     ) {
-        traceEntered(classDecl, definition, resolver)
+        logTraceEntered(classDecl, definition, resolver)
         val packageName = interfaceResolver.resolvePackageNameFromAnnotation(
             classDecl,
             resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
@@ -262,7 +260,7 @@ class PropsProcessor(
             functionProps = functionProps,
             interfaces = interfaces
         )
-        traceExiting(createClassName)
+        logTraceExiting(createClassName)
     }
 
     /**
@@ -274,7 +272,7 @@ class PropsProcessor(
      * @since 2025-08-22
      */
     private fun collectInterfaces(definition: ProjectionDefinition): List<TypeName> {
-        traceEntered(definition)
+        logTraceEntered(definition)
         // commonInterfaces と customInterfaces を結合して TypeName のリストを生成
         val result = buildList<TypeName> {
             definition.commonInterfaces.forEach { common ->
@@ -286,7 +284,7 @@ class PropsProcessor(
                     add(ClassName.bestGuess(custom))
                 }
         }
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -299,13 +297,13 @@ class PropsProcessor(
      * @since 2025-08-01
      */
     private fun generateCommonInterface(commonInterface: String): ClassName {
-        traceEntered(commonInterface)
+        logTraceEntered(commonInterface)
         val result = ClassName.bestGuess(
             (DMLInterfaceEnum.valueOf(
                 ClassName.bestGuess(commonInterface).simpleName
             )).interfaceFQN
         )
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -320,27 +318,27 @@ class PropsProcessor(
      * @since 2025-09-05
      */
     inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
-        traceEntered(name)
+        logTraceEntered(name)
         val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value ?: run {
             // 引数が存在しない場合は null を戻す
-            traceExiting("null")
+            logTraceExiting("null")
             return null
         }
         // Enum の場合は KSType から Enum を取得
         if (T::class.java.isEnum) {
             val ksType = argValue as? KSType ?: run {
                 // 引数が存在しない場合は null を戻す
-                traceExiting("null")
+                logTraceExiting("null")
                 return null
             }
             val enumName = ksType.declaration.simpleName.asString()
 
             @Suppress("UNCHECKED_CAST") val result =
                 java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
-            traceExiting(result)
+            logTraceExiting(result)
             return result
         }
-        traceExiting(argValue)
+        logTraceExiting(argValue)
         return argValue as? T
     }
 

@@ -36,7 +36,7 @@ class ProjectionExtractor() : LoggerLike by logger {
      */
     @OptIn(KspExperimental::class)
     fun findProjectionClasses(resolver: Resolver): List<KSClassDeclaration> {
-        traceEntered(resolver)
+        logTraceEntered(resolver)
         // KSP の Resolver を使用して、@Projection および @Projections アノテーションが付与されたクラスを検索する
         val result = sequenceOf(
             resolver.getSymbolsWithAnnotation(PROJECTION_FQN, false),
@@ -44,7 +44,7 @@ class ProjectionExtractor() : LoggerLike by logger {
         ).flatten()
             .filterIsInstance<KSClassDeclaration>()
             .toList()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -57,7 +57,7 @@ class ProjectionExtractor() : LoggerLike by logger {
      * @since 2026-04-17
      */
     fun extractFromClass(classDecl: KSClassDeclaration): List<KSAnnotation> {
-        traceEntered(classDecl)
+        logTraceEntered(classDecl)
         // クラスのアノテーションを走査し、@Projection および @Projections アノテーションを抽出する
         val result = classDecl.annotations.flatMap { annotation ->
             when (annotation.annotationType.resolve().declaration.qualifiedName?.asString()) {
@@ -66,7 +66,7 @@ class ProjectionExtractor() : LoggerLike by logger {
                 else -> emptyList()
             }
         }
-        traceExiting(result)
+        logTraceExiting(result)
         return result.toList()
     }
 
@@ -79,14 +79,14 @@ class ProjectionExtractor() : LoggerLike by logger {
      * @since 2026-04-17
      */
     private fun extractProjectionList(annotation: KSAnnotation): List<KSAnnotation> {
-        traceEntered(annotation)
+        logTraceEntered(annotation)
         // @Projections アノテーションの引数から、@Projection アノテーションのリストを抽出する
         val result = (annotation.arguments
             .firstOrNull { it.name?.asString() == "value" }
             ?.value as? List<*>)
             ?.filterIsInstance<KSAnnotation>()
             ?: emptyList()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 }

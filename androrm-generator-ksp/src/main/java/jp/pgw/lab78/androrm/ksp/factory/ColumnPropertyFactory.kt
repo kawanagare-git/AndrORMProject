@@ -39,7 +39,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         prop: KSPropertyDeclaration,
         hideFromSelect: Boolean = false
     ): PropertySpec {
-        traceEntered(prop, hideFromSelect)
+        logTraceEntered(prop, hideFromSelect)
         // KSPropertyDeclaration からプロパティの型と名前を取得し、PropertySpec のビルダーを作成する
         val builder = PropertySpec.builder(
             prop.simpleName.asString(),
@@ -66,7 +66,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         val result = builder
             .initializer(prop.simpleName.asString())
             .build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -83,7 +83,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         prop: KSPropertyDeclaration,
         hideFromSelect: Boolean
     ): AnnotationSpec? {
-        traceEntered(prop, hideFromSelect)
+        logTraceEntered(prop, hideFromSelect)
         // KSPropertyDeclaration から @Column を検索する
         val columnAnnotation = prop.annotations.firstOrNull {
             it.shortName.asString() == COLUMN &&
@@ -91,7 +91,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         }
         // @Column が存在しない場合は null を返す
         if (columnAnnotation == null) {
-            traceExiting("null")
+            logTraceExiting("null")
             return null
         }
         // @Column の引数を抽出し、AnnotationSpec を生成する
@@ -110,7 +110,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
             addMember("$COLUMN_ALIAS = %S", columnAlias)
             addMember("$COLUMN_HIDE_FROM_SELECT = %L", hideFromSelect)
         }.build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -124,7 +124,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
      * @since 2026-04-21
      */
     private fun KSAnnotation.toAnnotationSpec(): AnnotationSpec {
-        traceEntered(this)
+        logTraceEntered(this)
         // アノテーションの完全修飾名を取得し、AnnotationSpec のビルダーを作成する
         val fqn = this.annotationType.resolve().declaration.qualifiedName!!.asString()
         val builder = AnnotationSpec.builder(com.squareup.kotlinpoet.ClassName.bestGuess(fqn))
@@ -152,7 +152,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         }
         // AnnotationSpec を生成して返す
         val result = builder.build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 
@@ -171,7 +171,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
         prop: KSPropertyDeclaration,
         hideFromSelect: Boolean
     ): AnnotationSpec {
-        traceEntered(prop, hideFromSelect)
+        logTraceEntered(prop, hideFromSelect)
         // プロパティ名をスネークケースに変換して、name 引数として使用する
         val generatedColumnName = prop.simpleName.asString().toSnakeCase()
         // デフォルトの @Column を生成する。name 引数はプロパティ名をスネークケースに変換して使用し、alias 引数は空文字列を使用する。hideFromSelect 引数は引数として渡された値を使用する。
@@ -179,7 +179,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
             addMember("name = %S", generatedColumnName)
             addMember("hideFromSelect = %L", hideFromSelect)
         }.build()
-        traceExiting(result)
+        logTraceExiting(result)
         return result
     }
 }
