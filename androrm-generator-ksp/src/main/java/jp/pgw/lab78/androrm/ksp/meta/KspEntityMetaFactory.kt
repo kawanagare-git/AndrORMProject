@@ -6,6 +6,7 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
@@ -17,7 +18,6 @@ import jp.pgw.lab78.androrm.ksp.Constants.TABLE
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 
 /**

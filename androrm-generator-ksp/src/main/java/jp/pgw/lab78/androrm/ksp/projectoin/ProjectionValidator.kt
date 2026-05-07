@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.ksp.projectoin
 
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## プロジェクション定義の検証クラス

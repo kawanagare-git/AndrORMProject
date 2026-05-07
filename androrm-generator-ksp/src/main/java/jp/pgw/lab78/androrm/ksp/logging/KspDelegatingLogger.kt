@@ -1,8 +1,9 @@
 package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.KSPLogger
-import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
-import jp.pgw.lab78.androrm.common.Constants.Log.*
+import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
+import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
@@ -31,7 +32,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
     override fun logInfo(infoMessage: String, vararg details: Any) {
         logger.info(infoMessage.ifEmpty {
             "${generateInfoMessage(infoMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -71,7 +72,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
     override fun logWarning(warnMessage: String, vararg details: Any) {
         logger.warn(warnMessage.ifEmpty {
             "${generateWarningMessage(warnMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -86,7 +87,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
     override fun logError(errMessage: String, vararg details: Any) {
         logger.error(errMessage.ifEmpty {
             "${generateErrorMessage(errMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -101,7 +102,7 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
     override fun logDebug(debugMessage: String, vararg details: Any) {
         logger.warn(debugMessage.ifEmpty {
             "${generateDebugMessage(debugMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -125,7 +126,12 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
                                 ""
                             } else {
                                 val detailsSub = details.toList().subList(1, details.size - 1)
-                                ": ${concat(detailsSub, COMMA_SPACE).toSingleLineLogString()}"
+                                ": ${
+                                    concat(
+                                        detailsSub,
+                                        ARGUMENT_DELIMITER
+                                    ).toSingleLineLogString()
+                                }"
                             }
                 }
             }

@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.ksp.logging
+package jp.pgw.lab78.androrm.common.logging.interfaces
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 

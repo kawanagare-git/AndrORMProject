@@ -1,5 +1,6 @@
 [versions]
 # Kotlin / Android Plugin
+aspectjVersion = "1.9.25.1"
 detektApi = "1.23.6"
 gradleAndroidPluginAspectjx = "2.0.10"
 kotlin = "1.9.24"
@@ -16,10 +17,7 @@ junitJupiterVersion = "5.10.2"
 junitVintageEngine = "5.10.2"
 mockitoCore = "5.15.2"
 mockitoAndroid = "5.12.0"
-
-# Logging
-logbackAndroid = "3.0.0"
-slf4jApi = "2.0.16"
+mockitoKotlin = "5.4.0"
 
 # Build & Tools
 desugar_jdk_libs = "2.1.5"
@@ -44,9 +42,12 @@ android-library = { id = "com.android.library", version.ref = "agpVersion" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinVersion" }
 
 [libraries]
+aspectjrt = { module = "org.aspectj:aspectjrt", version.ref = "aspectjVersion" }
+aspectjtools = { module = "org.aspectj:aspectjtools", version.ref = "aspectjVersion" }
 core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 detekt-api = { module = "io.gitlab.arturbosch.detekt:detekt-api", version.ref = "detektApi" }
 detekt-test = { module = "io.gitlab.arturbosch.detekt:detekt-test", version.ref = "detektApi" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junitJupiterVersion" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junitJupiterVersion" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 kotlin-reflect = { group = "org.jetbrains.kotlin", name = "kotlin-reflect", version.ref = "kotlin" }
@@ -57,10 +58,7 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "jun
 junit-vintage-engine = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junitVintageEngine" }
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
 mockito-android = { module = "org.mockito:mockito-android", version.ref = "mockitoAndroid" }
-
-# Logging
-logback-android = { module = "com.github.tony19:logback-android", version.ref = "logbackAndroid" }
-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4jApi" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
 
 # Build Tools
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }

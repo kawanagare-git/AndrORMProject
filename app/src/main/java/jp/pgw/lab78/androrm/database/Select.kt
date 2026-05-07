@@ -1,12 +1,14 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
+import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isHiddenFromSelect
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.common.logging.LogLevel.*
+import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
 import jp.pgw.lab78.androrm.common.logging.LogScope.APP
+import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
+import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
@@ -21,6 +23,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
+import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.EnumMap
 import java.util.Locale
 import java.util.logging.Level.WARNING
@@ -42,7 +45,10 @@ class Select<T : SelectEntity>(
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
     /** Select クラスで使用するエンティティクラスのリスト */
-    private val usedEntityClasses = mutableSetOf<KClass<out SelectEntity>>()
+    private val usedEntityClasses = mutableListOf<KClass<out SelectEntity>>()
+
+    /** テーブル名ごとの使用回数 */
+    private val tableAliasUseCountMap = mutableMapOf<String, Int>()
 
     /** Entity メタ情報生成 */
     private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
@@ -112,21 +118,22 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     init {
-        logger.log(TRACE.level, "Select init:enter fromEntity=$fromEntity / isDistinct=$isDistinct")
-        // 主 Entity のメタ情報を検証
-        validateEntityMeta(mainEntityMeta)
-        // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換
-        mainEntityMeta.properties
-            .filterNot { it.hideFromSelect }
-            .forEach { propertyMeta ->
-                selectColumnList += buildSelectExpression(mainEntityMeta, propertyMeta)
-            }
-        // from 句とテーブル名の定義を設定
-        queryStructureMap[SelectClause.SELECT] =
-            mutableListOf("from $mainTableName $mainTableAlias")
-        // select 文で使用するエンティティクラスを登録
-        usedEntityClasses += fromEntity
-        logger.log(TRACE.level, "Select init:returning")
+        @InfoLog
+        @TraceLog
+        fun initialize() {
+            // 主 Entity のメタ情報を検証
+            validateEntityMeta(mainEntityMeta)
+            // 主テーブルは使用回数 1 として登録
+            tableAliasUseCountMap[mainTableName] = 1
+            // 主テーブルの SELECT 対象列を追加
+            appendSelectableColumns(mainEntityMeta, mainTableAlias)
+            // from 句とテーブル名の定義を設定
+            queryStructureMap[SelectClause.SELECT] =
+                mutableListOf("from $mainTableName $mainTableAlias")
+            // select 文で使用するエンティティクラスを登録
+            usedEntityClasses += fromEntity
+        }
+        initialize()
     }
 
 //    fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
@@ -141,22 +148,25 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @InfoLog
+    @TraceLog
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
         on: ConditionBuilder.() -> Unit
     ): Select<T> {
-        logger.log(
-            TRACE.level,
-            "Select join:enter joinType=$joinType / joinedEntity=$joinedEntity / on=$on"
-        )
         isBuild = false
         // 結合テーブル名取得
         val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
         validateEntityMeta(joinedEntityMeta)
-
+        // テーブル名の取得
         val joinedTableName = joinedEntityMeta.tableName
-        val joinedTableAlias = joinedEntityMeta.tableAlias
+        // テーブルエイリアスの取得（重複時連番付与）
+        val joinedTableAlias =
+            resolveJoinedTableAlias(joinedEntityMeta.tableName, joinedEntityMeta.tableAlias)
+        // join 先テーブルの SELECT 対象列を追加
+        appendSelectableColumns(joinedEntityMeta, joinedTableAlias)
+        // 結合条件の取得
         val joinCondition = ConditionBuilder(this).apply(on).buildList()
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
@@ -165,7 +175,6 @@ class Select<T : SelectEntity>(
                         + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
         usedEntityClasses += joinedEntity
-        logger.log(TRACE.level, "Select join:returning $this")
         return this
     }
 
@@ -178,34 +187,27 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2026-01-11
      */
+    @InfoLog
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
-    ): JoinCondition<T> {
-        logger.log(TRACE.level, "Select join:enter joinType=$joinType / joinedEntity=$joinedEntity")
+    ): JoinCondition {
         isBuild = false
-        logger.log(TRACE.level, "Select join:returning $this")
-        return JoinCondition(this, joinType, joinedEntity)
+        return JoinCondition(joinType, joinedEntity)
     }
 
     /**
      * ## JoinCondition クラス
      * ### join メソッド内で使用する結合条件クラス
+     * @param joinType 結合方法
+     * @param joinedEntity 結合するエンティティクラス
      * @author Masahiro Inoue
      * @since 2026-01-11
      */
-    class JoinCondition<T : SelectEntity>(
-        private val select: Select<T>,
+    inner class JoinCondition(
         private val joinType: JoinType,
         private val joinedEntity: KClass<out SelectEntity>,
     ) {
-        init {
-            select.logger.log(
-                TRACE.level,
-                "JoinCondition init:enter select=$select / joinType=$joinType / joinedEntity=$joinedEntity"
-            )
-            select.logger.log(TRACE.level, "JoinCondition init:returning")
-        }
 
         /** ## on メソッド
          * ### テーブル結合条件を指定する
@@ -214,11 +216,9 @@ class Select<T : SelectEntity>(
          * @author Masahiro Inoue
          * @since 2026-01-11
          */
-        fun on(block: ConditionBuilder.() -> Unit): Select<T> {
-            select.logger.log(TRACE.level, "Select join:enter block=$block")
-            select.logger.log(TRACE.level, "Select join:returning $this")
-            return select.join(joinType, joinedEntity, block)
-        }
+        @InfoLog
+        fun on(block: ConditionBuilder.() -> Unit): Select<T> =
+            this@Select.join(joinType, joinedEntity, block)
     }
 
     /**
@@ -229,13 +229,12 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @InfoLog
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
-        logger.log(TRACE.level, "Select where:enter block=$block")
         isBuild = false
         val builder = ConditionBuilder(this).apply(block)
         // Select は builder の中身を意識せず、リストだけ取得して保持
         whereConditions += builder.buildList()
-        logger.log(TRACE.level, "Select where:returning $this")
         return this
     }
 
@@ -247,8 +246,8 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @InfoLog
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
-        logger.log(TRACE.level, "Select having:enter block=$block")
         isBuild = false
         val builder = HavingConditionBuilder(this).apply(block)
         havingConditions += builder.buildList()
@@ -259,8 +258,6 @@ class Select<T : SelectEntity>(
                 groupByColumns += GroupByColumn(column)
             }
         }
-        logger.log(DEBUG.level, "Select having:groupByColumns = $groupByColumns")
-        logger.log(TRACE.level, "Select having:returning $this")
         return this
     }
 
@@ -271,15 +268,12 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
+    @InfoLog
     private fun detectGroupColumns() =
         usedEntityClasses.flatMap { entityClass ->
-            logger.log(DEBUG.level, "Select detectGroupColumns:entityClass = $entityClass")
             entityClass.memberProperties
                 .filter { !it.isFunctionColumn() }
                 .filterNot { it.isHiddenFromSelect() }
-                .onEach {
-                    logger.log(DEBUG.level, "Select detectGroupColumns:it = $it")
-                }
         }
 
     /**
@@ -290,12 +284,11 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @InfoLog
     fun order(by: OrderDsl.() -> Unit): Select<T> {
-        logger.log(TRACE.level, "Select order:enter by=$by")
         isBuild = false
         val builder = OrderDsl().apply(by)
         orderColumns += builder.orders
-        logger.log(TRACE.level, "Select order:returning $this")
         return this
     }
 
@@ -307,6 +300,7 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2026-04-28
      */
+    @InfoLog
     private fun validateEntityMeta(entityMeta: EntityMeta) {
         val validationResult = EntityMetaValidator().validate(entityMeta)
         // 警告があればログに出力
@@ -322,35 +316,77 @@ class Select<T : SelectEntity>(
     }
 
     /**
+     * ## 結合テーブルエイリアス解決
+     * ### 同一テーブルが再利用された場合、2回目以降に連番を付与する
+     * @param tableName テーブル名
+     * @param baseAlias 基本テーブルエイリアス
+     * @return 解決済みテーブルエイリアス
+     * @return 解決済みテーブルエイリアス
+     */
+    @InfoLog
+    private fun resolveJoinedTableAlias(tableName: String, baseAlias: String): String {
+        // テーブルエイリアスの後ろに付与する番号
+        val nextCount = (tableAliasUseCountMap[tableName] ?: 0) + 1
+        tableAliasUseCountMap[tableName] = nextCount
+        // テーブルエイリアスの番号が1検査
+        return if (nextCount == 1) {
+            // エイリアスをそのまま出力
+            baseAlias
+        } else {
+            // エイリアスに番号を付与
+            "${baseAlias}_$nextCount"
+        }
+    }
+
+    /**
+     * ## SELECT 対象列追加
+     * ### hideFromSelect = true の列を除外し、SELECT 句リストへ追加する
+     * @param entityMeta 対象 Entity のメタ情報
+     * @param tableAlias 使用するテーブルエイリアス
+     */
+    @InfoLog
+    private fun appendSelectableColumns(entityMeta: EntityMeta, tableAlias: String) {
+        entityMeta.properties
+            .filterNot { it.hideFromSelect }
+            .forEach { propertyMeta ->
+                selectColumnList += buildSelectExpression(entityMeta, tableAlias, propertyMeta)
+            }
+    }
+
+    /**
      * ## SELECT 句用式生成
      * ### PropertyMeta から SELECT 句断片を生成する
      * @param entityMeta 対象 Entity のメタ情報
+     * @param tableAlias 連番が付与されたテーブルエイリアス
      * @param propertyMeta 対象プロパティのメタ情報
      * @return 生成された SELECT 句断片
      * @author Masahiro Inoue
      * @since 2026-04-28
      */
-    private fun buildSelectExpression(entityMeta: EntityMeta, propertyMeta: PropertyMeta): String {
-        return if (!propertyMeta.isFunction) {
-            // 通常カラムの場合、テーブルエイリアスとカラム名を組み合わせてエイリアスを付与して返す
-            "$mainTableAlias.${propertyMeta.columnName} as ${mainTableAlias}_${propertyMeta.aliasName}"
-        } else {
-            // 関数列の場合、関数式を生成
-            val functionExpression = propertyMeta.rawFunction.takeIf { it.isNotBlank() }
-                ?: run {
-                    // 関数タイプが必要な場合、関数タイプを取得
-                    val functionType = propertyMeta.functionType
-                        ?: error("Function type is missing for property '${propertyMeta.propertyName}'.")
-                    // 関数引数を解決して関数式を生成
-                    val args = propertyMeta.functionArgs
-                        .map { arg -> resolveFunctionArgument(entityMeta, arg) }
-                        .toTypedArray()
-                    // 関数式を生成
-                    functionType.createQuery(*args)
-                }
-            // 関数式にエイリアスを付与して返す
-            "$functionExpression as ${mainTableAlias}_${propertyMeta.aliasName}"
-        }
+    @InfoLog
+    private fun buildSelectExpression(
+        entityMeta: EntityMeta,
+        tableAlias: String,
+        propertyMeta: PropertyMeta
+    ): String = if (!propertyMeta.isFunction) {
+        // 通常カラムの場合、テーブルエイリアスとカラム名を組み合わせてエイリアスを付与して返す
+        "$mainTableAlias.${propertyMeta.columnName} as ${mainTableAlias}_${propertyMeta.aliasName}"
+    } else {
+        // 関数列の場合、関数式を生成
+        val functionExpression = propertyMeta.rawFunction.takeIf { it.isNotBlank() }
+            ?: run {
+                // 関数タイプが必要な場合、関数タイプを取得
+                val functionType = propertyMeta.functionType
+                    ?: error("Function type is missing for property '${propertyMeta.propertyName}'.")
+                // 関数引数を解決して関数式を生成
+                val args = propertyMeta.functionArgs
+                    .map { arg -> resolveFunctionArgument(entityMeta, tableAlias, arg) }
+                    .toTypedArray()
+                // 関数式を生成
+                functionType.createQuery(*args)
+            }
+        // 関数式にエイリアスを付与して返す
+        "$functionExpression as ${mainTableAlias}_${propertyMeta.aliasName}"
     }
 
     /**
@@ -358,21 +394,27 @@ class Select<T : SelectEntity>(
      * ### 関数引数がプロパティ名ならカラム参照へ変換し
      * ### それ以外（文字列リテラル等）はそのまま返す
      * @param entityMeta 対象 Entity のメタ情報
+     * @param tableAlias 連番が付与されたテーブルエイリアス
      * @param arg 関数引数として指定された文字列
      * @return 解決された関数引数（カラム参照または元の文字列）
      * @author Masahiro Inoue
      * @since 2026-04-28
      */
-    private fun resolveFunctionArgument(entityMeta: EntityMeta, arg: String): String {
+    @InfoLog
+    private fun resolveFunctionArgument(
+        entityMeta: EntityMeta,
+        tableAlias: String,
+        arg: String
+    ): String {
         // 引数がプロパティ名に一致するか確認し、一致する場合はテーブルエイリアスとカラム名を組み合わせた参照に変換する
         val propertyMeta = entityMeta.properties.firstOrNull { it.propertyName == arg }
         // 一致するプロパティがない場合は引数をそのまま返す（文字列リテラルや数値リテラルなど）
-        return if (propertyMeta != null) {
-            // プロパティ名に一致する場合、テーブルエイリアスとカラム名を組み合わせた参照に変換して返す
-            "$mainTableAlias.${propertyMeta.columnName}"
-        } else {
+        return if (propertyMeta.isNull()) {
             // 引数をそのまま返す
             arg
+        } else {
+            // プロパティ名に一致する場合、テーブルエイリアスとカラム名を組み合わせた参照に変換して返す
+            "$tableAlias.${propertyMeta?.columnName}"
         }
     }
 
@@ -383,8 +425,8 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
+    @InfoLog
     override fun build(): String {
-        logger.log(TRACE.level, "Select build:enter")
         if (!isBuild) {
             isBuild = true
             val selectClause = buildString {
@@ -414,8 +456,8 @@ class Select<T : SelectEntity>(
 
             addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
-            addClauseIfNotEmpty(SelectClause.GROUP, COMMA, groupByColumns.toList())
-            addClauseIfNotEmpty(SelectClause.ORDER, COMMA, orderColumns.toList())
+            addClauseIfNotEmpty(SelectClause.GROUP, PRIMARY_DELIMITER, groupByColumns.toList())
+            addClauseIfNotEmpty(SelectClause.ORDER, PRIMARY_DELIMITER, orderColumns.toList())
             val otherClauses = SelectClause.entries
                 .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
             // select 文を生成
@@ -423,7 +465,6 @@ class Select<T : SelectEntity>(
                 .replace(ANY_CLOSE_BRACKET_REGEX, ")")
                 .replace(MULTI_SPACE_REGEX, " ").trim()
         }
-        logger.log(TRACE.level, "Select order:returning $query")
         return query
     }
 

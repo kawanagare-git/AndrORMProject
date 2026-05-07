@@ -6,11 +6,11 @@ import com.squareup.kotlinpoet.AnnotationSpec
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## Table アノテーションファクトリークラス

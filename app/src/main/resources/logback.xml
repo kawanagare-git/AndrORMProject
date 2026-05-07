@@ -1,8 +1,0 @@
-<configuration>
-    <!-- 共通設定をインポート -->
-    <include resource="logback-base.xml"/>
-
-    <!-- 本番用の追加設定（必要なら） -->
-    <!-- 例: 特定のパッケージだけ WARN にする -->
-    <logger name="com.example" level="WARN"/>
-</configuration>

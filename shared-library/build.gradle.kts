@@ -16,10 +16,6 @@ dependencies {
     implementation(kotlin("stdlib"))
     implementation(libs.kotlin.reflect)
 
-    // 共通ユーティリティ（必要ならログなど）
-    implementation(libs.slf4j.api)
-    implementation(libs.logback.android)
-
     // テストライブラリ
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.core)

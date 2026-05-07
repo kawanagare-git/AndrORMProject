@@ -1,7 +1,8 @@
 package jp.pgw.lab78.androrm.ksp.logging
 
-import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
-import jp.pgw.lab78.androrm.common.Constants.Log.*
+import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
+import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
@@ -59,7 +60,7 @@ class FileDelegatingLogger(
     override fun logInfo(infoMessage: String, vararg details: Any) {
         append(infoMessage.ifEmpty {
             "${generateInfoMessage(infoMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -100,7 +101,7 @@ class FileDelegatingLogger(
     override fun logWarning(warnMessage: String, vararg details: Any) {
         append(warnMessage.ifEmpty {
             "${generateWarningMessage(warnMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -115,7 +116,7 @@ class FileDelegatingLogger(
     override fun logError(errMessage: String, vararg details: Any) {
         append(errMessage.ifEmpty {
             "${generateErrorMessage(errMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -130,7 +131,7 @@ class FileDelegatingLogger(
     override fun logDebug(debugMessage: String, vararg details: Any) {
         append(debugMessage.ifEmpty {
             "${generateDebugMessage(debugMessage, getMethodName())}: " +
-                    concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
         })
     }
 
@@ -151,7 +152,7 @@ class FileDelegatingLogger(
                             ""
                         } else {
                             val detailsSub = details.toList().subList(1, details.size - 1)
-                            ": ${concat(detailsSub, COMMA_SPACE).toSingleLineLogString()}"
+                            ": ${concat(detailsSub, ARGUMENT_DELIMITER).toSingleLineLogString()}"
                         }
             }
         )

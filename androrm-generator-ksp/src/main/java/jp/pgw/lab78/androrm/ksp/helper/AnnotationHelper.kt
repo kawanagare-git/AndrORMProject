@@ -6,8 +6,8 @@ import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_FULLY_
 import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_SIMPLE_NAME
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## アノテーションヘルパー

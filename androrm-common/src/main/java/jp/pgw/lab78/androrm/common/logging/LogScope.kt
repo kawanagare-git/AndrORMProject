@@ -33,12 +33,12 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
     /** 最小ログレベル */
     private var minLogLevel: LogLevel = LogLevel.INFO
 
-    /** 最小ログレベル */
+    /** ログ接尾辞 */
     private var logFileSuffix: String = ""
 
     /** ロガーインスタンス */
     private val logger by lazy {
-        Logger.getLogger("$moduleName-$logFileSuffix")
+        Logger.getLogger("$moduleName${if (logFileSuffix.isEmpty()) "" else "-$logFileSuffix"}")
     }
 
     /** ログファイル名 */
@@ -68,7 +68,7 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
             "java.util.logging.SimpleFormatter.format",
             "%1\$tF %1\$tT [%4\$s] %5\$s%6\$s%n"
         )
-        val dir = File(System.getProperty("user.dir"), "$moduleName/logs")
+        val dir = File(System.getProperty("user.dir"), "$LOG_ROOT/logs/$moduleName")
         dir.mkdirs()
 
         logger.level = minLogLevel.level
@@ -94,7 +94,7 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
      */
     override fun log(logLevel: LogLevel, message: String) {
         if (minLogLevel.isLoggable(logLevel)) {
-            logger.log(logLevel.level, ("[$name] $message"))
+            logger.log(logLevel.level, ("[${this.moduleName}] $message"))
         }
     }
 
@@ -147,5 +147,8 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
             return entries.find { it.name == name }
                 ?: throw IllegalArgumentException("No LogScope with name: $name")
         }
+
+        /** モジュール内のログ出力先 */
+        private const val LOG_ROOT = "build"
     }
 }

@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import jp.pgw.lab78.androrm.common.Constants.Element.METHOD
 import jp.pgw.lab78.androrm.common.Constants.ModuleLabel.KSP
+import jp.pgw.lab78.androrm.common.Constants.TERTIARY_DELIMITER
 import jp.pgw.lab78.androrm.common.logging.LogLevel.*
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
 
@@ -15,7 +16,7 @@ object DefaultLogMessageGenerator {
      * @since 2026-05-01
      */
     fun generateInfoMessage(infoMessage: String, methodName: String) =
-        "${KSP.tag} ${INFO.tag}: ${METHOD.tag}: $methodName: ${infoMessage.toSingleLineLogString()}"
+        "${KSP.tag} ${INFO.tag}$TERTIARY_DELIMITER ${METHOD.tag}$TERTIARY_DELIMITER $methodName$TERTIARY_DELIMITER ${infoMessage.toSingleLineLogString()}"
 
     /**
      * ## ワーニングログメッセージ生成
@@ -26,7 +27,7 @@ object DefaultLogMessageGenerator {
      * @since 2026-05-01
      */
     fun generateWarningMessage(warnMessage: String, methodName: String) =
-        "${KSP.tag} ${WARN.tag}: ${METHOD.tag}: $methodName: ${warnMessage.toSingleLineLogString()}"
+        "${KSP.tag} ${WARN.tag}$TERTIARY_DELIMITER ${METHOD.tag}$TERTIARY_DELIMITER $methodName$TERTIARY_DELIMITER ${warnMessage.toSingleLineLogString()}"
 
     /**
      * ## エラーログメッセージ生成
@@ -37,7 +38,7 @@ object DefaultLogMessageGenerator {
      * @since 2026-05-01
      */
     fun generateErrorMessage(errMessage: String, methodName: String) =
-        "${KSP.tag} ${ERROR.tag}: ${METHOD.tag}: $methodName: ${errMessage.toSingleLineLogString()}"
+        "${KSP.tag} ${ERROR.tag}$TERTIARY_DELIMITER ${METHOD.tag}$TERTIARY_DELIMITER $methodName$TERTIARY_DELIMITER ${errMessage.toSingleLineLogString()}"
 
     /**
      * ## デバッグログメッセージ生成
@@ -48,7 +49,7 @@ object DefaultLogMessageGenerator {
      * @since 2026-05-01
      */
     fun generateDebugMessage(debugMessage: String, methodName: String) =
-        "${KSP.tag} ${DEBUG.tag}: ${METHOD.tag}: $methodName: ${debugMessage.toSingleLineLogString()}"
+        "${KSP.tag} ${DEBUG.tag}$TERTIARY_DELIMITER ${METHOD.tag}$TERTIARY_DELIMITER $methodName$TERTIARY_DELIMITER ${debugMessage.toSingleLineLogString()}"
 
     /**
      * ## トレースログメッセージ生成
@@ -58,5 +59,5 @@ object DefaultLogMessageGenerator {
      * @since 2026-05-01
      */
     fun generateTraceMessage(methodName: String) =
-        "${KSP.tag} ${TRACE.tag}: ${METHOD.tag}: $methodName"
+        "${KSP.tag} ${TRACE.tag}$TERTIARY_DELIMITER ${METHOD.tag}$TERTIARY_DELIMITER $methodName"
 }

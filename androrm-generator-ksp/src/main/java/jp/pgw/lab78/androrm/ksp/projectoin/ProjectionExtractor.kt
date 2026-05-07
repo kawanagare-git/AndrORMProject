@@ -6,8 +6,8 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## プロジェクション抽出クラス

@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 
 object CreateLogger {
     /** ログルートディレクトリ */

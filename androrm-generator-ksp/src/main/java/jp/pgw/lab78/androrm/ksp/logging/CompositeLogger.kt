@@ -1,9 +1,10 @@
 package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.KSPLogger
-import jp.pgw.lab78.androrm.common.Constants.COMMA_SPACE
-import jp.pgw.lab78.androrm.common.Constants.Log.*
+import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
+import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
 import jp.pgw.lab78.androrm.common.Constants.ModuleLabel.KSP
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateInfoMessage
@@ -59,7 +60,7 @@ class CompositeLogger(
         loggers.forEach {
             it.logInfo(
                 generateInfoMessage(infoMessage, methodName),
-                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
             )
         }
     }
@@ -105,7 +106,7 @@ class CompositeLogger(
         loggers.forEach {
             it.logWarning(
                 generateWarningMessage(warnMessage, methodName),
-                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
             )
         }
     }
@@ -123,7 +124,7 @@ class CompositeLogger(
         loggers.forEach {
             it.logError(
                 generateErrorMessage(errMessage, methodName),
-                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
             )
         }
     }
@@ -141,7 +142,7 @@ class CompositeLogger(
         loggers.forEach {
             it.logDebug(
                 generateDebugMessage(debugMessage, methodName),
-                concat(details.toList(), COMMA_SPACE).toSingleLineLogString()
+                concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
             )
         }
     }
@@ -160,7 +161,12 @@ class CompositeLogger(
                         if (details.isEmpty()) {
                             ""
                         } else {
-                            ": ${concat(details.toList(), COMMA_SPACE).toSingleLineLogString()}"
+                            ": ${
+                                concat(
+                                    details.toList(),
+                                    ARGUMENT_DELIMITER
+                                ).toSingleLineLogString()
+                            }"
                         }
             )
         }

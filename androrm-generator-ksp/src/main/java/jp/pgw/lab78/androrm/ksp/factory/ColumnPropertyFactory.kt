@@ -8,13 +8,13 @@ import com.squareup.kotlinpoet.ksp.toTypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_FQN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_HIDE_FROM_SELECT
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## Column プロパティファクトリークラス

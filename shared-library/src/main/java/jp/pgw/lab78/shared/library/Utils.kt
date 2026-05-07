@@ -20,4 +20,24 @@ object Utils {
      * @since 2024-10-19
      */
     fun Any?.isNotNull(): Boolean = !this.isNull()
+
+    /**
+     * ## Unit 判定拡張メソッド
+     * ### オブジェクトが Unit かどうかを判定する拡張メソッド
+     * @receiver 判定対象のオブジェクト
+     * @return Unit 判定結果
+     * @author Masahiro Inoue
+     * @since 2026-05-07
+     */
+    fun Any?.isUnit(): Boolean = this == Unit
+
+    /**
+     * ## Void 判定拡張メソッド
+     * ### オブジェクト型が Void かどうかを判定する拡張メソッド
+     * @receiver 判定対象のオブジェクト型
+     * @return Void 判定結果
+     * @author Masahiro Inoue
+     * @since 2026-05-07
+     */
+    fun Class<*>.isVoid(): Boolean = this == Void.TYPE
 }

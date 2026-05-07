@@ -6,6 +6,9 @@ package jp.pgw.lab78.androrm.common
  * @since 2025-08-01
  */
 object Constants {
+    /** ヌルもj亀裂 */
+    const val NULL_STRING = "null"
+
     /** 空文字列 */
     const val EMPTY_STRING = ""
 
@@ -13,25 +16,44 @@ object Constants {
     const val UNKNOWN = "Unknown"
 
     /** 空白 */
-    const val SPACE = " "
+    private const val SPACE = " "
 
     /** カンマ */
-    const val COMMA = ","
+    private const val COMMA = ","
 
-    /** カンマ + スペース */
-    const val COMMA_SPACE = "$COMMA$SPACE"
+    /** スラッシュ */
+    const val SLASH = "/"
+
+    /** コロン */
+    const val COLON = ":"
+
+    /** 優先区切り文字 */
+    const val PRIMARY_DELIMITER = COMMA
+    const val SECONDARY_DELIMITER = SLASH
+    const val TERTIARY_DELIMITER = COLON
+
+    /** 引数区切り文字 */
+    const val ARGUMENT_DELIMITER = "$PRIMARY_DELIMITER$SPACE"
+
+    /** 引数無メッセージ */
+    const val NO_ARGUMENTS = "No arguments"
+
+    /** Unit クラス*/
+    const val UNIT_RETURN = "Unit"
 
     /**
      * ## ログタグ
      * ### ログ出力時のタグを定義する列挙クラス
      * - ENTERED: メソッドに入ったときのログタグ
      * - EXITING: メソッドから出るときのログタグ
+     * - THROWING: 例外が発生したときのログタグ
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    enum class Log(keyword: String) {
+    enum class LogPhase(keyword: String) {
         ENTERED("Entered"),
         EXITING("Exiting"),
+        THROWING("Throwing")
         ;
 
         val tag: String = keyword

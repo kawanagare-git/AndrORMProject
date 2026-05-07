@@ -3,8 +3,8 @@ package jp.pgw.lab78.androrm.ksp.helper
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 
 /**
  * ## インポート収集ヘルパー

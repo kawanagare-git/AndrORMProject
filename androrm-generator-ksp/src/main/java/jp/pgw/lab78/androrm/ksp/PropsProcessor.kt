@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.annotation.*
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.ksp.factory.ColumnPropertyFactory
 import jp.pgw.lab78.androrm.ksp.factory.FunctionPropertyFactory
@@ -17,7 +18,6 @@ import jp.pgw.lab78.androrm.ksp.helper.AnnotationHelper
 import jp.pgw.lab78.androrm.ksp.helper.ImportHelper
 import jp.pgw.lab78.androrm.ksp.helper.TypeHelper
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 import jp.pgw.lab78.androrm.ksp.meta.KspEntityMetaFactory
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionArgumentParser
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition

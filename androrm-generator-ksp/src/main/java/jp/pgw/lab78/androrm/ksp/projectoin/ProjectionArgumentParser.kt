@@ -10,8 +10,8 @@ import jp.pgw.lab78.androrm.common.annotation.ReturnHint
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.CUSTOM
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
-import jp.pgw.lab78.androrm.ksp.logging.LoggerLike
 import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**

@@ -1,4 +1,5 @@
 // ＜app/build.gradle.kts＞
+import com.android.build.gradle.AppExtension
 import io.gitlab.arturbosch.detekt.Detekt
 
 plugins {
@@ -11,6 +12,9 @@ plugins {
     id("io.gitlab.arturbosch.detekt")
 }
 
+val aspectjVersion = "1.9.25.1"
+val aspectjTools by configurations.creating
+
 dependencies {
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
@@ -19,6 +23,9 @@ dependencies {
 
     implementation(libs.core.ktx.v1131)
     testImplementation(libs.junit.jupiter)
+
+    debugImplementation(libs.aspectjrt)
+    aspectjTools(libs.aspectjtools)
 }
 
 android {
@@ -212,4 +219,95 @@ ksp {
 }
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
+}
+
+// debug だけ weaving する task を追加
+val weaveDebugAspectJ by tasks.registering {
+    group = "aspectj"
+    description = "Weave AspectJ aspects into debug classes only."
+
+    dependsOn("compileDebugKotlin")
+
+    // Java compile task が存在する場合だけ依存する
+    dependsOn(
+        tasks.matching { it.name == "compileDebugJavaWithJavac" }
+    )
+
+    doLast {
+        val androidExtension = project.extensions.getByType(AppExtension::class.java)
+
+        val kotlinClassesDir = layout.buildDirectory
+            .dir("tmp/kotlin-classes/debug")
+            .get()
+            .asFile
+
+        val javaCompileTask = tasks.findByName("compileDebugJavaWithJavac") as? JavaCompile
+
+        val javaClassesDir = javaCompileTask
+            ?.destinationDirectory
+            ?.get()
+            ?.asFile
+
+        val targetDirs = listOfNotNull(
+            kotlinClassesDir.takeIf { it.exists() },
+            javaClassesDir?.takeIf { it.exists() },
+        )
+
+        if (targetDirs.isEmpty()) {
+            logger.lifecycle("AspectJ weaving skipped. No debug class directories found.")
+            return@doLast
+        }
+
+        val bootClasspath = androidExtension.bootClasspath
+            .joinToString(File.pathSeparator) { it.absolutePath }
+
+        val compileClasspath = configurations
+            .getByName("debugCompileClasspath")
+            .files
+            .joinToString(File.pathSeparator) { it.absolutePath }
+
+        val aspectPath = targetDirs
+            .joinToString(File.pathSeparator) { it.absolutePath }
+
+        val fullClasspath = listOf(
+            bootClasspath,
+            compileClasspath,
+            aspectPath
+        )
+            .filter { it.isNotBlank() }
+            .joinToString(File.pathSeparator)
+
+        targetDirs.forEach { targetDir ->
+            logger.lifecycle("AspectJ weaving target: ${targetDir.absolutePath}")
+
+            project.javaexec {
+                classpath = aspectjTools
+                mainClass.set("org.aspectj.tools.ajc.Main")
+
+                args(
+                    "-showWeaveInfo",
+                    "-inpath", targetDir.absolutePath,
+                    "-aspectpath", aspectPath,
+                    "-d", targetDir.absolutePath,
+                    "-classpath", fullClasspath,
+                    "-bootclasspath", bootClasspath
+                )
+            }
+        }
+    }
+}
+
+// Kotlin compile 後に weaving する
+tasks.matching { it.name == "compileDebugKotlin" }.configureEach {
+    finalizedBy(weaveDebugAspectJ)
+}
+
+// Java compile task が存在する場合だけ weaving 後続にする
+tasks.matching { it.name == "compileDebugJavaWithJavac" }.configureEach {
+    finalizedBy(weaveDebugAspectJ)
+}
+
+// dex 側が存在する場合だけ weaving を前提にする
+tasks.matching { it.name == "dexBuilderDebug" }.configureEach {
+    dependsOn(weaveDebugAspectJ)
 }
