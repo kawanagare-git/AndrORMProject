@@ -252,7 +252,6 @@ class TraceAspect {
     /**
      * ## ログ基本メッセージ生成
      * ### ログ出力時の基本メッセージを生成
-     * @param level ログレベル
      * @param logPhase ログ出力のフェーズ
      * @param className クラス名
      * @param methodName メソッド名
