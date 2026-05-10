@@ -1,10 +1,10 @@
 package jp.pgw.lab78.androrm.aop
 
+import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.LogPhase
 import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
 import jp.pgw.lab78.androrm.common.Constants.NO_ARGUMENTS
 import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
-import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.TERTIARY_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.UNIT_RETURN
 import jp.pgw.lab78.androrm.common.logging.LogLevel
@@ -91,83 +91,33 @@ class TraceAspect {
         val methodSignature = signature as MethodSignature
         val returnType = methodSignature.returnType
         // メソッドエンターログ
-        logger.log(
-            logLevel.level, enteredMessage(logLevel, joinPoint, className, methodName)
-        )
+        logger.info(generateLogMessage(ENTERED, className, methodName))
+        if (logLevel == TRACE) {
+            logger.finest("$ENTERED args=${formatArgs(joinPoint.args)}")
+        }
         // 実行対象メソッド呼び出し
         val result = try {
             joinPoint.proceed()
         } catch (t: Throwable) {
             // メソッド例外ログ
-            logger.log(logLevel.level, throwingMessage(className, methodName, t))
+            logger.warning(throwingMessage(className, methodName, t))
             throw t
         }
         // メソッドイグジットログ
-        logger.log(
-            logLevel.level, exitingMessage(logLevel, className, methodName, returnType, result)
-        )
-        return result
-    }
-
-    /**
-     * ## エンターログ生成
-     * ### メソッドが呼び出されたときの情報をログ生成
-     * @param logLevel ログレベル
-     * @param joinPoint AOP が保持するインスタンス情報
-     * @param className クラス名
-     * @param methodName メソッド名
-     * @return 生成されたログメッセージ
-     * @author Masahiro Inoue
-     * @since 2026-05-07
-     */
-    private fun enteredMessage(
-        logLevel: LogLevel, joinPoint: ProceedingJoinPoint, className: String, methodName: String
-    ): String {
-        return buildString {
-            // 共通ログメッセージ作成
-            append(generateLogMessage(ENTERED, className, methodName))
-            // トレースログ用メッセージ作成
-            if (logLevel == TRACE) {
-                append("$PRIMARY_DELIMITER args=")
-                append(formatArgs(joinPoint.args))
-            }
-        }
-    }
-
-    /**
-     * ## イグジットログ生成
-     * ### メソッドから抜け出すときの情報をログ生成
-     * @param logLevel ログレベル
-     * @param className クラス名
-     * @param methodName メソッド名
-     * @param result メソッド実行時の戻り値
-     * @return 生成されたログメッセージ
-     * @author Masahiro Inoue
-     * @since 2026-05-07
-     */
-    private fun exitingMessage(
-        logLevel: LogLevel,
-        className: String,
-        methodName: String,
-        returnType: Class<*>,
-        result: Any?
-    ): String {
-        return buildString {
-            // 共通ログメッセージ作成
-            append(generateLogMessage(EXITING, className, methodName))
-            // トレースログ用メッセージ作成
-            if (logLevel == TRACE) {
-                append("$PRIMARY_DELIMITER return=")
-                append(
+        if (logLevel == TRACE) {
+            logger.finest(
+                "$EXITING return=${
                     when {
                         returnType.isVoid() -> UNIT_RETURN
                         result.isUnit() -> UNIT_RETURN
                         result.isNull() -> NULL_STRING
                         else -> result
                     }
-                )
-            }
+                }"
+            )
         }
+        logger.info(generateLogMessage(EXITING, className, methodName))
+        return result
     }
 
     /**
@@ -244,7 +194,7 @@ class TraceAspect {
         return when {
             args.isEmpty() -> NO_ARGUMENTS
             else -> args.joinToString(
-                prefix = "[", postfix = "]", separator = PRIMARY_DELIMITER
+                prefix = "[", postfix = "]", separator = ARGUMENT_DELIMITER
             ) { it?.toString() ?: NULL_STRING }
         }
     }
@@ -259,5 +209,5 @@ class TraceAspect {
     private fun generateLogMessage(
         logPhase: LogPhase, className: String, methodName: String
     ) =
-        "${logPhase.name}$TERTIARY_DELIMITER class=$className$PRIMARY_DELIMITER method=$methodName"
+        "${logPhase.name}$TERTIARY_DELIMITER class=$className${ARGUMENT_DELIMITER}method=$methodName"
 }
