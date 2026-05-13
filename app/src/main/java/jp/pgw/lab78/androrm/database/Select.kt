@@ -12,8 +12,6 @@ import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
-import jp.pgw.lab78.androrm.database.DmlConstant.ANY_CLOSE_BRACKET_REGEX
-import jp.pgw.lab78.androrm.database.DmlConstant.ANY_OPEN_BRACKET_REGEX
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
@@ -23,6 +21,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.EnumMap
 import java.util.Locale
@@ -34,33 +33,50 @@ import kotlin.reflect.full.memberProperties
 /**
  * ## Select 文生成クラス
  * ### select 句を構成する要素を基に select 文を生成します
+ * @param fromTable テーブル参照情報
+ * @param isDistinct select 文で distinct を指定する場合は true
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
 class Select<T : SelectEntity>(
-    fromEntity: KClass<out T>,
+    private val fromTable: TableRef<out T>,
     private val isDistinct: Boolean = false,
 ) : QueryWithBindValues(), QueryStructureLike {
+    /**
+     * ## コンストラクタ
+     * @param fromEntity エンティティクラス
+     * @param isDistinct select 文で distinct を指定する場合は true
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    constructor(
+        fromEntity: KClass<out T>,
+        isDistinct: Boolean = false,
+    ) : this(
+        TableRef(
+            entityClass = fromEntity,
+            alias = RuntimeEntityMetaFactory().create(fromEntity).tableAlias,
+        ),
+        isDistinct,
+    )
+
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
     /** Select クラスで使用するエンティティクラスのリスト */
     private val usedEntityClasses = mutableListOf<KClass<out SelectEntity>>()
 
-    /** テーブル名ごとの使用回数 */
-    private val tableAliasUseCountMap = mutableMapOf<String, Int>()
-
     /** Entity メタ情報生成 */
     private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
 
     /** 主 Entity の正規化済みメタ情報 */
-    private val mainEntityMeta = runtimeEntityMetaFactory.create(fromEntity)
+    private val mainEntityMeta = runtimeEntityMetaFactory.create(fromTable.entityClass)
 
     /** テーブル名 */
     private val mainTableName = mainEntityMeta.tableName
 
     /** テーブルエイリアス */
-    private val mainTableAlias = mainEntityMeta.tableAlias
+    private val mainTableAlias = fromTable.alias
 
     /** クエリの構文を管理するマップ */
     private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
@@ -82,6 +98,9 @@ class Select<T : SelectEntity>(
 
     /** クエリ格納 */
     private lateinit var query: String
+
+    /** 使用済みテーブルエイリアス */
+    private val usedTableAliases = mutableSetOf<String>()
 
     /** ビルドフラグ */
     private var isBuild: Boolean = false
@@ -123,15 +142,14 @@ class Select<T : SelectEntity>(
         fun initialize() {
             // 主 Entity のメタ情報を検証
             validateEntityMeta(mainEntityMeta)
-            // 主テーブルは使用回数 1 として登録
-            tableAliasUseCountMap[mainTableName] = 1
             // 主テーブルの SELECT 対象列を追加
             appendSelectableColumns(mainEntityMeta, mainTableAlias)
             // from 句とテーブル名の定義を設定
             queryStructureMap[SelectClause.SELECT] =
                 mutableListOf("from $mainTableName $mainTableAlias")
             // select 文で使用するエンティティクラスを登録
-            usedEntityClasses += fromEntity
+            usedEntityClasses += fromTable.entityClass
+            registerTableAlias(mainTableName, mainTableAlias)
         }
         initialize()
     }
@@ -155,26 +173,58 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
         on: ConditionBuilder.() -> Unit
     ): Select<T> {
-        isBuild = false
-        // 結合テーブル名取得
+        // 結合対象の Entity メタ情報を生成
         val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
+        // テーブル結合の指定
+        return join(
+            joinType = joinType,
+            joinedTable = TableRef(
+                entityClass = joinedEntity,
+                alias = joinedEntityMeta.tableAlias,
+            ),
+            on = on,
+        )
+    }
+
+    /**
+     * ## join メソッド
+     * ### テーブル結合を指定する
+     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
+     * @param joinedTable 結合するエンティティクラス（副クラス）
+     * @param on 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
+     * @return 自身のインスタンス(this)
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    @InfoLog
+    @TraceLog
+    fun join(
+        joinType: JoinType,
+        joinedTable: TableRef<out SelectEntity>,
+        on: ConditionBuilder.() -> Unit
+    ): Select<T> {
+        isBuild = false
+        // 結合対象の Entity メタ情報を生成
+        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedTable.entityClass)
         validateEntityMeta(joinedEntityMeta)
-        // テーブル名の取得
+        // 結合対象のテーブル名とエイリアスを取得
         val joinedTableName = joinedEntityMeta.tableName
-        // テーブルエイリアスの取得（重複時連番付与）
-        val joinedTableAlias =
-            resolveJoinedTableAlias(joinedEntityMeta.tableName, joinedEntityMeta.tableAlias)
-        // join 先テーブルの SELECT 対象列を追加
+        val joinedTableAlias = joinedTable.alias
+        // テーブル名とテーブルエイリアスの組み合わせを登録、重複時は例外
+        registerTableAlias(joinedTableName, joinedTableAlias)
+        // 結合対象のテーブルの SELECT 対象列を追加
         appendSelectableColumns(joinedEntityMeta, joinedTableAlias)
-        // 結合条件の取得
+        // 結合条件を生成
         val joinCondition = ConditionBuilder(this).apply(on).buildList()
+        // join句の生成
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
                 "${joinType.name.lowercase(Locale.ROOT)} "
                         + "join $joinedTableName $joinedTableAlias"
                         + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
             )
-        usedEntityClasses += joinedEntity
+        // エンティティクラスを登録
+        usedEntityClasses += joinedTable.entityClass
         return this
     }
 
@@ -193,20 +243,47 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
     ): JoinCondition {
         isBuild = false
-        return JoinCondition(joinType, joinedEntity)
+        //
+        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
+
+        return JoinCondition(
+            joinType = joinType,
+            joinedTable = TableRef(
+                entityClass = joinedEntity,
+                alias = joinedEntityMeta.tableAlias,
+            ),
+        )
+    }
+
+    /**
+     * ## join メソッド
+     * ### テーブル結合を指定する
+     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
+     * @param joinedTable 結合するエンティティクラス（副クラス）
+     * @return 自身のインスタンス(this)
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    @InfoLog
+    fun join(
+        joinType: JoinType,
+        joinedTable: TableRef<out SelectEntity>,
+    ): JoinCondition {
+        isBuild = false
+        return JoinCondition(joinType, joinedTable)
     }
 
     /**
      * ## JoinCondition クラス
      * ### join メソッド内で使用する結合条件クラス
      * @param joinType 結合方法
-     * @param joinedEntity 結合するエンティティクラス
+     * @param joinedTable 結合するエンティティクラス
      * @author Masahiro Inoue
      * @since 2026-01-11
      */
     inner class JoinCondition(
         private val joinType: JoinType,
-        private val joinedEntity: KClass<out SelectEntity>,
+        private val joinedTable: TableRef<out SelectEntity>,
     ) {
 
         /** ## on メソッド
@@ -218,7 +295,7 @@ class Select<T : SelectEntity>(
          */
         @InfoLog
         fun on(block: ConditionBuilder.() -> Unit): Select<T> =
-            this@Select.join(joinType, joinedEntity, block)
+            this@Select.join(joinType, joinedTable, block)
     }
 
     /**
@@ -259,6 +336,24 @@ class Select<T : SelectEntity>(
             }
         }
         return this
+    }
+
+    /**
+     * ## テーブルエイリアス登録
+     * ### 同一 Select 内で同じ alias が再利用されないよう検証する
+     * @param tableName テーブル名
+     * @param tableAlias テーブルエイリアス
+     */
+    @InfoLog
+    private fun registerTableAlias(
+        tableName: String,
+        tableAlias: String,
+    ) {
+        require(usedTableAliases.add(tableAlias)) {
+            "Duplicate table alias '$tableAlias' was detected. " +
+                    "tableName='$tableName'. " +
+                    "Use a different alias with table(..., alias = \"...\")."
+        }
     }
 
     /**
@@ -316,35 +411,15 @@ class Select<T : SelectEntity>(
     }
 
     /**
-     * ## 結合テーブルエイリアス解決
-     * ### 同一テーブルが再利用された場合、2回目以降に連番を付与する
-     * @param tableName テーブル名
-     * @param baseAlias 基本テーブルエイリアス
-     * @return 解決済みテーブルエイリアス
-     * @return 解決済みテーブルエイリアス
-     */
-    @InfoLog
-    private fun resolveJoinedTableAlias(tableName: String, baseAlias: String): String {
-        // テーブルエイリアスの後ろに付与する番号
-        val nextCount = (tableAliasUseCountMap[tableName] ?: 0) + 1
-        tableAliasUseCountMap[tableName] = nextCount
-        // テーブルエイリアスの番号が1検査
-        return if (nextCount == 1) {
-            // エイリアスをそのまま出力
-            baseAlias
-        } else {
-            // エイリアスに番号を付与
-            "${baseAlias}_$nextCount"
-        }
-    }
-
-    /**
      * ## SELECT 対象列追加
      * ### hideFromSelect = true の列を除外し、SELECT 句リストへ追加する
      * @param entityMeta 対象 Entity のメタ情報
      * @param tableAlias 使用するテーブルエイリアス
+     * @author Masahiro Inoue
+     * @since 2026-04-28
      */
     @InfoLog
+    @TraceLog
     private fun appendSelectableColumns(entityMeta: EntityMeta, tableAlias: String) {
         entityMeta.properties
             .filterNot { it.hideFromSelect }
@@ -369,8 +444,8 @@ class Select<T : SelectEntity>(
         tableAlias: String,
         propertyMeta: PropertyMeta
     ): String = if (!propertyMeta.isFunction) {
-        // 通常カラムの場合、テーブルエイリアスとカラム名を組み合わせてエイリアスを付与して返す
-        "$mainTableAlias.${propertyMeta.columnName} as ${mainTableAlias}_${propertyMeta.aliasName}"
+        // 通常カラムの場合、使用中のテーブルエイリアスとカラム名を組み合わせてエイリアスを付与して返す
+        "$tableAlias.${propertyMeta.columnName} as ${tableAlias}_${propertyMeta.aliasName}"
     } else {
         // 関数列の場合、関数式を生成
         val functionExpression = propertyMeta.rawFunction.takeIf { it.isNotBlank() }
@@ -385,8 +460,8 @@ class Select<T : SelectEntity>(
                 // 関数式を生成
                 functionType.createQuery(*args)
             }
-        // 関数式にエイリアスを付与して返す
-        "$functionExpression as ${mainTableAlias}_${propertyMeta.aliasName}"
+        // 関数式に使用中のテーブルエイリアスを基準にした別名を付与して返す
+        "$functionExpression as ${tableAlias}_${propertyMeta.aliasName}"
     }
 
     /**
@@ -461,9 +536,7 @@ class Select<T : SelectEntity>(
             val otherClauses = SelectClause.entries
                 .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
             // select 文を生成
-            query = "$selectClause $otherClauses".replace(ANY_OPEN_BRACKET_REGEX, "(")
-                .replace(ANY_CLOSE_BRACKET_REGEX, ")")
-                .replace(MULTI_SPACE_REGEX, " ").trim()
+            query = "$selectClause $otherClauses".replace(MULTI_SPACE_REGEX, " ").trim()
         }
         return query
     }

@@ -41,6 +41,9 @@ object Constants {
     /** Unit クラス*/
     const val UNIT_RETURN = "Unit"
 
+    /** ディレクトリィ区切り文字 */
+    const val DIRECTORY_DELIMITER = SECONDARY_DELIMITER
+
     /**
      * ## ログタグ
      * ### ログ出力時のタグを定義する列挙クラス

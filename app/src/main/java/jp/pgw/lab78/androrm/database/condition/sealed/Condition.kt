@@ -8,6 +8,7 @@ import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
+import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
 import kotlin.reflect.KProperty1
 
@@ -40,8 +41,9 @@ sealed class Compare : Condition() {
      * ## 検索条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param lhsProperty 検索条件のカラム
-     * @param operator 検索演算子
+     * @param operator 比較演算子
      * @param value 検索値
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -60,21 +62,22 @@ sealed class Compare : Condition() {
          */
         override fun build(): String {
             return "${lhsProperty.extractClassFromProperty().getTableAlias()}." +
-                    "${lhsProperty.getColumn()} ${operator.symbol} $value"
+                    "${lhsProperty.getColumn()} ${operator.symbol} ${value.toSqlConditionText()}"
         }
     }
 
     /**
      * ## 範囲条件記述用クラス
      * ### BETWEEN 範囲条件を指定
-     * @param property 検索条件のカラム
+     * @param lhsProperty 検索条件のカラム
      * @param start 下限検索値
      * @param end 上限検索値
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-09-13
      */
     data class Between<T : Entity>(
-        val property: KProperty1<T, *>,
+        val lhsProperty: KProperty1<T, *>,
         val start: Any,
         val end: Any
     ) : Condition() {
@@ -87,7 +90,8 @@ sealed class Compare : Condition() {
          * @since 2025-09-13
          */
         override fun build(): String {
-            return "${property.getColumn()} between $start and $end"
+            return "${lhsProperty.extractClassFromProperty().getTableAlias()}." +
+                    "${lhsProperty.getColumn()} between $start and $end"
         }
     }
 
@@ -120,6 +124,7 @@ sealed class Compare : Condition() {
      * ## EXISTS 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param subQuery サブクエリ
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -143,6 +148,7 @@ sealed class Compare : Condition() {
      * ## NOT EXISTS 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param subQuery サブクエリ
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -166,6 +172,7 @@ sealed class Compare : Condition() {
      * ## null 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param lhsProperty 検索条件のカラム
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -188,9 +195,10 @@ sealed class Compare : Condition() {
     }
 
     /**
-     * ## null 条件記述用クラス
+     * ## not null 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param lhsProperty 検索条件のカラム
+     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -210,6 +218,110 @@ sealed class Compare : Condition() {
             val column = lhsProperty.getColumn()
             return "${alias}.$column ${IS_NOT_NULL.symbol}"
         }
+    }
+
+    /**
+     * ## alias 明示カラムと値の比較条件
+     * ### TableRef から生成した ColumnRef を使用する
+     * @param lhsColumn 検索条件のカラム参照情報
+     * @param operator 比較条件
+     * @param value 検索値
+     * @return 条件インスタンスを返却（this）
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    data class ColumnValue(
+        val lhsColumn: ColumnRef<out Entity, *>,
+        val operator: ComparisonOperator,
+        val value: Any
+    ) : Condition() {
+
+        override fun build(): String {
+            return "${lhsColumn.build()} ${operator.symbol} ${value.toSqlConditionText()}"
+        }
+    }
+
+    /**
+     * ## alias 明示カラム同士の比較条件
+     * ### 同一 Entity 複数 join 時に alias を明示して比較する
+     * @param lhsColumn 検索条件のカラム参照情報（左辺）
+     * @param operator 比較条件
+     * @param rhsColumn 検索条件のカラム参照情報（右辺）
+     * @return 条件インスタンスを返却（this）
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    data class ColumnColumn(
+        val lhsColumn: ColumnRef<out Entity, *>,
+        val operator: ComparisonOperator,
+        val rhsColumn: ColumnRef<out Entity, *>,
+    ) : Condition() {
+
+        override fun build(): String {
+            return "${lhsColumn.build()} ${operator.symbol} ${rhsColumn.build()}"
+        }
+    }
+
+    /**
+     * ## alias 明示カラムの BETWEEN 条件
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    data class ColumnBetween(
+        val column: ColumnRef<out Entity, *>,
+        val start: Any,
+        val end: Any,
+    ) : Condition() {
+
+        override fun build(): String {
+            return "${column.build()} between $start and $end"
+        }
+    }
+
+    /**
+     * ## alias 明示カラムの IS NULL 条件
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    data class ColumnIsNull(
+        val column: ColumnRef<out Entity, *>,
+    ) : Condition() {
+
+        override fun build(): String {
+            return "${column.build()} ${IS_NULL.symbol}"
+        }
+    }
+
+    /**
+     * ## alias 明示カラムの IS NOT NULL 条件
+     * ### where に使用する単一条件を指定
+     * @param column 検索条件のカラム
+     * @author Masahiro Inoue
+     * @since 2026-05-12
+     */
+    data class ColumnIsNotNull(
+        val column: ColumnRef<out Entity, *>,
+    ) : Condition() {
+
+        override fun build(): String {
+            return "${column.build()} ${IS_NOT_NULL.symbol}"
+        }
+    }
+}
+
+/**
+ * ## SQL 条件文字列生成メソッド
+ * ### 右辺に来る文字列を生成
+ * @receiver 右辺に来るクラスのインスタンス
+ * @return 生成された文字列
+ * @author Masahiro Inoue
+ * @since 2026-05-12
+ */
+private fun Any.toSqlConditionText(): String {
+    return when (this) {
+        is Collection<*> -> this.joinToString(", ", "(", ")")
+        is ColumnRef<*, *> -> this.build()
+        else -> this.toString()
     }
 }
 

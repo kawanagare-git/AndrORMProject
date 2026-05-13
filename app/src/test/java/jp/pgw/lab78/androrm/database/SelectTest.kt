@@ -296,7 +296,18 @@ class SelectTest {
         println("${SELECT.build()}; values = ${SELECT.bindValues}")
     }
 
+    @Test
+    fun build12() {
+        SELECT = Select(EmployeeEntityIdSelection::class)
+            .where { EmployeeEntityIdSelection::employeeId inList (listOf(10, 20, 30)) }
+            .order {
+                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
+            }
+        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+    }
+
     private fun KClass<out SelectEntity>.prop(name: String): KProperty1<out SelectEntity, *> =
         this.memberProperties
             .firstOrNull { it.name == name } as KProperty1<out SelectEntity, *>
+
 }

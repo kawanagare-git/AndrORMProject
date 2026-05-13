@@ -52,9 +52,11 @@ class TraceAspect {
      */
     @Around(
         "execution(* *(..)) && (" +
-                "@annotation(jp.pgw.lab78.androrm.common.logging.aop.InfoLog)" +
-                " || @annotation(jp.pgw.lab78.androrm.common.logging.aop.TraceLog)" +
-                ")"
+                "@annotation(jp.pgw.lab78.androrm.common.logging.aop.InfoLog) || " +
+                "@annotation(jp.pgw.lab78.androrm.common.logging.aop.TraceLog)" +
+                ") && " +
+                "!within(jp.pgw.lab78.androrm.aop..*) && " +
+                "!within(jp.pgw.lab78.androrm..*AjcClosure*)"
     )
     fun aroundLog(joinPoint: ProceedingJoinPoint): Any? {
         // メソッド情報の取得

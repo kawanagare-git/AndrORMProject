@@ -221,10 +221,10 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 }
 
-// debug だけ weaving する task を追加
+// debug だけ weaving する task
 val weaveDebugAspectJ by tasks.registering {
     group = "aspectj"
-    description = "Weave AspectJ aspects into debug classes only."
+    description = "Weave AspectJ aspects into debug classes without in-place weaving."
 
     dependsOn("compileDebugKotlin")
 
@@ -258,6 +258,29 @@ val weaveDebugAspectJ by tasks.registering {
             return@doLast
         }
 
+        val inputRoot = layout.buildDirectory
+            .dir("tmp/aspectj-input/debug")
+            .get()
+            .asFile
+
+        val wovenRoot = layout.buildDirectory
+            .dir("tmp/aspectj-woven/debug")
+            .get()
+            .asFile
+
+        // AJC の入力・出力を毎回作り直す
+        project.delete(inputRoot)
+        project.delete(wovenRoot)
+        inputRoot.mkdirs()
+        wovenRoot.mkdirs()
+
+        // 元の class directory を staging input にコピーする
+        val inputDirs = targetDirs.mapIndexed { index, targetDir ->
+            val inputDir = File(inputRoot, "classes_$index")
+            targetDir.copyRecursively(inputDir, overwrite = true)
+            inputDir
+        }
+
         val bootClasspath = androidExtension.bootClasspath
             .joinToString(File.pathSeparator) { it.absolutePath }
 
@@ -266,19 +289,29 @@ val weaveDebugAspectJ by tasks.registering {
             .files
             .joinToString(File.pathSeparator) { it.absolutePath }
 
-        val aspectPath = targetDirs
+        val aspectPath = inputDirs
+            .joinToString(File.pathSeparator) { it.absolutePath }
+
+        val inputClasspath = inputDirs
             .joinToString(File.pathSeparator) { it.absolutePath }
 
         val fullClasspath = listOf(
             bootClasspath,
             compileClasspath,
-            aspectPath
+            inputClasspath,
         )
             .filter { it.isNotBlank() }
             .joinToString(File.pathSeparator)
 
-        targetDirs.forEach { targetDir ->
-            logger.lifecycle("AspectJ weaving target: ${targetDir.absolutePath}")
+        inputDirs.forEachIndexed { index, inputDir ->
+            val targetDir = targetDirs[index]
+            val outputDir = File(wovenRoot, "classes_$index")
+
+            // AJC が変更しない class も消えないよう、先に入力を出力へコピーする
+            inputDir.copyRecursively(outputDir, overwrite = true)
+
+            logger.lifecycle("AspectJ weaving input : ${inputDir.absolutePath}")
+            logger.lifecycle("AspectJ weaving output: ${outputDir.absolutePath}")
 
             project.javaexec {
                 classpath = aspectjTools
@@ -286,28 +319,46 @@ val weaveDebugAspectJ by tasks.registering {
 
                 args(
                     "-showWeaveInfo",
-                    "-inpath", targetDir.absolutePath,
+                    "-inpath", inputDir.absolutePath,
                     "-aspectpath", aspectPath,
-                    "-d", targetDir.absolutePath,
+                    "-d", outputDir.absolutePath,
                     "-classpath", fullClasspath,
                     "-bootclasspath", bootClasspath
                 )
             }
+
+            // AJC 完了後にだけ、元の class directory を置き換える
+            project.delete(targetDir)
+            targetDir.mkdirs()
+            outputDir.copyRecursively(targetDir, overwrite = true)
         }
     }
 }
 
 // Kotlin compile 後に weaving する
 tasks.matching { it.name == "compileDebugKotlin" }.configureEach {
-    finalizedBy(weaveDebugAspectJ)
+    outputs.upToDateWhen { false }
+    doFirst {
+        project.delete(
+            layout.buildDirectory.dir("tmp/kotlin-classes/debug").get().asFile
+        )
+    }
 }
 
 // Java compile task が存在する場合だけ weaving 後続にする
 tasks.matching { it.name == "compileDebugJavaWithJavac" }.configureEach {
-    finalizedBy(weaveDebugAspectJ)
+    outputs.upToDateWhen { false }
+    doFirst {
+        val javaCompileTask = this as JavaCompile
+        project.delete(javaCompileTask.destinationDirectory.get().asFile)
+    }
 }
 
 // dex 側が存在する場合だけ weaving を前提にする
+tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
+    dependsOn(weaveDebugAspectJ)
+}
+
 tasks.matching { it.name == "dexBuilderDebug" }.configureEach {
     dependsOn(weaveDebugAspectJ)
 }

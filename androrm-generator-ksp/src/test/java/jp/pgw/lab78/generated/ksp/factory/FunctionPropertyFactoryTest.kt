@@ -2,6 +2,7 @@ package jp.pgw.lab78.generated.ksp.factory
 
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
+import jp.pgw.lab78.androrm.common.Constants.DIRECTORY_DELIMITER
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.ReturnHint
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
@@ -37,7 +38,7 @@ class FunctionPropertyFactoryTest {
         // モックの挙動を定義
         whenever(mockProcessor.logger).thenReturn(mockKspLogger)
         whenever(mockProcessor.options).thenReturn(
-            mapOf("androrm.moduleDir" to "build/test-module")
+            mapOf("androrm.moduleDir" to "build${DIRECTORY_DELIMITER}test-module")
         )
         // ログの初期化
         CreateLogger.initialize(mockProcessor)
