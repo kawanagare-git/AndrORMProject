@@ -22,6 +22,8 @@ import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.validation.DuplicateMethodCallValidator
+import jp.pgw.lab78.androrm.database.validation.QueryMethodCall
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.EnumMap
 import java.util.Locale
@@ -102,6 +104,16 @@ class Select<T : SelectEntity>(
     /** 使用済みテーブルエイリアス */
     private val usedTableAliases = mutableSetOf<String>()
 
+    /** 重複メソッド呼び出し検証インスタンス */
+    private val duplicateMethodCallValidator =
+        DuplicateMethodCallValidator<SelectClause>("Select")
+
+    /** 最大読み出し行数 */
+    private var limitValue: Int? = null
+
+    /** 読み出し開始行 */
+    private var offsetValue: Int? = null
+
     /** ビルドフラグ */
     private var isBuild: Boolean = false
 
@@ -111,13 +123,18 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    private enum class SelectClause(val sql: String) {
-        SELECT("select"),
-        JOIN("join"),
-        WHERE("where"),
-        GROUP("group by"),
-        HAVING("having"),
-        ORDER("order by")
+    private enum class SelectClause(
+        val sql: String,
+        override val methodName: String,
+    ) : QueryMethodCall {
+        SELECT("select", ""),
+        JOIN("join", ""),
+        WHERE("where", "where"),
+        GROUP("group by", ""),
+        HAVING("having", "having"),
+        ORDER("order by", "order"),
+        LIMIT("limit", "limit"),
+        OFFSET("offset", "offset"),
     }
 
     /**
@@ -308,6 +325,7 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.WHERE)
         isBuild = false
         val builder = ConditionBuilder(this).apply(block)
         // Select は builder の中身を意識せず、リストだけ取得して保持
@@ -325,6 +343,7 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.HAVING)
         isBuild = false
         val builder = HavingConditionBuilder(this).apply(block)
         havingConditions += builder.buildList()
@@ -381,9 +400,47 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     fun order(by: OrderDsl.() -> Unit): Select<T> {
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.ORDER)
         isBuild = false
         val builder = OrderDsl().apply(by)
         orderColumns += builder.orders
+        return this
+    }
+
+    /**
+     * ## limit メソッド
+     * ### 最大レコード件数を指定する
+     * @param limitValue 最大レコード件数
+     * @return 自身のインスタンス(this)
+     * @author Masahiro Inoue
+     * @since 2026-05-14
+     */
+    @InfoLog
+    fun limit(limitValue: Int = 10): Select<T> {
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
+        require(limitValue >= 0) {
+            "limitValue must be greater than or equal to 0."
+        }
+        isBuild = false
+        this.limitValue = limitValue
+        return this
+    }
+
+    /**
+     * ## offset メソッド
+     * ### 読み出し開始レコードを指定する
+     * @return 自身のインスタンス(this)
+     * @author Masahiro Inoue
+     * @since 2026-05-14
+     */
+    @InfoLog
+    fun offset(offsetValue: Int = 0): Select<T> {
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
+        require(offsetValue >= 0) {
+            "offsetValue must be greater than or equal to 0."
+        }
+        isBuild = false
+        this.offsetValue = offsetValue
         return this
     }
 

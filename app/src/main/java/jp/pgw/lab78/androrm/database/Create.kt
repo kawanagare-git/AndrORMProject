@@ -16,20 +16,23 @@ import kotlin.reflect.KClass
  */
 class Create<T : TableDefinitionEntity>(
     private val entityClass: KClass<out T>
-): QueryBuilderLike<Any?> {
+) : QueryBuilderLike<Any?> {
     /**
      * ## CREATE 文文字列生成関数
      * ### テーブルを作成するクエリを生成する
      * @author Masahiro Inoue
      * @since 2025-08-08
      */
-    override fun  build(): String {
+    override fun build(): String {
         /** テーブル名の生成 */
         val tableName = entityClass.getTableName()
+
         /** カラム定義の生成 */
         val columnList = entityClass.getColumnDefinitions()
-        return "CREATE TABLE $tableName (${columnList.joinToString(", ") {
-                (columnName, sqlType) -> "$columnName $sqlType"
-        }})"
+        return "CREATE TABLE $tableName (${
+            columnList.joinToString(", ") { (columnName, sqlType) ->
+                "$columnName $sqlType"
+            }
+        })"
     }
 }

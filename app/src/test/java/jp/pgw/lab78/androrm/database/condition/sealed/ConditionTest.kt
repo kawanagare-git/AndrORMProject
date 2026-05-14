@@ -1,17 +1,12 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
-import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
-import jp.pgw.lab78.androrm.database.reference.ColumnRef
-import jp.pgw.lab78.androrm.database.reference.TableRef
-
+import jp.pgw.lab78.androrm.support.SupportOperation.changeColumnRef
+import jp.pgw.lab78.androrm.support.SupportOperation.changeProperty
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
-import java.util.stream.Stream
+import org.junit.jupiter.params.provider.CsvSource
 
 /**
  * ## Condition テスト
@@ -19,110 +14,83 @@ import java.util.stream.Stream
  */
 class ConditionTest {
 
-    companion object {
-
-        @JvmStatic
-        fun valueConditionCases(): Stream<Arguments> =
-            Stream.of(
-                Arguments.of(EQ, "?", "EMP.EMPLOYEE_ID = ?"),
-                Arguments.of(NE, "?", "EMP.EMPLOYEE_ID <> ?"),
-                Arguments.of(GT, "?", "EMP.EMPLOYEE_ID > ?"),
-                Arguments.of(GE, "?", "EMP.EMPLOYEE_ID >= ?"),
-                Arguments.of(LT, "?", "EMP.EMPLOYEE_ID < ?"),
-                Arguments.of(LE, "?", "EMP.EMPLOYEE_ID <= ?"),
-                Arguments.of(LIKE, "?", "EMP.EMPLOYEE_ID like ?"),
-                Arguments.of(NOT_LIKE, "?", "EMP.EMPLOYEE_ID not like ?"),
-                Arguments.of(GLOB, "?", "EMP.EMPLOYEE_ID glob ?"),
-                Arguments.of(NOT_GLOB, "?", "EMP.EMPLOYEE_ID not glob ?"),
-            )
-
-        @JvmStatic
-        fun inConditionCases(): Stream<Arguments> =
-            Stream.of(
-                Arguments.of(IN, listOf("?", "?", "?"), "EMP.EMPLOYEE_ID in (?, ?, ?)"),
-                Arguments.of(NOT_IN, listOf("?", "?", "?"), "EMP.EMPLOYEE_ID not in (?, ?, ?)"),
-            )
-    }
-
     @ParameterizedTest
-    @MethodSource("valueConditionCases")
+    @CsvSource(
+        "'EQ','EMP.EMPLOYEE_ID = ?'",
+        "'NE','EMP.EMPLOYEE_ID <> ?'",
+        "'GT','EMP.EMPLOYEE_ID > ?'",
+        "'GE','EMP.EMPLOYEE_ID >= ?'",
+        "'LT','EMP.EMPLOYEE_ID < ?'",
+        "'LE','EMP.EMPLOYEE_ID <= ?'",
+        "'LIKE','EMP.EMPLOYEE_ID like ?'",
+        "'NOT_LIKE','EMP.EMPLOYEE_ID not like ?'",
+        "'GLOB','EMP.EMPLOYEE_ID glob ?'",
+        "'NOT_GLOB','EMP.EMPLOYEE_ID not glob ?'"
+    )
     fun value_shouldBuildExpectedSql(
         operator: ComparisonOperator,
-        value: Any,
         expected: String,
     ) {
         val condition = Compare.Value(
             lhsProperty = EmployeeEntity::employeeId,
             operator = operator,
-            value = value,
+            value = "?",
         )
-
         assertEquals(expected, condition.build())
     }
 
     @ParameterizedTest
-    @MethodSource("inConditionCases")
+    @CsvSource(
+        "'IN',3,'EMP.EMPLOYEE_ID in (?, ?, ?)'",
+        "'NOT_IN',5,'EMP.EMPLOYEE_ID not in (?, ?, ?, ?, ?)'"
+    )
     fun value_shouldBuildExpectedSql_whenValueIsList(
         operator: ComparisonOperator,
-        value: Any,
+        value: Int,
         expected: String,
     ) {
+        val valueList = mutableListOf<Any>()
+        for (i in 1..value) {
+            valueList += "?"
+        }
         val condition = Compare.Value(
             lhsProperty = EmployeeEntity::employeeId,
             operator = operator,
-            value = value,
+            value = valueList,
         )
-
         assertEquals(expected, condition.build())
     }
 
-    @Test
-    fun between_shouldBuildExpectedSql() {
-        val tabRef = TableRef(EmployeeEntity::class, "EMP")
-        val colRef = ColumnRef(tabRef, EmployeeEntity::employeeId)
-        val condition = Compare.ColumnBetween(
-            column = colRef,
-            start = "?",
-            end = "?",
-        )
-
-        assertEquals(
-            "EMP.EMPLOYEE_ID between ? and ?",
-            condition.build()
-        )
+    @ParameterizedTest
+    @CsvSource("'EmployeeEntity::employeeId', 'EMP.EMPLOYEE_ID between ? and ?'")
+    fun between_shouldBuildExpectedSql(refString: String, expected: String) {
+        val ref = changeColumnRef(refString)
+        val condition = Compare.ColumnBetween(column = ref, start = "?", end = "?")
+        assertEquals(expected, condition.build())
     }
 
-    @Test
-    fun isNull_shouldBuildExpectedSql() {
-        val condition = Compare.IsNull(
-            lhsProperty = EmployeeEntity::employeeSubId,
-        )
-
-        assertEquals(
-            "EMP.EMPLOYEE_SUB_ID is null",
-            condition.build()
-        )
+    @ParameterizedTest
+    @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is null'")
+    fun isNull_shouldBuildExpectedSql(propertyString: String, expected: String) {
+        val property = changeProperty(propertyString)
+        val condition = Compare.IsNull(lhsProperty = property)
+        assertEquals(expected, condition.build())
     }
 
-    @Test
-    fun isNotNull_shouldBuildExpectedSql() {
-        val condition = Compare.IsNotNull(
-            lhsProperty = EmployeeEntity::employeeSubId,
-        )
-
-        assertEquals(
-            "EMP.EMPLOYEE_SUB_ID is not null",
-            condition.build()
-        )
+    @ParameterizedTest
+    @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is not null'")
+    fun isNotNull_shouldBuildExpectedSql(
+        propertyString: String, expected: String
+    ) {
+        val property = changeProperty(propertyString)
+        val condition = Compare.IsNotNull(lhsProperty = property)
+        assertEquals(expected, condition.build())
     }
 
-    @Test
-    fun freeText_shouldReturnOriginalText() {
-        val condition = FreeText("EMP.EMPLOYEE_ID = ?")
-
-        assertEquals(
-            "EMP.EMPLOYEE_ID = ?",
-            condition.build()
-        )
+    @ParameterizedTest
+    @CsvSource("'EMP.EMPLOYEE_ID = ?','EMP.EMPLOYEE_ID = ?'")
+    fun freeText_shouldReturnOriginalText(actualBase: String, expected: String) {
+        val condition = FreeText(actualBase)
+        assertEquals(expected, condition.build())
     }
 }
