@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
+import jp.pgw.lab78.androrm.common.Constants.LogicalOperator
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
@@ -379,7 +380,7 @@ data class GroupByColumn(
  * @since 2025-08-01
  */
 data class LogicalCondition(
-    val operator: String = "AND", // "AND" または "OR"
+    val operator: String = LogicalOperator.AND.query, // "AND" または "OR"
     val conditions: List<Condition>
 ) : Condition() {
 
@@ -404,7 +405,7 @@ data class LogicalCondition(
      */
     private fun build(visited: MutableSet<LogicalCondition>): String {
         if (!visited.add(this)) return "<cycle>"   // 循環検出
-        val body = conditions.joinToString(" $operator ") {
+        val body = conditions.joinToString(" ${operator.trim()} ") {
             when (it) {
                 is LogicalCondition -> it.build(visited)
                 else -> it.build()

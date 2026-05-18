@@ -60,3 +60,9 @@ allprojects {
         mavenCentral()
     }
 }
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+
+    systemProperty("file.encoding", "UTF-8")
+    jvmArgs("-Dfile.encoding=UTF-8")
+}

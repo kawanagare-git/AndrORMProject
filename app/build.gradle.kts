@@ -1,6 +1,8 @@
 // ＜app/build.gradle.kts＞
 import com.android.build.gradle.AppExtension
 import io.gitlab.arturbosch.detekt.Detekt
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     id("com.android.application")
@@ -361,4 +363,26 @@ tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
 
 tasks.matching { it.name == "dexBuilderDebug" }.configureEach {
     dependsOn(weaveDebugAspectJ)
+}
+
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+
+    systemProperty("file.encoding", "UTF-8")
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8"
+    )
+
+    testLogging {
+        events(
+            TestLogEvent.PASSED,
+            TestLogEvent.SKIPPED,
+            TestLogEvent.FAILED
+        )
+        exceptionFormat = TestExceptionFormat.FULL
+        showStandardStreams = false
+    }
 }

@@ -617,7 +617,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun <T : SelectEntity> notExists(subQuery: Select<T>) {
-        list += Compare.Exists(subQuery)
+        list += Compare.NotExists(subQuery)
     }
 
     /**

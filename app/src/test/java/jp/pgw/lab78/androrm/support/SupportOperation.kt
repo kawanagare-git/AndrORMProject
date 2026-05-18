@@ -43,7 +43,7 @@ object SupportOperation {
      */
     fun changeColumnRef(
         propertyName: String,
-    ) =
+    ): ColumnRef<EmployeeEntity, Any> =
         when (propertyName) {
             "EmployeeEntity::employeeId" -> ColumnRef(
                 TableRef(EmployeeEntity::class, "EMP"),

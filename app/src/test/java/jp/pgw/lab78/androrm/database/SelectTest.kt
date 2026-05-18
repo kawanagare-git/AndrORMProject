@@ -5,6 +5,7 @@ import jp.pgw.lab78.androrm.database.Select.JoinType.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
+import jp.pgw.lab78.androrm.database.utility.Support.tableRef
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -233,6 +234,7 @@ class SelectTest {
             TestSelectEntity::id inList listOf(1, 2, 3, 4, 5)
         }
         println("${SELECT.build()}; values = ${SELECT.bindValues}")
+        SELECT = Select(TestSelectEntity::class)
         SELECT.where {
             TestSelectEntity::name like "川流%"
         }
@@ -310,4 +312,20 @@ class SelectTest {
         this.memberProperties
             .firstOrNull { it.name == name } as KProperty1<out SelectEntity, *>
 
+    @Test
+    fun build13() {
+        val fromTable = tableRef(TestSelectEntity::class, "FR")
+        val join1Table = tableRef(TestSelectEntity::class, "J1")
+        val join2Table = tableRef(TestSelectEntity::class, "J2")
+        val select = Select(fromTable).join(
+            LEFT,
+            join1Table,
+            { fromTable[TestSelectEntity::id] eq join1Table[TestSelectEntity::id] })
+            .join(
+                INNER,
+                join2Table,
+                { join1Table[TestSelectEntity::name] eq join2Table[TestSelectEntity::name] })
+            .where { fromTable[TestSelectEntity::id] like "0010%" }
+        println("${select.build()}; values = ${select.bindValues}")
+    }
 }

@@ -435,7 +435,7 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     fun offset(offsetValue: Int = 0): Select<T> {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
+        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
         require(offsetValue >= 0) {
             "offsetValue must be greater than or equal to 0."
         }

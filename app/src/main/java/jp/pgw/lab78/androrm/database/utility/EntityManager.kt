@@ -8,6 +8,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -268,6 +269,11 @@ object EntityManager {
         is KProperty1<*, *> -> {
             val property = value as KProperty1<out Entity, *>
             "${property.extractClassFromProperty().getTableAlias()}.${value.getColumn()}"
+        }
+
+        is ColumnRef<*, *> -> {
+            val ref = (value as ColumnRef<out Entity, *>)
+            ref.build()
         }
 
         else -> {
