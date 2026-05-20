@@ -326,6 +326,7 @@ class SelectTest {
                 join2Table,
                 { join1Table[TestSelectEntity::name] eq join2Table[TestSelectEntity::name] })
             .where { fromTable[TestSelectEntity::id] like "0010%" }
+            .limit(10).offset(5)
         println("${select.build()}; values = ${select.bindValues}")
     }
 }

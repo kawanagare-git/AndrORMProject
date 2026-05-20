@@ -22,6 +22,8 @@ import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_LIMIT_VALUE
+import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_OFFSET_VALUE
 import jp.pgw.lab78.androrm.database.validation.DuplicateMethodCallValidator
 import jp.pgw.lab78.androrm.database.validation.QueryMethodCall
 import jp.pgw.lab78.shared.library.Utils.isNull
@@ -98,6 +100,15 @@ class Select<T : SelectEntity>(
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
 
+    /** JOIN 句用バインド値リスト */
+    private val joinBindValues: MutableList<Any?> = mutableListOf()
+
+    /** WHERE 句用バインド値リスト */
+    private val whereBindValues: MutableList<Any?> = mutableListOf()
+
+    /** HAVING 句用バインド値リスト */
+    private val havingBindValues: MutableList<Any?> = mutableListOf()
+
     /** クエリ格納 */
     private lateinit var query: String
 
@@ -171,8 +182,6 @@ class Select<T : SelectEntity>(
         initialize()
     }
 
-//    fun defineFunctionalColumn(function: ColumnFunction, column: KProperty1<T, *>) = ""
-
     /**
      * ## join メソッド
      * ### テーブル結合を指定する
@@ -232,7 +241,10 @@ class Select<T : SelectEntity>(
         // 結合対象のテーブルの SELECT 対象列を追加
         appendSelectableColumns(joinedEntityMeta, joinedTableAlias)
         // 結合条件を生成
-        val joinCondition = ConditionBuilder(this).apply(on).buildList()
+        val valueHolder = object : QueryWithBindValues() {}
+        val joinCondition = ConditionBuilder(valueHolder).apply(on).buildList()
+        // バインド変数の設定
+        joinBindValues.addAll(valueHolder.bindValues)
         // join句の生成
         queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
             .add(
@@ -260,7 +272,7 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
     ): JoinCondition {
         isBuild = false
-        //
+        // 結合するエンティティのメタ情報を生成
         val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
 
         return JoinCondition(
@@ -327,9 +339,12 @@ class Select<T : SelectEntity>(
     fun where(block: ConditionBuilder.() -> Unit): Select<T> {
         duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.WHERE)
         isBuild = false
-        val builder = ConditionBuilder(this).apply(block)
+        val valueHolder = object : QueryWithBindValues() {}
+        val builder = ConditionBuilder(valueHolder).apply(block)
         // Select は builder の中身を意識せず、リストだけ取得して保持
         whereConditions += builder.buildList()
+        // バインド変数の設定
+        whereBindValues.addAll(valueHolder.bindValues)
         return this
     }
 
@@ -345,8 +360,11 @@ class Select<T : SelectEntity>(
     fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
         duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.HAVING)
         isBuild = false
-        val builder = HavingConditionBuilder(this).apply(block)
+        val valueHolder = object : QueryWithBindValues() {}
+        val builder = HavingConditionBuilder(valueHolder).apply(block)
         havingConditions += builder.buildList()
+        // バインド変数の設定
+        havingBindValues.addAll(valueHolder.bindValues)
         // HAVING 句が指定されると自動的に GROUP BY 句を生成する
         // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
         if (groupByColumns.isEmpty()) {
@@ -416,32 +434,82 @@ class Select<T : SelectEntity>(
      * @since 2026-05-14
      */
     @InfoLog
-    fun limit(limitValue: Int = 10): Select<T> {
+    fun limit(limitValue: Int = DEFAULT_LIMIT_VALUE): LimitClause {
         duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
         require(limitValue >= 0) {
             "limitValue must be greater than or equal to 0."
         }
         isBuild = false
         this.limitValue = limitValue
-        return this
+        return LimitClause()
     }
 
     /**
-     * ## offset メソッド
-     * ### 読み出し開始レコードを指定する
-     * @return 自身のインスタンス(this)
+     * ## LIMIT 句指定後の操作
+     * ### LIMIT 指定後に OFFSET を追加するための中間オブジェクト
      * @author Masahiro Inoue
      * @since 2026-05-14
      */
-    @InfoLog
-    fun offset(offsetValue: Int = 0): Select<T> {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
-        require(offsetValue >= 0) {
-            "offsetValue must be greater than or equal to 0."
+    inner class LimitClause internal constructor() {
+
+        /**
+         * ## OFFSET 指定
+         * ### LIMIT 指定後に、先頭からスキップする件数を指定する
+         * @param offsetValue スキップする件数
+         * @return 自身のインスタンス(this)
+         * @author Masahiro Inoue
+         * @since 2026-05-14
+         */
+        @InfoLog
+        fun offset(offsetValue: Int = DEFAULT_OFFSET_VALUE): Select<T> {
+            duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
+            require(offsetValue >= 0) {
+                "offsetValue must be greater than or equal to 0."
+            }
+            isBuild = false
+            this@Select.offsetValue = offsetValue
+            return this@Select
         }
-        isBuild = false
-        this.offsetValue = offsetValue
-        return this
+
+        /**
+         * ## SQL 生成
+         * ### LIMIT のみ指定して SQL を生成する
+         * @return 生成された SQL
+         * @author Masahiro Inoue
+         * @since 2026-05-14
+         */
+        @InfoLog
+        fun build(): String {
+            return this@Select.build()
+        }
+
+        /**
+         * ## バインド値
+         * ### LIMIT のみ指定した状態でも bindValues を参照できるようにする
+         * @return バインド値のリスト
+         * @author Masahiro Inoue
+         * @since 2026-05-14
+         */
+        val bindValues: List<Any?>
+            get() = this@Select.bindValues
+    }
+
+    /**
+     * ## 追加バインド値取得
+     * ### SQL 句の出現順に合わせて bindValues を合成する
+     */
+    protected override fun additionalBindValues(): List<Any?> = buildList {
+        addAll(joinBindValues)
+        addAll(whereBindValues)
+        addAll(havingBindValues)
+
+        limitValue?.let { value ->
+            add(value)
+        }
+
+        offsetValue?.let { value ->
+            add(value)
+        }
     }
 
     /**
@@ -590,6 +658,13 @@ class Select<T : SelectEntity>(
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
             addClauseIfNotEmpty(SelectClause.GROUP, PRIMARY_DELIMITER, groupByColumns.toList())
             addClauseIfNotEmpty(SelectClause.ORDER, PRIMARY_DELIMITER, orderColumns.toList())
+            limitValue?.let {
+                queryStructureMap[SelectClause.LIMIT] = mutableListOf("${SelectClause.LIMIT.sql} ?")
+            }
+            offsetValue?.let {
+                queryStructureMap[SelectClause.OFFSET] =
+                    mutableListOf("${SelectClause.OFFSET.sql} ?")
+            }
             val otherClauses = SelectClause.entries
                 .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
             // select 文を生成

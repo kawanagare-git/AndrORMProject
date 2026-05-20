@@ -2,7 +2,6 @@ package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder.NullMarker
-import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.support.SupportOperation.changeColumnRef
@@ -18,22 +17,6 @@ import org.junit.jupiter.params.provider.CsvSource
  * ### BaseConditionBuilder の DSL public メソッドを ConditionBuilder 経由で検証する
  */
 class BaseConditionBuilderTest {
-
-    private data class Fixture(
-        val builder: ConditionBuilder,
-        val valueHolder: QueryWithBindValues,
-    )
-
-    private fun newFixture(): Fixture {
-        val valueHolder = object : QueryWithBindValues() {}
-        return Fixture(
-            builder = ConditionBuilder(valueHolder),
-            valueHolder = valueHolder,
-        )
-    }
-
-    private fun Fixture.singleSql(): String =
-        builder.buildList().single().build()
 
     @DisplayName("KProperty1 の値比較 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, value={1}, expected={2}")
