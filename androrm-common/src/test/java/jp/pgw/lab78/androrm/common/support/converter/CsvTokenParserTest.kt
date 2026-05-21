@@ -1,5 +1,6 @@
-package jp.pgw.lab78.androrm.support.converter
+package jp.pgw.lab78.androrm.common.support.converter
 
+import jp.pgw.lab78.androrm.support.converter.CsvTokenParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -171,5 +172,21 @@ class CsvTokenParserTest {
             ),
             actual,
         )
+    }
+
+    @Test
+    @DisplayName("parseList は '<emptyList>' を空 List に変換できる")
+    fun parseList_emptyListToken() {
+        val actual = CsvTokenParser.parseList("<emptyList>")
+
+        assertEquals(emptyList<String>(), actual)
+    }
+
+    @Test
+    @DisplayName("parse2dList は '<emptyList>' を空の2次元 List に変換できる")
+    fun parse2dList_emptyListToken() {
+        val actual = CsvTokenParser.parse2dList("<emptyList>")
+
+        assertEquals(emptyList<List<String>>(), actual)
     }
 }

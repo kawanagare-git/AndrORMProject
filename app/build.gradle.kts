@@ -80,6 +80,9 @@ android {
         getByName("androidTest") {
             java.srcDir("build/generated/ksp/debugAndroidTest/kotlin")
         }
+        getByName("test") {
+            java.srcDir(rootProject.file("test-support/src/test/kotlin"))
+        }
     }
 }
 
@@ -365,7 +368,7 @@ tasks.matching { it.name == "dexBuilderDebug" }.configureEach {
     dependsOn(weaveDebugAspectJ)
 }
 
-
+// Unit Test 設定
 tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 

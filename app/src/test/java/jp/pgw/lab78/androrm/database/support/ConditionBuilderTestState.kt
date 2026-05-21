@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.support
+package jp.pgw.lab78.androrm.database.support
 
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues

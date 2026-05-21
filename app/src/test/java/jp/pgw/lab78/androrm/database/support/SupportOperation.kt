@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.support
+package jp.pgw.lab78.androrm.database.support
 
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.reference.ColumnRef

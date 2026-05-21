@@ -23,28 +23,41 @@ object CsvTokenParser {
     /** 空要素表現 */
     private const val EMPTY_TOKEN = "<empty>"
 
+    /** 空要素表現 */
+    private const val EMPTY_LIST_TOKEN = "<emptyList>"
+
     /**
      * ## 1次元 List 解析
      * ### ":" 区切り。ただし "\:" は値としての ":" として扱う
+     * ### <emptyList> が指定された場合、空のリストを戻す
      * @param source 解析対象文字列
      * @return 解析結果のリスト
      * @author Masahiro Inoue
      * @since 2026-05-20
      */
-    fun parseList(source: String): List<String> =
-        splitEscaped(source, LIST_DELIMITER)
+    fun parseList(source: String): List<String> {
+        if (source.trim() == EMPTY_LIST_TOKEN) {
+            return emptyList()
+        }
+        return splitEscaped(source, LIST_DELIMITER)
+    }
 
     /**
      * ## 2次元 List 解析
      * ### "^" で行分割、":" で列分割。ただし "\^" / "\:" は値として扱う
+     * ### <emptyList> が指定された場合、空のリストを戻す
      * @param source 解析対象文字列
      * @return 解析結果のリスト（2次元）
      * @author Masahiro Inoue
      * @since 2026-05-20
      */
-    fun parse2dList(source: String): List<List<String>> =
-        splitEscaped(source, ROW_DELIMITER, mutableSetOf(LIST_DELIMITER, ESCAPE_CHAR))
+    fun parse2dList(source: String): List<List<String>> {
+        if (source.trim() == EMPTY_LIST_TOKEN) {
+            return emptyList()
+        }
+        return splitEscaped(source, ROW_DELIMITER, setOf(LIST_DELIMITER, ESCAPE_CHAR))
             .map { row -> splitEscaped(row, LIST_DELIMITER) }
+    }
 
     /**
      * ## String トークン変換
@@ -103,6 +116,7 @@ object CsvTokenParser {
         // 文字列生成用インスタンス
         val buffer = StringBuilder()
         var skipNextChar = false
+        val maxLength = source.length
         // 文字列長に達するまで繰り返し
         for (index in source.indices) {
             if (skipNextChar) {
@@ -112,38 +126,37 @@ object CsvTokenParser {
             // 文字の取得
             val char = source[index]
             // 現在の文字がエスケープ文字
-            if (char == ESCAPE_CHAR) {
-                // 次の文字列が取得できるか判定
-                if (index + 1 < source.length) {
-                    // 次の文字を取得
-                    val nextChar = source[index + 1]
-                    // 次の文字を判定
-                    when (nextChar) {
-                        // 後段解析用にエスケープ状態を温存する区切り文字
-                        in preserveEscapedDelimiters -> {
+            when (char) {
+                ESCAPE_CHAR -> {
+                    // 次の文字列が取得できるか判定
+                    val nextIndex = index + 1
+                    if (nextIndex < maxLength) {
+                        // 次の文字を取得
+                        val nextChar = source[nextIndex]
+                        // 次の文字を判定：後段解析用にエスケープ状態を温存する区切り文字
+                        if (nextChar in preserveEscapedDelimiters) {
+                            // エスケープ文字を維持する
                             buffer.append(char)
-                            buffer.append(nextChar)
                         }
-
-                        else -> {
-                            // 次の文字は値として扱う
-                            buffer.append(nextChar)
-                        }
+                        // 次の文字を文字列領域へ設定
+                        buffer.append(nextChar)
+                        // 一文字多く処理しているのでスキップ指定
+                        skipNextChar = true
+                    } else {
+                        // 現在の文字は終端なので、無条件に文字列領域へ設定
+                        buffer.append(char)
                     }
-                    skipNextChar = true
-                } else {
-                    // 現在の文字は終端なので、無条件に文字列領域へ設定
-                    buffer.append(char)
                 }
-            } else {
                 // 区切り文字化判定
-                if (char == delimiter) {
-                    // 文字列を結果リストに設定
+                delimiter -> {
+                    // 文字列を結果リストに追加
                     result += buffer.toString()
                     // 文字列領域をクリア
                     buffer.clear()
-                } else {
-                    // 現在の delimiter とは無関係なので文字列領域へ設定
+                }
+
+                else -> {
+                    // 現在の文字を値として扱う
                     buffer.append(char)
                 }
             }
