@@ -1,61 +1,37 @@
 package jp.pgw.lab78.androrm.common.dml.interfaces
 
-import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgType.*
-
 /**
  * ## SQL 関数の基底インターフェース
  * ### すべての関数が共通で持つ要素を定義するインターフェース
  * @author Masahiro Inoue
  * @since 2024-10-30
  */
-interface SqlFunction {
-    /** ## 引数タイプ */
-    val argType: ArgType
+interface SqlFunction<E : Enum<E>> {
+    /** 関数名 */
+    val functionName: String
+
+    /** 引数タイプ */
+    val argumentArity: ArgumentArity
 
     /**
-     * ## 関数名取得
-     * @return 関数名文字列
+     * ## 戻り値の型取得
+     * ### 関数の戻り値の型を取得する
+     * @param argTypes 引数（必要に応じて型を決定するために使用されることがある）
+     * @return 関数の戻り値の型、デフォルトでは Any クラス
      * @author Masahiro Inoue
-     * @since 2024-10-30
+     * @since 2026-04-30
      */
-    fun getFunctionName(): String
+    fun getReturnType(argTypes: List<String> = emptyList()): Any
 
     /**
      * ## 関数生成
      * ### 関数クエリを生成する
-     * @param arg 引数
+     * @param args 引数
      * @return 関数名文字列
      * @author Masahiro Inoue
      * @since 2024-10-30
      */
-    fun build(vararg arg: String): String
-
-    /**
-     * ## 関数名取得
-     * @return 関数名文字列
-     * @author Masahiro Inoue
-     * @since 2024-10-30
-     */
-    fun buildDefault(argType: ArgType, vararg arg: String): String = run {
-        when (argType) {
-            NONE -> "${getFunctionName()}()"
-            SINGLE -> {
-                require(arg.isNotEmpty()) {
-                    "This function requires at least one argument."
-                }
-                "${getFunctionName()}(${arg.first()})"
-            }
-
-            MULTI -> {
-                require(arg.size >= 2) {
-                    "This function requires at least two arguments. Additional arguments are ignored."
-                }
-                "${this.getFunctionName()}(${arg.joinToString(",")})"
-            }
-
-            SPECIAL -> throw IllegalArgumentException("SPECIAL argType requires a custom build() implementation.")
-        }
-    }
+    fun build(vararg args: String): String
 
     /**
      * ## 引数タイプ列挙型
@@ -63,7 +39,7 @@ interface SqlFunction {
      * @author Masahiro Inoue
      * @since 2024-10-30
      */
-    enum class ArgType {
+    enum class ArgumentArity {
         /** ## 引数なし */
         NONE,
 

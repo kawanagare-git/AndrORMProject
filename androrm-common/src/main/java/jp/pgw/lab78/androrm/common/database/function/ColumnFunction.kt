@@ -1,174 +1,280 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction
+import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity.*
+import java.util.Locale
+
 /**
  * ## 関数列挙型
  * ### 列に使用する関数定義
- * @param query クエリに使用される文字列
- * @param isSingleArgument 引数が1つしかないか
+ * @param argumentArity 引数の持ち方
+ * @param returnType 戻り値型
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
 enum class ColumnFunction(
-    val query: String,
-    val isSingleArgument: Boolean,
+    override val argumentArity: ArgumentArity,
     val returnType: String = Any::class.qualifiedName!!
-) {
+) : SqlFunction<ColumnFunction> {
     /** 集約関数(count) */
-    COUNT("count", true, Long::class.qualifiedName!!),
+    COUNT(SINGLE, Long::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
+    },
 
     /** 集約関数(count:全行)  */
-    COUNT_ALL("count", false, Long::class.qualifiedName!!) {
-        /**
-         * ## クエリ生成（count_all 専用）
-         * ### 関数クエリを生成する
-         * @param arg 引数
-         * @return 生成されたクエリ文字列
-         * @author Masahiro Inoue
-         * @since 2025-09-05
-         */
-        override fun createQuery(vararg arg: String): String = "$query(*)"
+    COUNT_ALL(NONE, Long::class.qualifiedName!!) {
+        override val functionName: String
+            get() = COUNT.name.lowercase()
+
+        override fun build(vararg args: String) = "$functionName(*)"
     },
 
     /** 集約関数(sum) */
-    SUM("sum", true) {
-        override fun getReturnType(argTypes: List<String>): String =
-            // 引数の型に基づいて戻り値の型を決定する
-            resolveSumReturnType(argTypes)
+    SUM(SINGLE) {
+        override fun getReturnType(argTypes: List<String>) = resolveSumReturnType(argTypes)
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
     },
 
     /** 集約関数(avg) */
-    AVG("avg", true, Double::class.qualifiedName!!),
+    AVG(SINGLE, Double::class.qualifiedName!!) {
+        override fun getReturnType(argTypes: List<String>) = returnType
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
+    },
 
     /** 集約関数(max) */
-    MAX("max", true) {
-        override fun getReturnType(argTypes: List<String>): String =
+    MAX(SINGLE) {
+        override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
     },
 
     /** 集約関数(min) */
-    MIN("min", true) {
-        override fun getReturnType(argTypes: List<String>): String =
+    MIN(SINGLE) {
+        override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
+    },
+
+    /** 集約関数(total) */
+    TOTAL(SINGLE, Double::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            return super.build(*args)
+        }
     },
 
     /** 集約関数(group_concat) */
-    GROUP_CONCAT("group_concat", true, String::class.qualifiedName!!),
+    GROUP_CONCAT(MULTI, String::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size in 1..2) {
+                "Invalid number of arguments. Expected 1 or 2 arguments."
+            }
+            return "${GROUP_CONCAT.functionName}(${args.joinToString(",")})"
+        }
+    },
 
-    /** 文字列r関数(length) */
-    LENGTH("length", true, Int::class.qualifiedName!!),
+    /** スカラー関数(max) */
+    SCALAR_MAX(MULTI) {
+        override val functionName: String
+            get() = MAX.functionName
+
+        override fun build(vararg args: String): String =
+            args.joinToString(",", "${functionName}(", ")")
+    },
+
+    /** スカラー関数(min) */
+    SCALAR_MIN(MULTI) {
+        override val functionName: String
+            get() = MIN.functionName
+
+        override fun build(vararg args: String): String =
+            args.joinToString(",", "${functionName}(", ")")
+    },
+
+    /** 文字列関数(length) */
+    LENGTH(SINGLE, Int::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size == 1) {
+                "This function requires at least one argument."
+            }
+            return super.build(args.first())
+        }
+    },
 
     /** 文字列関数(lower) */
-    LOWER("lower", true, String::class.qualifiedName!!),
+    LOWER(SINGLE, String::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size == 1) {
+                "This function requires at least one argument."
+            }
+            return super.build(args.first())
+        }
+    },
 
     /** 文字列関数(upper) */
-    UPPER("upper", true, String::class.qualifiedName!!),
+    UPPER(SINGLE, String::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size == 1) {
+                "This function requires at least one argument."
+            }
+            return super.build(args.first())
+        }
+    },
 
     /** 文字列関数(replace) */
-    REPLACE("replace", false, String::class.qualifiedName!!),
+    REPLACE(MULTI, String::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size == 3) {
+                "Invalid number of arguments. Expected 3 arguments."
+            }
+            return "$functionName(${args[0]},${args[1]},${args[2]})"
+        }
+    },
 
     /** 文字列関数(substr) */
-    SUBSTR("substr", false, String::class.qualifiedName!!),
+    SUBSTR(MULTI, String::class.qualifiedName!!),
 
     /** 文字列関数(concat) */
-    CONCAT("concat", false, String::class.qualifiedName!!) {
-        /**
-         * ## クエリ生成（concat 専用）
-         * ### 関数クエリを生成する
-         * @param arg 引数
-         * @return 生成されたクエリ文字列
-         * @author Masahiro Inoue
-         * @since 2025-09-05
-         */
-        override fun createQuery(vararg arg: String): String = arg.joinToString(" || ")
+    CONCAT(MULTI, String::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size >= 2) {
+                "Invalid number of arguments. Expected 2 or more arguments."
+            }
+            return args.joinToString(" || ")
+        }
     },
 
     /** 文字列関数(trim) */
-    TRIM("trim", false, String::class.qualifiedName!!),
+    TRIM(MULTI, String::class.qualifiedName!!),
 
     /** 文字列関数(ltrim) */
-    LTRIM("ltrim", false, String::class.qualifiedName!!),
+    LTRIM(MULTI, String::class.qualifiedName!!),
 
     /** 文字列関数(rtrim) */
-    RTRIM("rtrim", false, String::class.qualifiedName!!),
+    RTRIM(MULTI, String::class.qualifiedName!!),
 
     /** 日付関数(date) */
-    DATE("date", false, String::class.qualifiedName!!),
+    DATE(MULTI, String::class.qualifiedName!!),
 
     /** 日付関数(time) */
-    TIME("time", false, String::class.qualifiedName!!),
+    TIME(MULTI, String::class.qualifiedName!!),
 
     /** 日付関数(datetime) */
-    DATETIME("datetime", false, String::class.qualifiedName!!),
+    DATETIME(MULTI, String::class.qualifiedName!!),
 
     /** 日付関数(strftime) */
-    STRFTIME("strftime", false, String::class.qualifiedName!!),
+    STRFTIME(MULTI, String::class.qualifiedName!!),
 
     /** 日付関数(julianday) */
-    JULIANDAY("julianday", false, Double::class.qualifiedName!!),
+    JULIANDAY(MULTI, Double::class.qualifiedName!!),
 
     /** 数値関数(ABS) */
-    ABS("abs", false) {
+    ABS(MULTI) {
         override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
-    },
 
-    /** 数値関数(ROUND) */
-    ROUND("round", false, Double::class.qualifiedName!!) {
-        /**
-         * ## クエリ生成（round 専用）
-         * ### 関数クエリを生成する
-         * @param arg 引数
-         * @return 生成されたクエリ文字列
-         * @author Masahiro Inoue
-         * @since 2025-09-05
-         */
-        override fun createQuery(vararg arg: String): String = "$query()"
+        override fun build(vararg args: String): String {
+            require(args.size == 1) {
+                "This function requires at least one argument."
+            }
+            return super.build(args.first())
+        }
     },
 
     /** 数値関数(random) */
-    RANDOM("random", false, Long::class.qualifiedName!!),
+    RANDOM(NONE, Long::class.qualifiedName!!),
+
+    /** 数値関数(ROUND) */
+    ROUND(MULTI, Double::class.qualifiedName!!) {
+        override fun build(vararg args: String): String {
+            require(args.size in 1..2) {
+                "Invalid number of arguments. Expected 1 or 2 arguments."
+            }
+            return super.build(*args)
+        }
+    },
 
     /** 判定関数(ifnull) */
-    IFNULL("ifnull", false) {
+    IFNULL(MULTI) {
         override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.size == 2) {
+                "Invalid number of arguments. Expected 2 arguments."
+            }
+            return "$functionName(${args[0]},${args[1]})"
+        }
     },
 
     /** 判定関数(coalesce) */
-    COALESCE("coalesce", false) {
+    COALESCE(MULTI) {
         override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.size >= 2) {
+                "Invalid number of arguments. Expected 2 or more arguments."
+            }
+            return "$functionName(${args.joinToString(",")})"
+        }
     },
 
     /** 判定関数(nullif) */
-    NULLIF("nullif", false) {
+    NULLIF(MULTI) {
         override fun getReturnType(argTypes: List<String>) =
             // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
     },
 
-    /** カスタム関数 */
-    CUSTOM("", false), ;
-
-    /**
-     * ## クエリ生成
-     * ### 関数クエリを生成する
-     * @param arg 引数
-     * @return 生成されたクエリ文字列
-     * @author Masahiro Inoue
-     * @since 2025-09-05
-     */
-    open fun createQuery(vararg arg: String): String =
-        if (isSingleArgument) {
-            "$query(${arg.first()})"
-        } else {
-            "$query(${arg.joinToString(",")})"
+    /** 型変換関数 */
+    CAST(MULTI) {
+        override fun build(vararg args: String): String {
+            require(args.size == 2) {
+                "Invalid number of arguments. Expected 2 arguments."
+            }
+            return "$functionName(${args[0]} as ${args[1]})"
         }
+    },
+
+    /** カスタム関数 */
+    CUSTOM(SPECIAL) {
+        override val functionName: String
+            get() = ""
+
+        override fun build(vararg args: String): String = run {
+            // カスタム関数は少なくとも1つの引数が必要：空なら例外 IllegalArgumentException() をスロー
+            require(args.isNotEmpty()) { "CUSTOM requires at least one argument." }
+            args.first()
+        }
+    }, ;
+
+    /** 関数名 */
+    override val functionName: String
+        get() = name.lowercase(Locale.ROOT)
 
     /**
      * ## 戻り値の型取得
@@ -178,7 +284,23 @@ enum class ColumnFunction(
      * @author Masahiro Inoue
      * @since 2026-04-30
      */
-    open fun getReturnType(argTypes: List<String> = emptyList()) = returnType
+    override fun getReturnType(argTypes: List<String>): String = returnType
+
+    /**
+     * ## 関数文字列生成
+     * ### 関数クエリを生成する
+     * @param args 引数
+     * @return 関数名文字列
+     * @author Masahiro Inoue
+     * @since 2024-10-30
+     */
+    override fun build(vararg args: String): String =
+        when (this.argumentArity) {
+            NONE -> "$functionName()"
+            SINGLE -> "$functionName(${args.first()})"
+            MULTI -> "$functionName(${args.joinToString(",")})"
+            else -> args.joinToString(",")
+        }
 
     /**
      * ## 型の広い方を決定するメソッド
@@ -190,30 +312,28 @@ enum class ColumnFunction(
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
-    fun widerType(type1: String?, type2: String?): String {
+    fun widerType(type1: String?, type2: String?): String =
         // 型の広さの順序を定義し、引数の型に基づいて適切な型を返すロジックを実装する
-        val result = when {
+        when {
             type1 == type2 -> type1!!
-            type1 == String::class.qualifiedName ||
-                    type2 == String::class.qualifiedName
+            type1 == String::class.qualifiedName
+                    || type2 == String::class.qualifiedName
                 -> String::class.qualifiedName!!
 
-            type1 == Double::class.qualifiedName!! ||
-                    type2 == Double::class.qualifiedName!! ||
-                    type1 == Float::class.qualifiedName!! ||
-                    type2 == Float::class.qualifiedName!!
+            type1 == Double::class.qualifiedName!!
+                    || type2 == Double::class.qualifiedName!!
+                    || type1 == Float::class.qualifiedName!!
+                    || type2 == Float::class.qualifiedName!!
                 -> Double::class.qualifiedName!!
 
-            type1 == Long::class.qualifiedName!! ||
-                    type2 == Long::class.qualifiedName!! ||
-                    type1 == Int::class.qualifiedName!! ||
-                    type2 == Int::class.qualifiedName!!
+            type1 == Long::class.qualifiedName!!
+                    || type2 == Long::class.qualifiedName!!
+                    || type1 == Int::class.qualifiedName!!
+                    || type2 == Int::class.qualifiedName!!
                 -> Long::class.qualifiedName!!
 
             else -> returnType
         }
-        return result
-    }
 
     /**
      * ## sum 関数の戻り値の型を解決するメソッド

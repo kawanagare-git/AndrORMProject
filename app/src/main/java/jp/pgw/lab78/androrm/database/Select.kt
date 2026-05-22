@@ -583,7 +583,7 @@ class Select<T : SelectEntity>(
                     .map { arg -> resolveFunctionArgument(entityMeta, tableAlias, arg) }
                     .toTypedArray()
                 // 関数式を生成
-                functionType.createQuery(*args)
+                functionType.build(*args)
             }
         // 関数式に使用中のテーブルエイリアスを基準にした別名を付与して返す
         "$functionExpression as ${tableAlias}_${propertyMeta.aliasName}"
