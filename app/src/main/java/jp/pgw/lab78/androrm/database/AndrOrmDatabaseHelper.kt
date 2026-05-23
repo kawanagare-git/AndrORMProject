@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00001
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
@@ -60,7 +61,7 @@ class AndrOrmDatabaseHelper(
             val tableName = if (tableAnnotation != null && tableAnnotation.name.isNotBlank()) {
                 tableAnnotation.name
             } else {
-                entity.simpleName?.toSnakeCase() ?: error("Unable to determine table name")
+                entity.simpleName?.toSnakeCase() ?: error(AE00001)
             }
             db.execSQL("DROP TABLE IF EXISTS $tableName")
         }

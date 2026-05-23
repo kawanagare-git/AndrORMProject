@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.ksp.helper
 
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
-import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_FULLY_QUALIFIED_NAME
-import jp.pgw.lab78.androrm.common.MessageConstants.ERROR_COLUMN_FUNCTION_SIMPLE_NAME
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00014
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00015
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
@@ -78,9 +78,9 @@ class AnnotationHelper() : LoggerLike by logger {
     private fun getFunctionAnnotation(annotationSpec: AnnotationSpec): String {
         logTraceEntered(annotationSpec)
         val fqnClassName =
-            checkNotNull(ColumnFunction::class.qualifiedName) { ERROR_COLUMN_FUNCTION_FULLY_QUALIFIED_NAME }
+            checkNotNull(ColumnFunction::class.qualifiedName) { CE00014 }
         val simpleClassName =
-            checkNotNull(ColumnFunction::class.simpleName) { ERROR_COLUMN_FUNCTION_SIMPLE_NAME }
+            checkNotNull(ColumnFunction::class.simpleName) { CE00015 }
         logDebug("Replace string", "base = $annotationSpec", fqnClassName, "->", simpleClassName)
         val result = annotationSpec.toString().replaceFirst(fqnClassName, simpleClassName)
         logTraceExiting(result)

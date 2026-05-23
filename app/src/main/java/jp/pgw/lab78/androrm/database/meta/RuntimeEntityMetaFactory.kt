@@ -1,6 +1,8 @@
 package jp.pgw.lab78.androrm.database.meta
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
@@ -44,13 +46,13 @@ class RuntimeEntityMetaFactory {
             ?: tableName
         // クラスの主コンストラクタを取得。存在しない場合はエラー
         val constructor = entityClass.primaryConstructor
-            ?: error("No primary constructor for ${entityClass.qualifiedName}")
+            ?: error(AE00007.format(entityClass.qualifiedName))
         // クラスのプロパティを名前でマップ化
         val propertiesByName = entityClass.memberProperties.associateBy { it.name }
         // コンストラクタのパラメータに対応するプロパティを突き合わせて PropertyMeta を生成。存在しない場合はエラー
         val properties = constructor.parameters.map { param ->
             val property = propertiesByName[param.name]
-                ?: error("Property '${param.name}' is not declared in ${entityClass.qualifiedName}")
+                ?: error(AE00008.format(param.name, entityClass.qualifiedName))
             (property as KProperty1<out SelectEntity, *>).toPropertyMeta()
         }
         // EntityMeta を生成して返す

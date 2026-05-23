@@ -2,6 +2,10 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00003
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00004
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00005
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00006
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.isHiddenFromSelect
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
@@ -387,9 +391,7 @@ class Select<T : SelectEntity>(
         tableAlias: String,
     ) {
         require(usedTableAliases.add(tableAlias)) {
-            "Duplicate table alias '$tableAlias' was detected. " +
-                    "tableName='$tableName'. " +
-                    "Use a different alias with table(..., alias = \"...\")."
+            AE00003.format(tableAlias, tableName)
         }
     }
 
@@ -436,9 +438,7 @@ class Select<T : SelectEntity>(
     @InfoLog
     fun limit(limitValue: Int = DEFAULT_LIMIT_VALUE): LimitClause {
         duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
-        require(limitValue >= 0) {
-            "limitValue must be greater than or equal to 0."
-        }
+        require(limitValue >= 0) { AE00004 }
         isBuild = false
         this.limitValue = limitValue
         return LimitClause()
@@ -463,9 +463,7 @@ class Select<T : SelectEntity>(
         @InfoLog
         fun offset(offsetValue: Int = DEFAULT_OFFSET_VALUE): Select<T> {
             duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
-            require(offsetValue >= 0) {
-                "offsetValue must be greater than or equal to 0."
-            }
+            require(offsetValue >= 0) { AE00005 }
             isBuild = false
             this@Select.offsetValue = offsetValue
             return this@Select
@@ -577,7 +575,7 @@ class Select<T : SelectEntity>(
             ?: run {
                 // 関数タイプが必要な場合、関数タイプを取得
                 val functionType = propertyMeta.functionType
-                    ?: error("Function type is missing for property '${propertyMeta.propertyName}'.")
+                    ?: error(AE00006.format(propertyMeta.propertyName))
                 // 関数引数を解決して関数式を生成
                 val args = propertyMeta.functionArgs
                     .map { arg -> resolveFunctionArgument(entityMeta, tableAlias, arg) }

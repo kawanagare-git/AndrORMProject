@@ -1,5 +1,12 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00001
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00002
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00003
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00004
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00005
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00006
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00007
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity.*
@@ -20,7 +27,7 @@ enum class ColumnFunction(
     /** 集約関数(count) */
     COUNT(SINGLE, Long::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -37,7 +44,7 @@ enum class ColumnFunction(
     SUM(SINGLE) {
         override fun getReturnType(argTypes: List<String>) = resolveSumReturnType(argTypes)
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -46,7 +53,7 @@ enum class ColumnFunction(
     AVG(SINGLE, Double::class.qualifiedName!!) {
         override fun getReturnType(argTypes: List<String>) = returnType
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -58,7 +65,7 @@ enum class ColumnFunction(
             argTypes.reduceOrNull(::widerType) ?: returnType
 
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -70,7 +77,7 @@ enum class ColumnFunction(
             argTypes.reduceOrNull(::widerType) ?: returnType
 
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -78,7 +85,7 @@ enum class ColumnFunction(
     /** 集約関数(total) */
     TOTAL(SINGLE, Double::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.isNotEmpty()) { "Aggregate functions require a column argument." }
+            require(args.isNotEmpty()) { CE00001 }
             return super.build(*args)
         }
     },
@@ -86,9 +93,7 @@ enum class ColumnFunction(
     /** 集約関数(group_concat) */
     GROUP_CONCAT(MULTI, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size in 1..2) {
-                "Invalid number of arguments. Expected 1 or 2 arguments."
-            }
+            require(args.size in 1..2) { CE00003 }
             return "${GROUP_CONCAT.functionName}(${args.joinToString(",")})"
         }
     },
@@ -98,8 +103,14 @@ enum class ColumnFunction(
         override val functionName: String
             get() = MAX.functionName
 
-        override fun build(vararg args: String): String =
-            args.joinToString(",", "${functionName}(", ")")
+        override fun getReturnType(argTypes: List<String>) =
+            // 引数の型に基づいて戻り値の型を決定する
+            argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.size >= 2) { CE00005 }
+            return args.joinToString(",", "${functionName}(", ")")
+        }
     },
 
     /** スカラー関数(min) */
@@ -107,16 +118,20 @@ enum class ColumnFunction(
         override val functionName: String
             get() = MIN.functionName
 
-        override fun build(vararg args: String): String =
-            args.joinToString(",", "${functionName}(", ")")
+        override fun getReturnType(argTypes: List<String>) =
+            // 引数の型に基づいて戻り値の型を決定する
+            argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.size >= 2) { CE00005 }
+            return args.joinToString(",", "${functionName}(", ")")
+        }
     },
 
     /** 文字列関数(length) */
     LENGTH(SINGLE, Int::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size == 1) {
-                "This function requires at least one argument."
-            }
+            require(args.size == 1) { CE00002 }
             return super.build(args.first())
         }
     },
@@ -124,9 +139,7 @@ enum class ColumnFunction(
     /** 文字列関数(lower) */
     LOWER(SINGLE, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size == 1) {
-                "This function requires at least one argument."
-            }
+            require(args.size == 1) { CE00002 }
             return super.build(args.first())
         }
     },
@@ -134,9 +147,7 @@ enum class ColumnFunction(
     /** 文字列関数(upper) */
     UPPER(SINGLE, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size == 1) {
-                "This function requires at least one argument."
-            }
+            require(args.size == 1) { CE00002 }
             return super.build(args.first())
         }
     },
@@ -144,9 +155,7 @@ enum class ColumnFunction(
     /** 文字列関数(replace) */
     REPLACE(MULTI, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size == 3) {
-                "Invalid number of arguments. Expected 3 arguments."
-            }
+            require(args.size == 3) { CE00006 }
             return "$functionName(${args[0]},${args[1]},${args[2]})"
         }
     },
@@ -157,9 +166,7 @@ enum class ColumnFunction(
     /** 文字列関数(concat) */
     CONCAT(MULTI, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size >= 2) {
-                "Invalid number of arguments. Expected 2 or more arguments."
-            }
+            require(args.size >= 2) { CE00005 }
             return args.joinToString(" || ")
         }
     },
@@ -195,9 +202,7 @@ enum class ColumnFunction(
             argTypes.reduceOrNull(::widerType) ?: returnType
 
         override fun build(vararg args: String): String {
-            require(args.size == 1) {
-                "This function requires at least one argument."
-            }
+            require(args.size == 1) { CE00002 }
             return super.build(args.first())
         }
     },
@@ -208,9 +213,7 @@ enum class ColumnFunction(
     /** 数値関数(ROUND) */
     ROUND(MULTI, Double::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
-            require(args.size in 1..2) {
-                "Invalid number of arguments. Expected 1 or 2 arguments."
-            }
+            require(args.size in 1..2) { CE00003 }
             return super.build(*args)
         }
     },
@@ -222,9 +225,7 @@ enum class ColumnFunction(
             argTypes.reduceOrNull(::widerType) ?: returnType
 
         override fun build(vararg args: String): String {
-            require(args.size == 2) {
-                "Invalid number of arguments. Expected 2 arguments."
-            }
+            require(args.size == 2) { CE00004 }
             return "$functionName(${args[0]},${args[1]})"
         }
     },
@@ -236,9 +237,7 @@ enum class ColumnFunction(
             argTypes.reduceOrNull(::widerType) ?: returnType
 
         override fun build(vararg args: String): String {
-            require(args.size >= 2) {
-                "Invalid number of arguments. Expected 2 or more arguments."
-            }
+            require(args.size >= 2) { CE00005 }
             return "$functionName(${args.joinToString(",")})"
         }
     },
@@ -246,16 +245,18 @@ enum class ColumnFunction(
     /** 判定関数(nullif) */
     NULLIF(MULTI) {
         override fun getReturnType(argTypes: List<String>) =
-            // 引数の型に基づいて戻り値の型を決定する
             argTypes.reduceOrNull(::widerType) ?: returnType
+
+        override fun build(vararg args: String): String {
+            require(args.size == 2) { CE00004 }
+            return "$functionName(${args[0]},${args[1]})"
+        }
     },
 
     /** 型変換関数 */
     CAST(MULTI) {
         override fun build(vararg args: String): String {
-            require(args.size == 2) {
-                "Invalid number of arguments. Expected 2 arguments."
-            }
+            require(args.size == 2) { CE00004 }
             return "$functionName(${args[0]} as ${args[1]})"
         }
     },
@@ -267,7 +268,7 @@ enum class ColumnFunction(
 
         override fun build(vararg args: String): String = run {
             // カスタム関数は少なくとも1つの引数が必要：空なら例外 IllegalArgumentException() をスロー
-            require(args.isNotEmpty()) { "CUSTOM requires at least one argument." }
+            require(args.isNotEmpty()) { CE00007 }
             args.first()
         }
     }, ;

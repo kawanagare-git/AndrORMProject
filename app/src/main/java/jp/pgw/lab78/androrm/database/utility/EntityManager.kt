@@ -1,5 +1,7 @@
 package jp.pgw.lab78.androrm.database.utility
 
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
@@ -9,6 +11,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
+import jp.pgw.lab78.shared.library.Utils.isNotNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -109,7 +112,7 @@ object EntityManager {
         val alias = this.getTableAlias()
         // プライマリコンストラクタがないときはエラー
         val constructor = this.primaryConstructor
-            ?: error("No primary constructor for ${this.simpleName}")
+            ?: error(AE00007.format(this.simpleName))
         // コンストラクタパラメータ順でプロパティをマッピング
         return constructor.parameters.map { param ->
             // メタデータから抽出準備
@@ -140,7 +143,7 @@ object EntityManager {
         val alias = this.getTableAlias()
         // プライマリコンストラクタがないときはエラー
         val constructor = this.primaryConstructor
-            ?: error("No primary constructor for ${this.simpleName}")
+            ?: error(AE00007.format(this.simpleName))
         // コンストラクタパラメータ順でプロパティをマッピング
         return constructor.parameters.map { param ->
             // メタデータから抽出準備
@@ -247,12 +250,13 @@ object EntityManager {
             // それ以外は、KClass<*> を取得
             else -> field::class
         }
-        if (valueForJudgment == null) {
-            throw IllegalArgumentException("Unsupported type: $field")
-        } else {
-            return fieldToColumnMap[valueForJudgment]
-                ?: throw IllegalArgumentException("Unsupported type: $valueForJudgment")
+        require(
+            valueForJudgment.isNotNull()
+                    || fieldToColumnMap[valueForJudgment].isNotNull()
+        ) {
+            AE00009.format(valueForJudgment)
         }
+        return fieldToColumnMap[valueForJudgment]!!
     }
 
     /**

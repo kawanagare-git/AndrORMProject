@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition.base
 
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00002
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select
@@ -712,8 +713,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
         val placeholderCount = text.count { it == '?' }
         // プレースホルダの個数とバインド値の個数が一致しない場合は例外をスロー
         require(placeholderCount == values.size) {
-            "The number of placeholders '?' and bind values does not match. " +
-                    "text='$text', placeholders=$placeholderCount, values=${values.size}"
+            AE00002.format(text, placeholderCount, values.size)
         }
         // 条件式をリストに追加し、バインド値を管理オブジェクトに登録
         list.add(FreeText(text))

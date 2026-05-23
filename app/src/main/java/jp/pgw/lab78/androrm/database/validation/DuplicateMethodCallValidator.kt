@@ -1,5 +1,7 @@
 package jp.pgw.lab78.androrm.database.validation
 
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00010
+
 /**
  * ## QueryBuilder メソッド呼び出し識別子
  * ### where / order / limit など、1回だけ指定可能なメソッドを識別する
@@ -31,8 +33,6 @@ class DuplicateMethodCallValidator<M : QueryMethodCall>(
      * @since 2026-05-14
      */
     fun validateNoDuplicateMethodCall(methodCall: M) {
-        check(calledMethodSet.add(methodCall)) {
-            "$ownerName.${methodCall.methodName}() has already been specified."
-        }
+        check(calledMethodSet.add(methodCall)) { AE00010.format(ownerName, methodCall.methodName) }
     }
 }

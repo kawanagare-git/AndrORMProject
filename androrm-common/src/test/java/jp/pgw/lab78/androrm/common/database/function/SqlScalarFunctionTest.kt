@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity
 import jp.pgw.lab78.androrm.support.converter.AnyListConverter
 import org.junit.jupiter.api.Assertions.*
@@ -91,8 +92,8 @@ class SqlScalarFunctionTest {
         "LENGTH, name, length(name)",
         "LOWER, name, lower(name)",
         "UPPER, name, upper(name)",
-        "SCALAR_MAX, gross, max(gross)",
-        "SCALAR_MIN, gross, min(gross)",
+        "SCALAR_MAX, contents:container, 'max(contents,container)'",
+        "SCALAR_MIN, total:net, 'min(total,net)'",
     )
     fun testBuildSingleArgument(
         function: SqlScalarFunction,
@@ -206,34 +207,32 @@ class SqlScalarFunctionTest {
     @DisplayName("単一引数関数は引数なしの場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] function={0}")
     @CsvSource(
-        "ABS",
-        "LENGTH",
-        "LOWER",
-        "UPPER",
+        "ABS,'${MessageConstants.CE00002}'",
+        "LENGTH,'${MessageConstants.CE00002}'",
+        "LOWER,'${MessageConstants.CE00002}'",
+        "UPPER,'${MessageConstants.CE00002}'",
     )
     fun testBuildSingleArgumentRequiresAtLeastOneArgument(
         function: SqlScalarFunction,
+        expected: String,
     ) {
         val actual = assertThrows(IllegalArgumentException::class.java) {
             function.build()
         }
-        assertEquals(
-            "This function requires at least one argument.",
-            actual.message,
-        )
+        assertEquals(expected, actual.message)
     }
 
     @DisplayName("複数引数関数は引数が不足している場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}")
     @CsvSource(
-        "REPLACE, <emptyList>, 'Invalid number of arguments. Expected 3 arguments.'",
-        "REPLACE, name, 'Invalid number of arguments. Expected 3 arguments.'",
-        "COALESCE, <emptyList> ,'Invalid number of arguments. Expected 2 or more arguments.'",
-        "COALESCE, name, 'Invalid number of arguments. Expected 2 or more arguments.'",
-        "IFNULL, <emptyList>, 'Invalid number of arguments. Expected 2 arguments.'",
-        "IFNULL, name, 'Invalid number of arguments. Expected 2 arguments.'",
-        "CONCAT, <emptyList>, 'Invalid number of arguments. Expected 2 or more arguments.'",
-        "CONCAT, name, 'Invalid number of arguments. Expected 2 or more arguments.'",
+        "REPLACE, <emptyList>, '${MessageConstants.CE00006}'",
+        "REPLACE, name, '${MessageConstants.CE00006}'",
+        "COALESCE, <emptyList> ,'${MessageConstants.CE00005}'",
+        "COALESCE, name, '${MessageConstants.CE00005}'",
+        "IFNULL, <emptyList>, '${MessageConstants.CE00004}'",
+        "IFNULL, name, '${MessageConstants.CE00004}'",
+        "CONCAT, <emptyList>, '${MessageConstants.CE00005}'",
+        "CONCAT, name, '${MessageConstants.CE00005}'",
     )
     fun testBuildMultiArgumentRequiresAtLeastTwoArguments(
         function: SqlScalarFunction,
@@ -253,8 +252,8 @@ class SqlScalarFunctionTest {
     @DisplayName("ROUND は引数不適札の場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
-        "<emptyList>, 'Invalid number of arguments. Expected 1 or 2 arguments.'",
-        "gross:2:999, 'Invalid number of arguments. Expected 1 or 2 arguments.'"
+        "<emptyList>, '${MessageConstants.CE00003}'",
+        "gross:2:999, '${MessageConstants.CE00003}'",
     )
     fun testBuildRoundRequiresAtLeastOneArgument(
         @ConvertWith(AnyListConverter::class)
@@ -273,9 +272,9 @@ class SqlScalarFunctionTest {
     @DisplayName("CAST は引数が不適切な場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
-        "<emptyList>, 'Invalid number of arguments. Expected 2 arguments.'",
-        "gross, 'Invalid number of arguments. Expected 2 arguments.'",
-        "gross:INTEGER:ignored, 'Invalid number of arguments. Expected 2 arguments.'",
+        "<emptyList>, '${MessageConstants.CE00004}'",
+        "gross, '${MessageConstants.CE00004}'",
+        "gross:INTEGER:ignored, '${MessageConstants.CE00004}'",
     )
     fun testBuildCastRequiresExpressionAndType(
         @ConvertWith(AnyListConverter::class)
@@ -301,10 +300,7 @@ class SqlScalarFunctionTest {
         val actual = assertThrows(IllegalArgumentException::class.java) {
             SqlScalarFunction.CUSTOM.build(*args.toStringArray())
         }
-        assertEquals(
-            "CUSTOM requires at least one argument.",
-            actual.message,
-        )
+        assertEquals(MessageConstants.CE00007, actual.message)
     }
 
     /**

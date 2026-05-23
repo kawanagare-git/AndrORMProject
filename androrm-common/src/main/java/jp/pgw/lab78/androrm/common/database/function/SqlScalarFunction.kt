@@ -16,6 +16,7 @@ enum class SqlScalarFunction() : SqlFunction<SqlScalarFunction> {
     ROUND,
     COALESCE,
     IFNULL,
+    NULLIF,
     CAST,
     CONCAT,
     SUBSTR,

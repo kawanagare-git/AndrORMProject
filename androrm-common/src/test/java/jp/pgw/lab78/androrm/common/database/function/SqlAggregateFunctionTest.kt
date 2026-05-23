@@ -1,5 +1,7 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00001
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00003
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction.ArgumentArity
 import jp.pgw.lab78.androrm.support.converter.AnyListConverter
 import org.junit.jupiter.api.Assertions.*
@@ -66,14 +68,11 @@ class SqlAggregateFunctionTest {
     )
     fun testBuildSingleArgument(
         function: SqlAggregateFunction,
-
         @ConvertWith(AnyListConverter::class)
         args: List<Any?>,
-
         expected: String,
     ) {
         val actual = function.build(*args.toStringArray())
-
         assertEquals(expected, actual)
     }
 
@@ -89,14 +88,11 @@ class SqlAggregateFunctionTest {
     )
     fun testBuildSingleArgumentUsesFirstArgumentOnly(
         function: SqlAggregateFunction,
-
         @ConvertWith(AnyListConverter::class)
         args: List<Any?>,
-
         expected: String,
     ) {
         val actual = function.build(*args.toStringArray())
-
         assertEquals(expected, actual)
     }
 
@@ -110,11 +106,9 @@ class SqlAggregateFunctionTest {
     fun testBuildCountAll(
         @ConvertWith(AnyListConverter::class)
         args: List<Any?>,
-
         expected: String,
     ) {
         val actual = SqlAggregateFunction.COUNT_ALL.build(*args.toStringArray())
-
         assertEquals(expected, actual)
     }
 
@@ -153,10 +147,7 @@ class SqlAggregateFunctionTest {
         val actual = assertThrows(IllegalArgumentException::class.java) {
             function.build()
         }
-        assertEquals(
-            "Aggregate functions require a column argument.",
-            actual.message,
-        )
+        assertEquals(CE00001, actual.message)
     }
 
     @DisplayName("複数引数関数は引数なしまたは1件のみの場合に例外を投げる")
@@ -172,10 +163,7 @@ class SqlAggregateFunctionTest {
         val actual = assertThrows(IllegalArgumentException::class.java) {
             SqlAggregateFunction.GROUP_CONCAT.build(*args.toStringArray())
         }
-        assertEquals(
-            "Invalid number of arguments. Expected 1 or 2 arguments.",
-            actual.message,
-        )
+        assertEquals(CE00003, actual.message)
     }
 
     /**
