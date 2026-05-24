@@ -4,8 +4,13 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00011
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getPropertyValue
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
+import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
+import jp.pgw.lab78.androrm.common.logging.LogScope.APP
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getInsertTargets
+import java.util.logging.Logger
 import kotlin.reflect.KClass
 
 /**
@@ -16,7 +21,10 @@ import kotlin.reflect.KClass
  */
 class Insert<T : InsertEntity>(
     private val entityClass: KClass<out T>
-) {
+) : QueryBuilderLike<T>, QueryWithBindValues() {
+    /** ログ出力移譲 */
+    private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
+
     /** テーブル名：クラス名をスネークケース（大文字）に変換 */
     private val tableName = entityClass.getTableName()
 
@@ -28,17 +36,44 @@ class Insert<T : InsertEntity>(
     private val columnDefine: String =
         columnList.joinToString(", ", "(", ")") { it.second }
 
+    /** エンティティ一覧 */
+    private var entities: MutableList<T> = mutableListOf()
+        set(value) {
+            field = value
+        }
+
+    /** エンティティを1件追加 */
+    fun addEntity(entity: T) {
+        entities.add(entity)
+    }
+
+    /** エンティティを複数件追加 */
+    fun addEntities(entities: List<T>) {
+        this.entities.addAll(entities)
+    }
+
+    /**
+     * ## 条件生成メソッド
+     * ### 定義された条件から文字列を生成する
+     * @return 生成された文字列
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    override fun build(): String = build(entities).first
+
     /**
      * ## Insert 文を生成します
      * ### プレースホルダ名形式の insert 文を生成します
      * @param entities インサートするデータが格納されたエンティティクラスのリスト
      * @return insert into テーブル名 (カラム定義) values (「:プレースホルダー」を展開) to list<Any>
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2026-05-23
      */
     @TraceLog
     fun build(entities: List<T>): Pair<String, List<Any?>> {
         require(entities.isNotEmpty()) { AE00011 }
+        this.entities = entities.toMutableList()
+        clearBindValues()
         val result =
             "insert into $tableName $columnDefine values${
                 placeholders(entities.size, columnList.size)
@@ -47,6 +82,7 @@ class Insert<T : InsertEntity>(
                     getPropertyValue(entity, propertyName)
                 }
             }
+        addBindValues(result.second)
         return result
     }
 
@@ -59,6 +95,7 @@ class Insert<T : InsertEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-23
      */
+    @TraceLog
     private fun placeholders(rowCount: Int, columnCount: Int): String {
         val oneRow = List(columnCount) { "?" }.joinToString(", ", "(", ")")
         return List(rowCount) { oneRow }.joinToString(", ")

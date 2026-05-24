@@ -25,6 +25,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
+import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_LIMIT_VALUE
 import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_OFFSET_VALUE
@@ -68,6 +69,12 @@ class Select<T : SelectEntity>(
         isDistinct,
     )
 
+    /** WHERE 句生成委譲 */
+    private val whereDelegate =
+        WhereClauseDelegate<Select<T>>(owner = this, ownerName = this.javaClass.simpleName) {
+            isBuild = false
+        }
+
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
@@ -92,9 +99,6 @@ class Select<T : SelectEntity>(
     /** 抽出カラムリスト */
     private val selectColumnList = mutableListOf<String>()
 
-    /** 検索条件リスト */
-    private val whereConditions = mutableListOf<Condition>()
-
     /** 関数結果検索条件リスト */
     private val havingConditions = mutableListOf<Condition>()
 
@@ -106,9 +110,6 @@ class Select<T : SelectEntity>(
 
     /** JOIN 句用バインド値リスト */
     private val joinBindValues: MutableList<Any?> = mutableListOf()
-
-    /** WHERE 句用バインド値リスト */
-    private val whereBindValues: MutableList<Any?> = mutableListOf()
 
     /** HAVING 句用バインド値リスト */
     private val havingBindValues: MutableList<Any?> = mutableListOf()
@@ -340,17 +341,7 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     @InfoLog
-    fun where(block: ConditionBuilder.() -> Unit): Select<T> {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.WHERE)
-        isBuild = false
-        val valueHolder = object : QueryWithBindValues() {}
-        val builder = ConditionBuilder(valueHolder).apply(block)
-        // Select は builder の中身を意識せず、リストだけ取得して保持
-        whereConditions += builder.buildList()
-        // バインド変数の設定
-        whereBindValues.addAll(valueHolder.bindValues)
-        return this
-    }
+    fun where(block: ConditionBuilder.() -> Unit): Select<T> = whereDelegate.where(block)
 
     /**
      * ## having メソッド
@@ -495,19 +486,15 @@ class Select<T : SelectEntity>(
     /**
      * ## 追加バインド値取得
      * ### SQL 句の出現順に合わせて bindValues を合成する
+     * @author Masahiro Inoue
+     * @since 2026-04-28
      */
     protected override fun additionalBindValues(): List<Any?> = buildList {
         addAll(joinBindValues)
-        addAll(whereBindValues)
+        addAll(whereDelegate.bindValues)
         addAll(havingBindValues)
-
-        limitValue?.let { value ->
-            add(value)
-        }
-
-        offsetValue?.let { value ->
-            add(value)
-        }
+        limitValue?.let { value -> add(value) }
+        offsetValue?.let { value -> add(value) }
     }
 
     /**
@@ -652,7 +639,7 @@ class Select<T : SelectEntity>(
                 }
             }
 
-            addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereConditions.toList())
+            addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereDelegate.conditions)
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
             addClauseIfNotEmpty(SelectClause.GROUP, PRIMARY_DELIMITER, groupByColumns.toList())
             addClauseIfNotEmpty(SelectClause.ORDER, PRIMARY_DELIMITER, orderColumns.toList())

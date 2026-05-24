@@ -1,11 +1,16 @@
 package jp.pgw.lab78.androrm.ksp
 
 import com.google.devtools.ksp.KspExperimental
-import com.google.devtools.ksp.processing.*
+import com.google.devtools.ksp.processing.CodeGenerator
+import com.google.devtools.ksp.processing.Resolver
+import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.*
-import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.TypeName
 import jp.pgw.lab78.androrm.common.GenerateProps
-import jp.pgw.lab78.androrm.common.annotation.*
+import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
+import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
@@ -94,6 +99,7 @@ class PropsProcessor(
             INSERT("insertPackage"),
             UPDATE("updatePackage"),
             UPSERT("upsertPackage"),
+            DELETE("deletePackage"),
         }
     }
 
@@ -189,7 +195,12 @@ class PropsProcessor(
                 // ProjectionDefinition から EntityMeta を生成して検証
                 val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
                 // Entity メタ情報検証
-                val validationResult = EntityMetaValidator().validate(entityMeta)
+                val requireSelectableProperties =
+                    definition.commonInterfaces.contains(DMLInterfaceEnum.SELECT)
+                val validationResult = EntityMetaValidator().validate(
+                    entityMeta = entityMeta,
+                    requireSelectableProperties = requireSelectableProperties,
+                )
                 validationResult.warnings.forEach { logWarning(it) }
                 // エラーがある場合はログに出力して次のアノテーションへ
                 if (validationResult.hasErrors) {

@@ -29,6 +29,23 @@ import java.time.LocalDateTime
             ],
             commonInterface = [DMLInterfaceEnum.INSERT, DMLInterfaceEnum.UPSERT]
         ),
+        Projection(
+            entityNameExtend = "Update",
+            properties = [
+                ColumnProjection("name"),
+                ColumnProjection("address"),
+                ColumnProjection("updateDate"),
+            ],
+            commonInterface = [DMLInterfaceEnum.UPDATE]
+        ),
+        Projection(
+            entityNameExtend = "Delete",
+            properties = [
+                ColumnProjection("id", hideFromSelect = true),
+                ColumnProjection("address", hideFromSelect = true),
+            ],
+            commonInterface = [DMLInterfaceEnum.DELETE]
+        ),
     ]
 )
 @Table

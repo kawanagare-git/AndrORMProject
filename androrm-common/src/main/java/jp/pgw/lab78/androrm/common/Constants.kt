@@ -16,7 +16,7 @@ object Constants {
     const val UNKNOWN = "Unknown"
 
     /** 空白 */
-    private const val SPACE = " "
+    const val SPACE = " "
 
     /** カンマ */
     private const val COMMA = ","

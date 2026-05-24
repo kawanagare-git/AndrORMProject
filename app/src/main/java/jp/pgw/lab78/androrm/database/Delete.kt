@@ -1,4 +1,62 @@
 package jp.pgw.lab78.androrm.database
 
-class Delete {
+import jp.pgw.lab78.androrm.common.Constants.SPACE
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.dml.interfaces.DeleteEntity
+import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
+import jp.pgw.lab78.androrm.common.logging.LogScope.APP
+import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
+import java.util.logging.Logger
+import kotlin.reflect.KClass
+
+class Delete<T : DeleteEntity>(
+    private val entityClass: KClass<out T>
+) : QueryBuilderLike<T>, QueryWithBindValues() {
+    /** ログ出力移譲 */
+    private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
+
+    /** テーブル名：クラス名をスネークケース（大文字）に変換 */
+    val tableName = entityClass.getTableName()
+
+    /** ビルドフラグ */
+    private var isBuild = false
+
+    /** WHERE 句生成委譲 */
+    private val whereDelegate =
+        WhereClauseDelegate<Delete<T>>(owner = this, ownerName = this.javaClass.simpleName) {
+            isBuild = false
+        }
+
+    fun where(block: ConditionBuilder.() -> Unit): Delete<T> =
+        whereDelegate.where(block)
+
+    protected override fun additionalBindValues(): List<Any?> =
+        whereDelegate.bindValues
+
+    fun deleteAll() {
+        isBuild = true
+    }
+
+    /**
+     * ## 生成メソッド
+     * ### クエリを生成するときに呼び出す
+     * @return 生成されたクエリ文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-24
+     */
+    override fun build(): String {
+        val query = StringBuilder("delete from $tableName")
+        if (!isBuild) {
+            isBuild = true
+            val whereClause = whereDelegate.buildClause()
+            query.append(" $whereClause")
+                .replace(DmlConstant.MULTI_SPACE_REGEX, SPACE)
+                .trim()
+        }
+        return query.toString()
+    }
+
 }

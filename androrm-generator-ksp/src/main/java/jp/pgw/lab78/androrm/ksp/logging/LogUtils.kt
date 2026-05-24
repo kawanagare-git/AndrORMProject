@@ -14,6 +14,8 @@ object LogUtils {
         "warning",
         "error",
         "debug",
+        "logTraceEntered",
+        "logTraceExiting",
     )
 
     /** ログ再起上限 */

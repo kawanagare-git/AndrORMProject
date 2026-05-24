@@ -21,5 +21,6 @@ enum class DMLInterfaceEnum(
     SELECT(SelectEntity::class),
     INSERT(InsertEntity::class),
     UPDATE(UpdateEntity::class),
-    UPSERT(UpsertEntity::class), ;
+    UPSERT(UpsertEntity::class),
+    DELETE(DeleteEntity::class), ;
 }

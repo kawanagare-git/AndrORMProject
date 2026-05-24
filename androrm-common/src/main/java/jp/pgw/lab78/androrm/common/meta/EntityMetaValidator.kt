@@ -26,14 +26,23 @@ class EntityMetaValidator {
      * @author Masahiro Inoue
      * @since 2026-04-27
      */
-    fun validate(entityMeta: EntityMeta): EntityMetaValidationResult {
-        // 各検査を実行
+    fun validate(
+        entityMeta: EntityMeta,
+        requireSelectableProperties: Boolean = true,
+    ): EntityMetaValidationResult {
+        errors.clear()
+        warnings.clear()
+        // エンティティメタ情報の二重定義検査
         validateDualAnnotation(entityMeta)
-        validateNoSelectableProperties(entityMeta)
+        // Select 時のみ表示カラム「hideFromSelect」の検査
+        if (requireSelectableProperties) {
+            validateNoSelectableProperties(entityMeta)
+        }
+        // エイリアスの二重定義検査
         validateDuplicateAliases(entityMeta)
         return EntityMetaValidationResult(
-            errors = errors,
-            warnings = warnings,
+            errors = errors.toList(),
+            warnings = warnings.toList(),
         )
     }
 

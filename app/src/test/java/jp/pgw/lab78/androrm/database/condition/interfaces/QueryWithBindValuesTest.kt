@@ -37,7 +37,7 @@ class QueryWithBindValuesTest {
          * ### Iterator の中身が展開されることを検証するためのラッパー
          */
         fun addValues(values: List<Any?>) {
-            addBindValues(values.iterator())
+            addBindValues(values)
         }
 
         /**

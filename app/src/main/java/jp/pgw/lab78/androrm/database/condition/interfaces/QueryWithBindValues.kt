@@ -39,10 +39,8 @@ abstract class QueryWithBindValues {
      * @author Masahiro Inoue
      * @since 2026-01-12
      */
-    internal fun addBindValues(values: Iterator<Any?>) {
-        values.forEach { value ->
-            _bindValues += value
-        }
+    internal fun addBindValues(values: Iterable<Any?>) {
+        _bindValues.addAll(values)
     }
 
     /**
