@@ -99,6 +99,7 @@ object MessageConstants {
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
      * 現時点の app/src/main には Warning 用メッセージは見当たらない。
      */
+    const val AE00011 = "Insert requires at least one value."
 
     /**
      * ## CE00001

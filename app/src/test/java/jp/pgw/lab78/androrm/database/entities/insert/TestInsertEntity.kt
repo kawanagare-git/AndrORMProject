@@ -1,13 +1,14 @@
 package jp.pgw.lab78.androrm.database.entities.insert
 
+import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
 import java.time.LocalDate
-import java.time.LocalDateTime
 
+@Table
 data class TestInsertEntity(
     val name: String,
     val address: String,
     val birthday: LocalDate,
-    val updateDate: LocalDateTime,
-    val insertDateTime: LocalDateTime
+    val updateDate: LocalDate?,
+    val insertDateTime: LocalDate?
 ) : InsertEntity

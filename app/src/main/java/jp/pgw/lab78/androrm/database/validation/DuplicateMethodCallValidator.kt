@@ -28,7 +28,7 @@ class DuplicateMethodCallValidator<M : QueryMethodCall>(
      * ## 重複メソッド呼び出し検証
      * ### 既に同一メソッドが呼び出されている場合は例外を発生させる
      * @param methodCall 検証対象メソッド
-     * @throws IllegalArgumentException 同一メソッドが複数回指定された場合にスローされる例外
+     * @throws IllegalStateException 同一メソッドが複数回指定された場合にスローされる例外
      * @author Masahiro Inoue
      * @since 2026-05-14
      */

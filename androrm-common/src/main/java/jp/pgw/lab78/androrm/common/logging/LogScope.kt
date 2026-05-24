@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.logging
 
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00010
 import jp.pgw.lab78.androrm.common.logging.interfaces.AndrOrmLoggerLike
 import java.io.File
 import java.time.Instant
@@ -145,7 +146,7 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
          */
         fun fromName(name: String): LogScope {
             return entries.find { it.name == name }
-                ?: throw IllegalArgumentException("No LogScope with name: $name")
+                ?: throw IllegalArgumentException(CE00010.format(name))
         }
 
         /** モジュール内のログ出力先 */

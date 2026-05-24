@@ -1,6 +1,8 @@
 package jp.pgw.lab78.androrm.common.database
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00008
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00009
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
@@ -10,6 +12,7 @@ import java.util.Locale
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.memberProperties
 
 /**
  * SupportFunction オブジェクトクラス
@@ -31,10 +34,7 @@ object SupportFunction {
      */
     fun <T : Entity> KClass<out T>.getTableAnnotation() =
         this.findAnnotation<Table>()
-            ?: error(
-                "Cannot be constructed using an entity(${this.qualifiedName})" +
-                        " that does not have the `@Table` annotation."
-            )
+            ?: error(CE00008.format(this.qualifiedName))
 
     /**
      * ## テーブル名取得
@@ -95,7 +95,7 @@ object SupportFunction {
      */
     fun KClass<*>.simpleNameToSnakeCase(): String =
         this.simpleName?.toSnakeCase()
-            ?: error("Could not determine class name for ${this.qualifiedName}")
+            ?: error(CE00009.format(this.qualifiedName))
 
     /**
      * ## プロパティ名をスネークケースに変換
@@ -194,4 +194,23 @@ object SupportFunction {
         this.findAnnotation<Function>()?.hideFromSelect
             ?: this.findAnnotation<Column>()?.hideFromSelect
             ?: false
+
+    /**
+     * ## 値取得
+     * ### リフレクションを利用して、インスタンスから値を取得する
+     * @param target 取得対象のインスタンス
+     * @param propertyName 値を取得するプロパティ名
+     * @return 取得した値
+     * @author Masahiro Inoue
+     * @since 2026-05-23
+     */
+    fun getPropertyValue(
+        target: Any,
+        propertyName: String,
+    ): Any? {
+        val property = target::class.memberProperties
+            .firstOrNull { it.name == propertyName }
+            ?: throw IllegalArgumentException("Property '$propertyName' is not found.")
+        return property.getter.call(target)
+    }
 }

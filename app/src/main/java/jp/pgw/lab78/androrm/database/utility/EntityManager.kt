@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.shared.library.Utils.isNotNull
@@ -58,9 +59,6 @@ object EntityManager {
 
     /** テーブルメタデータ管理 */
     private val tableMetadata = mutableMapOf<String, TableDefinition<Entity>>()
-
-    /** プレースホルダー名正規表現 */
-    private val PLACE_HOLDER_REGEX = Regex(""":(\w+)""")
 
     /**
      * ## クラス取得
@@ -130,29 +128,37 @@ object EntityManager {
     }
 
     /**
-     * ## 定義順カラム情報取得
-     * ### カラム定義をコンストラクタ順に取得
-     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
-     * @param T [Entity] インターフェースを実装するクラスの型
-     * @return 定義順に並んだカラム名のリスト
+     * ## Insert 用名称取得
+     * ### Insert クラスで使用するエンティティからプロパティ名と DB カラム名をコンストラクタに定義されている順で取得
+     * @receiver エンティティのインスタンス
+     * @return 生成されたプロパティ名（戻り値１）と DB カラム名（戻り値２）
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2026-05-23
      */
-    fun <T : Entity> KClass<out T>.getColumns(): List<String> {
+    @TraceLog
+    fun <T : Entity> KClass<out T>.getInsertTargets(): List<Pair<String, String>> {
         val tableName = this.createTableName()
         val alias = this.getTableAlias()
-        // プライマリコンストラクタがないときはエラー
+        // コンストラクタ情報の取得
         val constructor = this.primaryConstructor
             ?: error(AE00007.format(this.simpleName))
-        // コンストラクタパラメータ順でプロパティをマッピング
         return constructor.parameters.map { param ->
-            // メタデータから抽出準備
-            val property = this.memberProperties.first { it.name == param.name }
-            // @Column の name/alias を取得
+            // プロパティ名の取得
+            val propertyName = param.name
+                ?: error(AE00007.format(this.simpleName))
+            // プロパティ情報の取得
+            val property = this.memberProperties.first { it.name == propertyName }
+            // プロパティ情報情報を基にカラムエイリアスを取得
             val columnAlias =
                 "${alias}_${property.getColumnAlias().ifBlank { property.getColumn() }}"
-            // tableMetadata から、カラム名抽出
-            this.extractColumnMetadata(tableName, alias, columnAlias, property)
+            // カラム名を生成
+            val columnName = this.extractColumnMetadata(
+                tableName = tableName,
+                alias = alias,
+                columnAlias = columnAlias,
+                property = property,
+            )
+            Pair(propertyName, columnName)
         }
     }
 
@@ -199,29 +205,6 @@ object EntityManager {
      * @since 2025-08-01
      */
     fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
-
-    /**
-     * ## エンティティクラス値マップ生成
-     * ### 複数のエンティティインスタンスを受け取り
-     * ### エンティティプロパティ名と値のマップをリストとして生成
-     * @param entities 複数のエンティティインスタンス
-     * @return エンティティプロパティ名と値のマップのリスト
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    inline fun <reified T : Entity> getValueFromEntity(vararg entities: T): List<Map<String, Any>> {
-        val entityList = listOf(*entities)
-        val result: MutableList<Map<String, Any>> = mutableListOf()
-        entityList.forEach { entity ->
-            val map: MutableMap<String, Any> = mutableMapOf()
-            T::class.memberProperties.forEach { property ->
-                val value = property.get(entity)
-                map[property.getColumn()] = value as Any
-            }
-            result.add(map)
-        }
-        return result
-    }
 
     /** 型変換用マップ */
     private val fieldToColumnMap = mapOf(
@@ -285,23 +268,4 @@ object EntityManager {
             "?"
         }
     }
-
-//    /**
-//     * ## 値の文字列化
-//     * ### 指定された値を文字列化する
-//     * @param value 変換元の値
-//     * @return 文字列化された値
-//     * @author Masahiro Inoue
-//     * @since 2025-08-01
-//     */
-//    fun formatValue(value: Any): String = when (value) {
-//        is KProperty1<*, *> -> {
-//            val property = value as KProperty1<out Entity, *>
-//            "${property.extractClassFromProperty().getTableAlias()}.${value.getColumn()}"
-//        }
-//
-//        else -> {
-//            "?"
-//        }
-//    }
 }

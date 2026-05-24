@@ -6,7 +6,6 @@ import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.junit.platform.commons.util.Preconditions.condition
 
 /**
  * ## Select#appendSelectableColumns テスト
