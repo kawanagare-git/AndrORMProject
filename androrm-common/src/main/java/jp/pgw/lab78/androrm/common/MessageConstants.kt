@@ -102,6 +102,49 @@ object MessageConstants {
     const val AE00011 = "Insert requires at least one value."
 
     /**
+     * ## AE00012
+     * ### Update の更新値 Entity が指定されていない場合
+     */
+    const val AE00012 = "Update requires an entity."
+
+    /**
+     * ## AE00013
+     * ### Update で WHERE 条件が指定されていない場合
+     */
+    const val AE00013 = "Update requires a WHERE condition."
+
+    /**
+     * ## AE00014
+     * ### Update の SET 句が指定されていない場合
+     */
+    const val AE00014 = "Update requires at least one SET assignment."
+
+    /**
+     * ## AE00015
+     * ### Update の join が from 指定前に呼び出された場合
+     */
+    const val AE00015 = "Update.join() requires from() before join()."
+
+    /**
+     * ## AE00016
+     * ### Upsert 対象 Entity が指定されていない場合
+     */
+
+    const val AE00016 = "Upsert requires at least one value."
+
+    /**
+     * ## AE00017
+     * ### Upsert の ON CONFLICT 対象カラムが指定されていない場合
+     */
+    const val AE00017 = "Upsert requires at least one conflict column."
+
+    /**
+     * ## AE00018
+     * ### Upsert の DO UPDATE SET 対象カラムが指定されていない場合
+     */
+    const val AE00018 = "Upsert requires at least one update column."
+
+    /**
      * ## CE00001
      * ### 集約関数に列引数が指定されていない場合
      */

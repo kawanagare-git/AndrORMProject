@@ -25,6 +25,8 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
+import jp.pgw.lab78.androrm.database.queryparts.JoinClauseDelegate
+import jp.pgw.lab78.androrm.database.queryparts.JoinType
 import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_LIMIT_VALUE
@@ -33,7 +35,6 @@ import jp.pgw.lab78.androrm.database.validation.DuplicateMethodCallValidator
 import jp.pgw.lab78.androrm.database.validation.QueryMethodCall
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.EnumMap
-import java.util.Locale
 import java.util.logging.Level.WARNING
 import java.util.logging.Logger
 import kotlin.reflect.KClass
@@ -75,6 +76,24 @@ class Select<T : SelectEntity>(
             isBuild = false
         }
 
+    /** JOIN 句生成委譲 */
+    private val joinDelegate =
+        JoinClauseDelegate<Select<T>, SelectEntity>(
+            owner = this,
+            onChanged = {
+                isBuild = false
+            },
+            onTableJoined = { joinedTable ->
+                val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedTable.entityClass)
+
+                validateEntityMeta(joinedEntityMeta)
+                registerTableAlias(joinedEntityMeta.tableName, joinedTable.alias)
+                appendSelectableColumns(joinedEntityMeta, joinedTable.alias)
+
+                usedEntityClasses += joinedTable.entityClass
+            },
+        )
+
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
@@ -107,9 +126,6 @@ class Select<T : SelectEntity>(
 
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
-
-    /** JOIN 句用バインド値リスト */
-    private val joinBindValues: MutableList<Any?> = mutableListOf()
 
     /** HAVING 句用バインド値リスト */
     private val havingBindValues: MutableList<Any?> = mutableListOf()
@@ -154,16 +170,6 @@ class Select<T : SelectEntity>(
     }
 
     /**
-     * ## 結合方法列挙型
-     * ### join メソッドで結合方法を指定するための列挙子
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    enum class JoinType {
-        INNER, LEFT, RIGHT, CROSS, NATURAL;
-    }
-
-    /**
      * ## コンストラクタ
      * ### 一番単純な select 文を生成します
      * @author Masahiro Inoue
@@ -202,20 +208,13 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
-        on: ConditionBuilder.() -> Unit
-    ): Select<T> {
-        // 結合対象の Entity メタ情報を生成
-        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
-        // テーブル結合の指定
-        return join(
+        on: ConditionBuilder.() -> Unit,
+    ): Select<T> =
+        joinDelegate.join(
             joinType = joinType,
-            joinedTable = TableRef(
-                entityClass = joinedEntity,
-                alias = joinedEntityMeta.tableAlias,
-            ),
+            joinedEntity = joinedEntity,
             on = on,
         )
-    }
 
     /**
      * ## join メソッド
@@ -232,35 +231,13 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedTable: TableRef<out SelectEntity>,
-        on: ConditionBuilder.() -> Unit
-    ): Select<T> {
-        isBuild = false
-        // 結合対象の Entity メタ情報を生成
-        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedTable.entityClass)
-        validateEntityMeta(joinedEntityMeta)
-        // 結合対象のテーブル名とエイリアスを取得
-        val joinedTableName = joinedEntityMeta.tableName
-        val joinedTableAlias = joinedTable.alias
-        // テーブル名とテーブルエイリアスの組み合わせを登録、重複時は例外
-        registerTableAlias(joinedTableName, joinedTableAlias)
-        // 結合対象のテーブルの SELECT 対象列を追加
-        appendSelectableColumns(joinedEntityMeta, joinedTableAlias)
-        // 結合条件を生成
-        val valueHolder = object : QueryWithBindValues() {}
-        val joinCondition = ConditionBuilder(valueHolder).apply(on).buildList()
-        // バインド変数の設定
-        joinBindValues.addAll(valueHolder.bindValues)
-        // join句の生成
-        queryStructureMap.getOrPut(SelectClause.JOIN) { mutableListOf() }
-            .add(
-                "${joinType.name.lowercase(Locale.ROOT)} "
-                        + "join $joinedTableName $joinedTableAlias"
-                        + " on ${joinCondition.joinToString(" AND ") { it.build() }}"
-            )
-        // エンティティクラスを登録
-        usedEntityClasses += joinedTable.entityClass
-        return this
-    }
+        on: ConditionBuilder.() -> Unit,
+    ): Select<T> =
+        joinDelegate.join(
+            joinType = joinType,
+            joinedTable = joinedTable,
+            on = on,
+        )
 
     /**
      * ## join メソッド
@@ -275,19 +252,11 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
-    ): JoinCondition {
-        isBuild = false
-        // 結合するエンティティのメタ情報を生成
-        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedEntity)
-
-        return JoinCondition(
+    ) =
+        joinDelegate.join(
             joinType = joinType,
-            joinedTable = TableRef(
-                entityClass = joinedEntity,
-                alias = joinedEntityMeta.tableAlias,
-            ),
+            joinedEntity = joinedEntity,
         )
-    }
 
     /**
      * ## join メソッド
@@ -302,10 +271,11 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedTable: TableRef<out SelectEntity>,
-    ): JoinCondition {
-        isBuild = false
-        return JoinCondition(joinType, joinedTable)
-    }
+    ) =
+        joinDelegate.join(
+            joinType = joinType,
+            joinedTable = joinedTable,
+        )
 
     /**
      * ## JoinCondition クラス
@@ -490,7 +460,7 @@ class Select<T : SelectEntity>(
      * @since 2026-04-28
      */
     protected override fun additionalBindValues(): List<Any?> = buildList {
-        addAll(joinBindValues)
+        addAll(joinDelegate.bindValues)
         addAll(whereDelegate.bindValues)
         addAll(havingBindValues)
         limitValue?.let { value -> add(value) }
@@ -639,6 +609,9 @@ class Select<T : SelectEntity>(
                 }
             }
 
+            if (joinDelegate.clauses.isNotEmpty()) {
+                queryStructureMap[SelectClause.JOIN] = joinDelegate.clauses.toMutableList()
+            }
             addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereDelegate.conditions)
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
             addClauseIfNotEmpty(SelectClause.GROUP, PRIMARY_DELIMITER, groupByColumns.toList())

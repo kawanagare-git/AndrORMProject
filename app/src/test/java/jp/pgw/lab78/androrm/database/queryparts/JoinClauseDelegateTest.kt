@@ -1,0 +1,169 @@
+package jp.pgw.lab78.androrm.database.queryparts
+
+import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
+import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.utility.Support.tableRef
+import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
+
+class JoinClauseDelegateTest {
+
+    private class TestOwner
+
+    @Test
+    fun testBuildClause_empty() {
+        val owner = TestOwner()
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+        )
+
+        assertEquals(emptyList<String>(), target.clauses)
+        assertEquals(emptyList<Any?>(), target.bindValues)
+        assertEquals("", target.buildClause())
+    }
+
+    @Test
+    fun testJoin_tableRef_columnToColumn() {
+        var changed = false
+        val joinedTables = mutableListOf<TableRef<out Entity>>()
+
+        val owner = TestOwner()
+        val fromTable = tableRef(TestSelectEntity::class, "X")
+        val joinTable = tableRef(TestSelectEntity::class, "Y")
+
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+            onChanged = {
+                changed = true
+            },
+            onTableJoined = { joinedTable ->
+                joinedTables += joinedTable
+            },
+        )
+
+        val actualOwner = target.join(
+            joinType = JoinType.INNER,
+            joinedTable = joinTable,
+        ) {
+            fromTable[TestSelectEntity::id] eq joinTable[TestSelectEntity::id]
+        }
+
+        assertSame(owner, actualOwner)
+        assertTrue(changed)
+        assertEquals(listOf(joinTable), joinedTables)
+        assertEquals(
+            listOf("inner join TEST_SELECT_ENTITY Y on X.ID = Y.ID"),
+            target.clauses,
+        )
+        assertEquals(
+            "inner join TEST_SELECT_ENTITY Y on X.ID = Y.ID",
+            target.buildClause(),
+        )
+        assertEquals(emptyList<Any?>(), target.bindValues)
+    }
+
+    @Test
+    fun testJoin_tableRef_columnToValue() {
+        val owner = TestOwner()
+        val joinTable = tableRef(TestSelectEntity::class, "Y")
+
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+        )
+
+        val actualOwner = target.join(
+            joinType = JoinType.LEFT,
+            joinedTable = joinTable,
+        ) {
+            joinTable[TestSelectEntity::id] eq 100
+        }
+
+        assertSame(owner, actualOwner)
+        assertEquals(
+            "left join TEST_SELECT_ENTITY Y on Y.ID = ?",
+            target.buildClause(),
+        )
+        assertEquals(
+            listOf(100),
+            target.bindValues,
+        )
+    }
+
+    @Test
+    fun testJoin_entityClass_usesDefaultAlias() {
+        val owner = TestOwner()
+
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+        )
+
+        val actualOwner = target.join(
+            joinType = JoinType.INNER,
+            joinedEntity = TestSelectEntity::class,
+        ) {
+            TestSelectEntity::id eq 100
+        }
+
+        assertSame(owner, actualOwner)
+        assertEquals(
+            "inner join TEST_SELECT_ENTITY TS on TS.ID = ?",
+            target.buildClause(),
+        )
+        assertEquals(
+            listOf(100),
+            target.bindValues,
+        )
+    }
+
+    @Test
+    fun testJoin_onSyntax() {
+        val owner = TestOwner()
+        val fromTable = tableRef(TestSelectEntity::class, "X")
+        val joinTable = tableRef(TestSelectEntity::class, "Y")
+
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+        )
+
+        val actualOwner = target
+            .join(JoinType.LEFT, joinTable)
+            .on {
+                fromTable[TestSelectEntity::id] eq joinTable[TestSelectEntity::id]
+            }
+
+        assertSame(owner, actualOwner)
+        assertEquals(
+            "left join TEST_SELECT_ENTITY Y on X.ID = Y.ID",
+            target.buildClause(),
+        )
+        assertEquals(emptyList<Any?>(), target.bindValues)
+    }
+
+    @Test
+    fun testJoin_multiClauses() {
+        val owner = TestOwner()
+        val fromTable = tableRef(TestSelectEntity::class, "X")
+        val joinTable1 = tableRef(TestSelectEntity::class, "Y")
+        val joinTable2 = tableRef(TestSelectEntity::class, "Z")
+
+        val target = JoinClauseDelegate<TestOwner, Entity>(
+            owner = owner,
+        )
+
+        target.join(JoinType.INNER, joinTable1) {
+            fromTable[TestSelectEntity::id] eq joinTable1[TestSelectEntity::id]
+        }
+
+        target.join(JoinType.LEFT, joinTable2) {
+            joinTable1[TestSelectEntity::id] eq joinTable2[TestSelectEntity::id]
+        }
+
+        assertEquals(
+            "inner join TEST_SELECT_ENTITY Y on X.ID = Y.ID " +
+                    "left join TEST_SELECT_ENTITY Z on Y.ID = Z.ID",
+            target.buildClause(),
+        )
+        assertEquals(emptyList<Any?>(), target.bindValues)
+    }
+}

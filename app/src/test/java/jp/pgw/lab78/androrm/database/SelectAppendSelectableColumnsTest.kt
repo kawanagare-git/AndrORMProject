@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.Select.JoinType.LEFT
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
+import jp.pgw.lab78.androrm.database.queryparts.JoinType
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -50,7 +50,7 @@ class SelectAppendSelectableColumnsTest {
     @Test
     fun appendSelectableColumns_shouldUseJoinedTableAlias_whenJoinedEntityContainsSelectableColumns() {
         val query = Select(EmployeeEntityIdSelection::class)
-            .join(LEFT, EmployeeEntity::class)
+            .join(JoinType.LEFT, EmployeeEntity::class)
             .on {
                 condition("1 = 1")
             }
@@ -101,7 +101,7 @@ class SelectAppendSelectableColumnsTest {
         val main = TableRef(EmployeeEntity::class, "M")
         val sub = TableRef(EmployeeEntity::class, "S")
         val query = Select(main)
-            .join(LEFT, sub)
+            .join(JoinType.LEFT, sub)
             .on {
                 condition("1 = 1")
             }

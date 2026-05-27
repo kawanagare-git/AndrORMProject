@@ -128,15 +128,19 @@ object EntityManager {
     }
 
     /**
-     * ## Insert 用名称取得
-     * ### Insert クラスで使用するエンティティからプロパティ名と DB カラム名をコンストラクタに定義されている順で取得
-     * @receiver エンティティのインスタンス
-     * @return 生成されたプロパティ名（戻り値１）と DB カラム名（戻り値２）
+     * ## DML 用名称取得
+     * ### DML として使用するエンティティクラスからプロパティ名と DB カラム名をコンストラクタに定義されている順で取得
+     * @receiver エンティティクラス
+     * @return コンストラクタ順に定義された名称のペア
+     * ```
+     * first：生成されたプロパティ名
+     * second：DB カラム名
+     *  ```
      * @author Masahiro Inoue
      * @since 2026-05-23
      */
     @TraceLog
-    fun <T : Entity> KClass<out T>.getInsertTargets(): List<Pair<String, String>> {
+    fun <T : Entity> KClass<out T>.getDmlTargets(): List<Pair<String, String>> {
         val tableName = this.createTableName()
         val alias = this.getTableAlias()
         // コンストラクタ情報の取得

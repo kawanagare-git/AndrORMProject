@@ -9,7 +9,7 @@ import jp.pgw.lab78.androrm.common.logging.LogScope.APP
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
-import jp.pgw.lab78.androrm.database.utility.EntityManager.getInsertTargets
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getDmlTargets
 import java.util.logging.Logger
 import kotlin.reflect.KClass
 
@@ -29,7 +29,7 @@ class Insert<T : InsertEntity>(
     private val tableName = entityClass.getTableName()
 
     /** 挿入カラムリスト */
-    private val columnList = entityClass.getInsertTargets()
+    private val columnList = entityClass.getDmlTargets()
 
     /** カラム名の定義文字列 */
     // カラム名：クラスのメンバー・プロパティ名をスネークケース（大文字）に変換

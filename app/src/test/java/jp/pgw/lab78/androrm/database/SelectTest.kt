@@ -1,10 +1,10 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.Select.JoinType.*
 import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
+import jp.pgw.lab78.androrm.database.queryparts.JoinType.*
 import jp.pgw.lab78.androrm.database.utility.Support.tableRef
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
