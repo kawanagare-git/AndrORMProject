@@ -3,118 +3,221 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00001
-import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
-import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty
 import kotlin.reflect.full.findAnnotation
 
 /**
  * ## AndrORM データベースヘルパークラス
- * ### SQLiteOpenHelper の作業を代行するヘルパークラス
- * @param context アプリケーションコンテキスト（通常は Android framework が生成）
- * @param name データベースファイル名（省略時 app.db）
- * @param version データベース改変バージョン
- * @param entities データベースにテーブルとして配置する Entity クラス
+ * ### AndrORM とデータベースの接続。各クエリの実行
+ * @param context android システムのコンテキスト
+ * @param databaseName データベース名
+ * @param version データベースのバージョン
+ * @param entities 生成するテーブル
  * @author Masahiro Inoue
- * @since 2025-08-01
- * @see SQLiteOpenHelper
+ * @since 2025-08-08
  */
-class AndrOrmDatabaseHelper(
+open class AndrOrmDatabaseHelper(
     context: Context,
-    val name: String = "app.db",
+    databaseName: String = "app.db",
     version: Int,
-    private vararg val entities: KClass<out TableDefinitionEntity>
-) : SQLiteOpenHelper(context, name, null, version) {
+    private vararg val entities: KClass<out TableDefinitionEntity>,
+) : SQLiteOpenHelper(context, databaseName, null, version) {
+    /**
+     * ## 標準カラムマッピング保持領域
+     * ### onUpgrade 中に作成した標準カラムマッピングを resolveColumnMappings() から参照する
+     */
+    private lateinit var preparedColumnMappings: MutableMap<KClass<out TableDefinitionEntity>, List<Pair<String, String>>>
 
     /**
-     * ## AndrORM データベーステーブル生成メソッド
-     * ### スーパークラスの onCreate メソッドをオーバーライドします。
-     * ### 設定された entities を基に Create 文を生成し、テーブルを作成する
+     * ## データベース生成
+     * ### データベースの生成と所属するテーブルを作成
+     * ### データベースが新規作成される時だけ作成される
+     * @param db SQLite データベース
      * @author Masahiro Inoue
      * @since 2025-08-08
-     * @see android.database.sqlite.SQLiteDatabase
      */
     override fun onCreate(db: SQLiteDatabase) {
-        // 全エンティティに対してテーブル生成クエリを実行
-        entities.forEach { entity ->
-            val tableQuery = Create(entity).build()
-            db.execSQL(tableQuery)
+        val createTableList = entities.map { entity ->
+            val create = Create(entity)
+            create.build() to create.buildIndexQueries()
+        }
+        // テーブル作成
+        createTableList.forEach { (createTableQuery, createIndexQueries) ->
+            db.execSQL(createTableQuery)
+            // テーブル毎のインデックス作成
+            createIndexQueries.forEach { createIndexQuery ->
+                db.execSQL(createIndexQuery)
+            }
         }
     }
 
     /**
-     * ## AndrORM データベースアップグレードメソッド
-     * ### スーパークラスの onUpgrade メソッドをオーバーライドします。
-     * ### 設定された entities を基に Drop 文を作成し、テーブルを削除する
+     * ## データベース更新
+     * ### データベースバージョンを比較してテーブル追加・変更を実施
+     * @param db SQLite データベース
+     * @param oldVersion 適用前データベースバージョン
+     * @param newVersion 適用後データベースバージョン
      * @author Masahiro Inoue
      * @since 2025-08-08
-     * @see android.database.sqlite.SQLiteDatabase
      */
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // 各エンティティに対して DROP TABLE 文を実行
-        entities.forEach { entity ->
-            val tableAnnotation = entity.findAnnotation<Table>()
-            val tableName = if (tableAnnotation != null && tableAnnotation.name.isNotBlank()) {
-                tableAnnotation.name
-            } else {
-                entity.simpleName?.toSnakeCase() ?: error(AE00001)
-            }
-            db.execSQL("DROP TABLE IF EXISTS $tableName")
-        }
-        onCreate(db)
+    override fun onUpgrade(
+        db: SQLiteDatabase,
+        oldVersion: Int,
+        newVersion: Int,
+    ) {
+        migrateDatabase(db)
     }
 
     /**
-     * ## AndrORM データベースヘルパ取得メソッド
-     * @return AndrORM データベースヘルパを返す
+     * ## DB 移行処理
+     * ### 標準では同名カラムの値を引き継ぐ
+     * @param db SQLite データベース
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2026-05-30
      */
-    fun getDatabase(): SQLiteOpenHelper = this
-
-    /**
-     * ## AndrORM データベースヘルパ取得メソッド（移譲用）
-     * ### AndrORM データベースヘルパークラスのインスタンスを移譲元に渡す
-     * @param thisRef オーナーオブジェクト：システムで設定
-     * @param property プロパティ情報：システムで設定
-     * @return AndrORM データベースヘルパを返す
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    operator fun getValue(thisRef: Any?, property: KProperty<*>) = this
-
-    /**
-     * ## AndrORM データベース実行メソッド
-     * ### 引数で渡されたクエリを実行する（select 文用）
-     * @param query 実行する Select クラスのインスタンス
-     * @param entities 条件エンティティクラスのインスタンス
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    inline fun <reified T : SelectEntity, reified> queryList(
-        query: Select<out T>,
-    ): List<T> {
-        // select の実行（values.firstOrNull() は、values が空の時は null を返す）
-        val cursor =
-            readableDatabase.rawQuery(
-                query.build(),
-                query.bindValues.map { it.toString() }.toTypedArray()
+    protected open fun migrateDatabase(
+        db: SQLiteDatabase,
+    ) {
+        // 新旧テーブル名を作成
+        val tableNames =
+            entities.associateWith { entity -> entity.getTableName() to "${entity.getTableName()}$NEW_TABLE_SUFFIX" }
+        // 新旧テーブルカラムのマッピング
+        preparedColumnMappings = entities.associateWith { entity ->
+            entity.getConstructorOrderedProperties()
+                .map { property ->
+                    val newColumn = property.getColumn()
+                    val oldColumn =
+                        property.findAnnotation<ColumnOldName>()?.name?.takeIf { it.isNotBlank() }
+                            ?: newColumn
+                    oldColumn to newColumn
+                }
+        }.toMutableMap()
+        // 新旧テーブルカラムのマッピングを更新
+        customColumnMappingsUpdate()
+        // 新テーブルの create 文生成
+        val createNewTableList = tableNames.map { (key, tableNamePair) ->
+            val create = Create(key, tableNamePair.second)
+            create.build()
+        }
+        // データ転送用クエリ生成
+        val insertSelectQueryList = entities.map { entity ->
+            Insert.intoTableColumns(
+                tableNames.getValue(entity).second,
+                preparedColumnMappings.getValue(entity).map { it.second },
+                Select.tableColumns(
+                    tableNames.getValue(entity).first,
+                    preparedColumnMappings.getValue(entity).map { it.first })
             )
-        val result = mutableListOf<T>()
-        cursor.use {
-            while (it.moveToFirst()) {
-                result += T::class.constructors.first().callBy( /* Cursor から map */ emptyMap())
-            }
         }
-        return result
+        // drop 文生成
+        val dropOldTableQueryList = entities.map { entity ->
+            "drop table if exists ${tableNames.getValue(entity).first}"
+        }
+        // alter 文生成(テーブル名変更)
+        val renameTableQueryList = entities.map { entity ->
+            "alter table ${
+                tableNames.getValue(entity).second
+            } rename to ${
+                tableNames.getValue(entity).first
+            }"
+        }
+        // 新テーブルの create index 文生成、リネーム後なのでテーブル名もそれに合わせる
+        val createNewTableIndexList = tableNames.flatMap { (key, tableNamePiar) ->
+            val create = Create(key, tableNamePiar.first)
+            create.buildIndexQueries()
+        }
+        // 生成したクエリの実行
+        executeQuery(db, createNewTableList)
+        executeQuery(db, insertSelectQueryList)
+        executeQuery(db, dropOldTableQueryList)
+        executeQuery(db, renameTableQueryList)
+        executeQuery(db, createNewTableIndexList)
     }
 
-    data class InsertResult(
-        val query: String,  // 例: INSERT INTO EMPLOYEE (ID, NAME) VALUES (?, ?)
-        val binds: List<Map<String, Any>> // 各行に対する値マップ
-    )
+    /**
+     * ## SQL 実行
+     * ### insert / update / delete / upsert などの更新系SQLを実行する
+     * @param query 実行クエリのインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
+    fun execute(
+        query: QueryBuilderLike<out TableDefinitionEntity>,
+    ) {
+        val queryStatement = query.build()
+        if (query is QueryWithBindValues) {
+            writableDatabase.execSQL(queryStatement, query.bindValues.toTypedArray())
+        } else {
+            writableDatabase.execSQL(queryStatement)
+        }
+    }
+
+    /**
+     * ## カラムマッピング解決
+     * ### onUpgrade 用のカラム移行マッピングを解決する
+     * ### 標準では空マップを返す
+     * @return エンティティとマッピングされたリスト
+     * - key   : 対象エンティティ
+     * - value : リスト(旧カラム名 to 新カラム名)
+     * @author Masahiro Inoue
+     * @since 2026-05-30
+     */
+    protected open fun resolveColumnMappings(): Map<KClass<out TableDefinitionEntity>, List<Pair<String, String>>> =
+        emptyMap()
+
+    /**
+     * ## カラム名マッピング更新
+     * ### 利用者がカスタムした resolveColumnMappings() メソッドの内容を基にカラム名のマッピングを更新
+     * @author Masahiro Inoue
+     * @since 2026-05-30
+     */
+    private fun customColumnMappingsUpdate() {
+        // resolveColumnMappings() から取得した Map を基に preparedColumnMappings を変更
+        resolveColumnMappings().forEach { (entity, customColumnList) ->
+            // resolveColumnMappings() で指定されたエンティティのリストを取得
+            val preparedColumnList =
+                // preparedColumnMappings に存在しない場合、例外を投げる
+                preparedColumnMappings[entity] ?: error(AE00021.format(entity))
+            // 新旧テーブルカラムのマッピングから旧カラム名のセットを生成
+            val preparedColumnKeySet = preparedColumnList.map { prepared -> prepared.first }.toSet()
+            // カスタムされたカラム変更リストを基にマップを生成（キー：旧カラム名 / 値：Pair 旧カラム名 to 新カラム名）
+            val customColumnMap = customColumnList.associateBy { custom ->
+                custom.first
+            }
+            // customColumnMap.keys と preparedColumnKeySet の差分を取る
+            val notFoundColumnList = customColumnMap.keys - preparedColumnKeySet
+            // 差分が無いなら継続、差分があるなら例外
+            require(notFoundColumnList.isEmpty()) {
+                AE00022.format(notFoundColumnList.joinToString(", "))
+            }
+            // 新旧テーブルカラムのマッピングを更新。customColumnMap に変更用 Pair が無い場合元の Pair を使用
+            preparedColumnMappings[entity] = preparedColumnList.map { prepared ->
+                customColumnMap[prepared.first] ?: prepared
+            }
+        }
+    }
+
+    /**
+     * ## SQLリスト実行
+     * ### 生成済みSQLを順番に実行する
+     *
+     * @param db SQLiteDatabase
+     * @param queries 実行対象クエリ郡
+     */
+    private fun executeQuery(
+        db: SQLiteDatabase,
+        queries: List<String>,
+    ) {
+        queries.forEach { query -> db.execSQL(query) }
+    }
 }

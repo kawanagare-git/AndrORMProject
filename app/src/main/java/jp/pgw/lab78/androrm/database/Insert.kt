@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00011
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getPropertyValue
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
@@ -22,6 +23,24 @@ import kotlin.reflect.KClass
 class Insert<T : InsertEntity>(
     private val entityClass: KClass<out T>
 ) : QueryBuilderLike<T>, QueryWithBindValues() {
+    companion object {
+        /**
+         * ## テーブル間データ転送用
+         * ### 基本的な用途は AndrOrmDatabaseHelper での使用
+         * @param tableName インサート先テーブル名
+         * @param columnList インサート先カラム名
+         * @param selectStatement インサート時のセレクト文
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
+        internal fun intoTableColumns(
+            tableName: String,
+            columnList: List<String>,
+            selectStatement: String
+        ): String =
+            "insert into $tableName (${columnList.joinToString(PRIMARY_DELIMITER)}) $selectStatement"
+    }
+
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 

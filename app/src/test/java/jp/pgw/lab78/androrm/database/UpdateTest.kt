@@ -6,7 +6,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00015
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.update.TestAllEntityUpdate
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.INNER
-import jp.pgw.lab78.androrm.database.utility.Support.tableRef
+import jp.pgw.lab78.androrm.database.reference.Support.tableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime

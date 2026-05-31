@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.database.queryparts
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
+import jp.pgw.lab78.androrm.database.reference.Support.tableRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
-import jp.pgw.lab78.androrm.database.utility.Support.tableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 

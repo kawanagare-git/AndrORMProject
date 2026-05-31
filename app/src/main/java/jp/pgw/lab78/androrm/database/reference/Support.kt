@@ -1,7 +1,6 @@
-package jp.pgw.lab78.androrm.database.utility
+package jp.pgw.lab78.androrm.database.reference
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
-import jp.pgw.lab78.androrm.database.reference.TableRef
 import kotlin.reflect.KClass
 
 object Support {

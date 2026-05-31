@@ -5,7 +5,7 @@ import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.select.*
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.*
-import jp.pgw.lab78.androrm.database.utility.Support.tableRef
+import jp.pgw.lab78.androrm.database.reference.Support.tableRef
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime

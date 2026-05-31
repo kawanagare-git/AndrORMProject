@@ -145,6 +145,36 @@ object MessageConstants {
     const val AE00018 = "Upsert requires at least one update column."
 
     /**
+     * ## AE00019
+     * ### 対象プロパティが指定されていない場合
+     */
+    const val AE00019 = "Index requires at least one property."
+
+    /**
+     * ## AE00020
+     * ### Index / Unique の索引名が重複している場合
+     *
+     * 第1引数: 重複した索引名
+     */
+    const val AE00020 = "Duplicate index name: %s"
+
+    /**
+     * ## AE00021
+     * ### resolveColumnMappings メソッド内で使用されたエンティティが存在しない場合
+     *
+     * 第1引数: 存在し無いエンティティ
+     */
+    const val AE00021 = "Entity specified in the resolveColumnMappings method was not found: %s"
+
+    /**
+     * ## AE00022
+     * ### resolveColumnMappings メソッド内で使用されたカラムが存在しない場合
+     *
+     * 第1引数: 存在し無いカラム
+     */
+    const val AE00022 = "Column mapping does not exist: %s"
+
+    /**
      * ## CE00001
      * ### 集約関数に列引数が指定されていない場合
      */

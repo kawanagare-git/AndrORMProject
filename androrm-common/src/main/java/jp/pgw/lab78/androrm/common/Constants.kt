@@ -6,7 +6,7 @@ package jp.pgw.lab78.androrm.common
  * @since 2025-08-01
  */
 object Constants {
-    /** ヌルもj亀裂 */
+    /** ヌル文字列 */
     const val NULL_STRING = "null"
 
     /** 空文字列 */
@@ -43,6 +43,9 @@ object Constants {
 
     /** ディレクトリィ区切り文字 */
     const val DIRECTORY_DELIMITER = SECONDARY_DELIMITER
+
+    /** migration 用新テーブル suffix */
+    const val NEW_TABLE_SUFFIX = "_new"
 
     /**
      * ## ログタグ
@@ -109,4 +112,20 @@ object Constants {
         AND(" and "),
         OR(" or "),
     }
+
+    /**
+     * ## 論理演算子
+     * @param query クエリ文字列
+     */
+    enum class IndexType(val query: String) {
+        UNIQUE("unique "),
+        INDEX(""),
+    }
+
+    /** limit 既定値*/
+    const val DEFAULT_LIMIT_VALUE = 10
+
+    /** offset 既定値*/
+    const val DEFAULT_OFFSET_VALUE = 0
+
 }

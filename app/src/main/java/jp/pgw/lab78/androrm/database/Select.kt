@@ -1,5 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.DEFAULT_LIMIT_VALUE
+import jp.pgw.lab78.androrm.common.Constants.DEFAULT_OFFSET_VALUE
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00003
@@ -29,8 +31,6 @@ import jp.pgw.lab78.androrm.database.queryparts.JoinClauseDelegate
 import jp.pgw.lab78.androrm.database.queryparts.JoinType
 import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import jp.pgw.lab78.androrm.database.reference.TableRef
-import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_LIMIT_VALUE
-import jp.pgw.lab78.androrm.database.utility.Constants.DEFAULT_OFFSET_VALUE
 import jp.pgw.lab78.androrm.database.validation.DuplicateMethodCallValidator
 import jp.pgw.lab78.androrm.database.validation.QueryMethodCall
 import jp.pgw.lab78.shared.library.Utils.isNull
@@ -69,6 +69,19 @@ class Select<T : SelectEntity>(
         ),
         isDistinct,
     )
+
+    companion object {
+        /**
+         * ## テーブル間データ転送用
+         * ### 基本的な用途は AndrOrmDatabaseHelper での使用
+         * @param tableName セレクト元テーブル
+         * @param columnList セレクト元カラム
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
+        internal fun tableColumns(tableName: String, columnList: List<String>): String =
+            "select ${columnList.joinToString(PRIMARY_DELIMITER)} from $tableName"
+    }
 
     /** WHERE 句生成委譲 */
     private val whereDelegate =

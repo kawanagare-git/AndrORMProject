@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database.utility
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
@@ -132,10 +133,8 @@ object EntityManager {
      * ### DML として使用するエンティティクラスからプロパティ名と DB カラム名をコンストラクタに定義されている順で取得
      * @receiver エンティティクラス
      * @return コンストラクタ順に定義された名称のペア
-     * ```
-     * first：生成されたプロパティ名
-     * second：DB カラム名
-     *  ```
+     * - first：プロパティ名
+     * - second：DB カラム名
      * @author Masahiro Inoue
      * @since 2026-05-23
      */
@@ -201,6 +200,25 @@ object EntityManager {
     }
 
     /**
+     * ## コンストラクタ定義順プロパティ取得
+     * ### プライマリコンストラクタの定義順でプロパティを取得する
+     * @receiver テーブル定義 Entity クラス
+     * @return コンストラクタ定義順のプロパティ一覧
+     */
+    fun <T : TableDefinitionEntity> KClass<out T>.getConstructorOrderedProperties():
+            List<KProperty1<out T, *>> {
+        val constructor = this.primaryConstructor
+            ?: error(AE00007.format(this.qualifiedName))
+        return constructor.parameters.map { parameter ->
+            val propertyName = parameter.name
+                ?: error(AE00008.format("<unknown>", this.qualifiedName))
+            this.memberProperties.firstOrNull { property ->
+                property.name == propertyName
+            } ?: error(AE00008.format(propertyName, this.qualifiedName))
+        }
+    }
+
+    /**
      * ## エイリアス取得
      * ### エンティティクラスからエイリアスを取得する
      * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
@@ -220,7 +238,8 @@ object EntityManager {
         String::class to "TEXT",
         LocalDate::class to "DATETIME",
         LocalTime::class to "DATETIME",
-        LocalDateTime::class to "DATETIME"
+        LocalDateTime::class to "DATETIME",
+        Enum::class to "TEXT",
     )
 
     /**
