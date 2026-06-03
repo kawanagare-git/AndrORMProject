@@ -52,15 +52,15 @@ class CreateTest {
 
     @Test
     fun testBuildIndexQueries_testLargeEntity() {
-        val actual = Create(TestLargeEntity::class).buildIndexQueries()
+        val actual = Create(TestLargeEntity::class).buildIndexQueries(2)
 
         assertEquals(
             listOf(
-                "create index if not exists IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED " +
+                "create index if not exists IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED2 " +
                         "on TEST_LARGE_ENTITY (ACTIVE, CREATED_AT)",
-                "create unique index if not exists UQ_TEST_CODE " +
+                "create unique index if not exists UQ_TEST_CODE2 " +
                         "on TEST_LARGE_ENTITY (CODE)",
-                "create unique index if not exists UQ_TEST_PERSONAL_INFO " +
+                "create unique index if not exists UQ_TEST_PERSONAL_INFO2 " +
                         "on TEST_LARGE_ENTITY (NAME, FURIGANA, GENDER, BIRTHDAY, PLACE_OF_BIRTH)",
             ),
             actual,
@@ -70,7 +70,7 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_emptyIndexProperties_throwsIllegalArgumentException() {
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            Create(TestEmptyIndexPropertiesEntity::class).buildIndexQueries()
+            Create(TestEmptyIndexPropertiesEntity::class).buildIndexQueries(3)
         }
 
         assertEquals(AE00019, actual.message)
@@ -79,7 +79,7 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_emptyUniqueProperties_throwsIllegalArgumentException() {
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            Create(TestEmptyUniquePropertiesEntity::class).buildIndexQueries()
+            Create(TestEmptyUniquePropertiesEntity::class).buildIndexQueries(4)
         }
 
         assertEquals(AE00019, actual.message)
@@ -88,11 +88,11 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_duplicateIndexName_throwsIllegalArgumentException() {
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            Create(TestDuplicateIndexNameEntity::class).buildIndexQueries()
+            Create(TestDuplicateIndexNameEntity::class).buildIndexQueries(0)
         }
 
         assertEquals(
-            AE00020.format("IDX_DUPLICATE"),
+            AE00020.format("IDX_DUPLICATE0"),
             actual.message,
         )
     }
@@ -100,11 +100,11 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_duplicateIndexNameIgnoreCase_throwsIllegalArgumentException() {
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            Create(TestDuplicateIndexNameIgnoreCaseEntity::class).buildIndexQueries()
+            Create(TestDuplicateIndexNameIgnoreCaseEntity::class).buildIndexQueries(9)
         }
 
         assertEquals(
-            AE00020.format("idx_duplicate"),
+            AE00020.format("idx_duplicate9"),
             actual.message,
         )
     }
@@ -112,7 +112,7 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_unknownIndexProperty_throwsIllegalStateException() {
         val actual = assertThrows(IllegalStateException::class.java) {
-            Create(TestUnknownIndexPropertyEntity::class).buildIndexQueries()
+            Create(TestUnknownIndexPropertyEntity::class).buildIndexQueries(100)
         }
 
         assertEquals(
@@ -127,7 +127,7 @@ class CreateTest {
     @Test
     fun testBuildIndexQueries_unknownUniqueProperty_throwsIllegalStateException() {
         val actual = assertThrows(IllegalStateException::class.java) {
-            Create(TestUnknownUniquePropertyEntity::class).buildIndexQueries()
+            Create(TestUnknownUniquePropertyEntity::class).buildIndexQueries(1000)
         }
 
         assertEquals(

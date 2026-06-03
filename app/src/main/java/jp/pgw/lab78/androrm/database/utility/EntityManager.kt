@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.utility
 
+import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
@@ -229,17 +230,47 @@ object EntityManager {
     fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
 
     /** 型変換用マップ */
-    private val fieldToColumnMap = mapOf(
-        Int::class to "INTEGER",
-        Long::class to "INTEGER",
-        Float::class to "REAL",
-        Double::class to "REAL",
-        Boolean::class to "INTEGER",
-        String::class to "TEXT",
-        LocalDate::class to "DATETIME",
-        LocalTime::class to "DATETIME",
-        LocalDateTime::class to "DATETIME",
-        Enum::class to "TEXT",
+    data class ColumnChanger<T : Any>(
+        val columnType: String,
+        val func: (SQLiteStatement, Int, T) -> Unit
+    ) {
+        @Suppress("UNCHECKED_CAST")
+        fun bind(statement: SQLiteStatement, index: Int, value: Any) {
+            func(statement, index, value as T)
+        }
+    }
+
+    val fieldToColumnMap = mapOf(
+        Int::class to ColumnChanger<Int>(
+            "INTEGER",
+            { statement, index, value -> statement.bindLong(index, value.toLong()) }),
+        Long::class to ColumnChanger<Long>(
+            "INTEGER",
+            { statement, index, value -> statement.bindLong(index, value) }),
+        Float::class to ColumnChanger<Float>(
+            "REAL",
+            { statement, index, value -> statement.bindDouble(index, value.toDouble()) }),
+        Double::class to ColumnChanger<Double>(
+            "REAL",
+            { statement, index, value -> statement.bindDouble(index, value) }),
+        Boolean::class to ColumnChanger<Boolean>(
+            "INTEGER",
+            { statement, index, value -> statement.bindLong(index, if (value) 1L else 0L) }),
+        String::class to ColumnChanger<String>(
+            "TEXT",
+            { statement, index, value -> statement.bindString(index, value) }),
+        LocalDate::class to ColumnChanger<LocalDate>(
+            "DATETIME",
+            { statement, index, value -> statement.bindString(index, value.toString()) }),
+        LocalTime::class to ColumnChanger<LocalTime>(
+            "DATETIME",
+            { statement, index, value -> statement.bindString(index, value.toString()) }),
+        LocalDateTime::class to ColumnChanger<LocalDateTime>(
+            "DATETIME",
+            { statement, index, value -> statement.bindString(index, value.toString()) }),
+        ByteArray::class to ColumnChanger<ByteArray>(
+            "BLOB",
+            { statement, index, value -> statement.bindBlob(index, value) }),
     )
 
     /**
@@ -262,7 +293,7 @@ object EntityManager {
         ) {
             AE00009.format(valueForJudgment)
         }
-        return fieldToColumnMap[valueForJudgment]!!
+        return fieldToColumnMap[valueForJudgment]?.columnType!!
     }
 
     /**

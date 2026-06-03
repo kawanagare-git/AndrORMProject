@@ -5,4 +5,4 @@ package jp.pgw.lab78.androrm.common.dml.interfaces
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
-interface SelectEntity : Entity
+interface SelectEntity : TableDefinitionEntity

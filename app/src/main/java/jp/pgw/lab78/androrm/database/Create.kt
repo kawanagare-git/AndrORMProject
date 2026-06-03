@@ -76,20 +76,22 @@ class Create<T : TableDefinitionEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-30
      */
-    fun buildIndexQueries(): List<String> {
+    fun buildIndexQueries(indexVersion: Int): List<String> {
         // @Index より create index 文を生成する
         val indexQueries = entityClass.findAnnotations<Index>()
             .mapIndexed { index, annotation ->
                 // @Index の properties が空配列なら例外
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
-                val indexName = annotation.name.takeIf { it.isNotBlank() }
-                // インデックス名の生成
-                    ?: buildDefaultIndexName(
-                        prefix = "IDX",
-                        serialNumber = index + 1,
-                        properties = annotation.properties,
-                    )
+                val indexName = "${
+                    annotation.name.takeIf { it.isNotBlank() }
+                    // インデックス名の生成
+                        ?: buildDefaultIndexName(
+                            prefix = "IDX",
+                            serialNumber = index + 1,
+                            properties = annotation.properties,
+                        )
+                }$indexVersion"
                 // インデックス名の登録
                 registerIndexName(indexName)
                 // create index 文の生成
@@ -105,13 +107,15 @@ class Create<T : TableDefinitionEntity>(
                 // @Index の properties が空配列なら例外
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
-                val indexName = annotation.name.takeIf { it.isNotBlank() }
-                // インデックス名の生成
-                    ?: buildDefaultIndexName(
-                        prefix = "UQ",
-                        serialNumber = index + 1,
-                        properties = annotation.properties,
-                    )
+                val indexName = "${
+                    annotation.name.takeIf { it.isNotBlank() }
+                    // インデックス名の生成
+                        ?: buildDefaultIndexName(
+                            prefix = "UQ",
+                            serialNumber = index + 1,
+                            properties = annotation.properties,
+                        )
+                }$indexVersion"
                 // インデックス名の登録
                 registerIndexName(indexName)
                 // create index 文の生成

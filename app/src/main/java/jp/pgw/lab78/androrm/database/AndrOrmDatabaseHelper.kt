@@ -12,7 +12,9 @@ import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.fieldToColumnMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
+import jp.pgw.lab78.shared.library.Utils.isNull
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -49,7 +51,7 @@ open class AndrOrmDatabaseHelper(
     override fun onCreate(db: SQLiteDatabase) {
         val createTableList = entities.map { entity ->
             val create = Create(entity)
-            create.build() to create.buildIndexQueries()
+            create.build() to create.buildIndexQueries(0)
         }
         // テーブル作成
         createTableList.forEach { (createTableQuery, createIndexQueries) ->
@@ -75,18 +77,20 @@ open class AndrOrmDatabaseHelper(
         oldVersion: Int,
         newVersion: Int,
     ) {
-        migrateDatabase(db)
+        migrateDatabase(db, newVersion)
     }
 
     /**
      * ## DB 移行処理
      * ### 標準では同名カラムの値を引き継ぐ
      * @param db SQLite データベース
+     * @param newVersion 適用後データベースバージョン
      * @author Masahiro Inoue
      * @since 2026-05-30
      */
     protected open fun migrateDatabase(
         db: SQLiteDatabase,
+        newVersion: Int = 0,
     ) {
         // 新旧テーブル名を作成
         val tableNames =
@@ -107,7 +111,7 @@ open class AndrOrmDatabaseHelper(
         // 新テーブルの create 文生成
         val createNewTableList = tableNames.map { (key, tableNamePair) ->
             val create = Create(key, tableNamePair.second)
-            create.build()
+            create.build() to create.buildIndexQueries(newVersion)
         }
         // データ転送用クエリ生成
         val insertSelectQueryList = entities.map { entity ->
@@ -131,35 +135,49 @@ open class AndrOrmDatabaseHelper(
                 tableNames.getValue(entity).first
             }"
         }
-        // 新テーブルの create index 文生成、リネーム後なのでテーブル名もそれに合わせる
-        val createNewTableIndexList = tableNames.flatMap { (key, tableNamePiar) ->
-            val create = Create(key, tableNamePiar.first)
-            create.buildIndexQueries()
-        }
         // 生成したクエリの実行
-        executeQuery(db, createNewTableList)
+        executeQuery(db, createNewTableList.map { it.first })
         executeQuery(db, insertSelectQueryList)
+        executeQuery(db, createNewTableList.flatMap { it.second })
         executeQuery(db, dropOldTableQueryList)
         executeQuery(db, renameTableQueryList)
-        executeQuery(db, createNewTableIndexList)
     }
 
     /**
      * ## SQL 実行
      * ### insert / update / delete / upsert などの更新系SQLを実行する
      * @param query 実行クエリのインスタンス
+     * @return 処理件数
      * @author Masahiro Inoue
      * @since 2026-05-31
      */
-    fun execute(
-        query: QueryBuilderLike<out TableDefinitionEntity>,
-    ) {
-        val queryStatement = query.build()
+    fun execute(query: QueryBuilderLike<out TableDefinitionEntity>) =
         if (query is QueryWithBindValues) {
-            writableDatabase.execSQL(queryStatement, query.bindValues.toTypedArray())
+            execute(query.build(), query.bindValues)
         } else {
-            writableDatabase.execSQL(queryStatement)
+            execute(query.build())
         }
+
+    /**
+     * ## SQL 実行
+     * ### insert / update / delete / upsert などの更新系SQLを実行する
+     * @param query 実行クエリ文字列
+     * @param bindValues 実行クエリ用バインド変数
+     * @return 処理件数
+     * @author Masahiro Inoue
+     * @since 2026-06-03
+     */
+    fun execute(query: String, bindValues: List<*> = emptyList<Any>()): Int {
+        val statement = writableDatabase.compileStatement(query)
+        bindValues.forEachIndexed { index, value ->
+            val bindIndex = index + 1
+            if (value.isNull()) {
+                statement.bindNull(bindIndex)
+            } else {
+                fieldToColumnMap[value!!::class]!!.bind(statement, bindIndex, value)
+            }
+        }
+        return statement.executeUpdateDelete()
     }
 
     /**
