@@ -1,19 +1,26 @@
 package jp.pgw.lab78.androrm.database
 
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.columnToFieldMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.fieldToColumnMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
+import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -151,11 +158,11 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-05-31
      */
-    fun execute(query: QueryBuilderLike<out TableDefinitionEntity>) =
+    fun executeDml(query: QueryBuilderLike<out TableDefinitionEntity>) =
         if (query is QueryWithBindValues) {
-            execute(query.build(), query.bindValues)
+            executeDml(query.build(), query.bindValues)
         } else {
-            execute(query.build())
+            executeDml(query.build())
         }
 
     /**
@@ -167,7 +174,7 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-06-03
      */
-    fun execute(query: String, bindValues: List<*> = emptyList<Any>()): Int {
+    fun executeDml(query: String, bindValues: List<*> = emptyList<Any>()): Int {
         val statement = writableDatabase.compileStatement(query)
         bindValues.forEachIndexed { index, value ->
             val bindIndex = index + 1
@@ -178,6 +185,117 @@ open class AndrOrmDatabaseHelper(
             }
         }
         return statement.executeUpdateDelete()
+    }
+
+    /**
+     * ## SELECT 実行
+     * ### Select クラスで生成した SQL を実行し、結果を Map のリストで返す
+     * @param query Select クエリのインスタンス
+     * @return SELECT 結果
+     * @author Masahiro Inoue
+     * @since 2026-06-04
+     */
+    fun executeSelectAsMapList(query: Select<out SelectEntity>): List<Map<String, Any?>> =
+        executeSelectAsMapList(query.build(), query.bindValues)
+
+    /**
+     * ## SELECT 実行
+     * ### 生成済み SELECT 文字列を実行し、結果を Map のリストで返す
+     * @param query 実行クエリ文字列
+     * @param bindValues 実行クエリ用バインド変数
+     * @return SELECT 結果
+     * @author Masahiro Inoue
+     * @since 2026-06-04
+     */
+    fun executeSelectAsMapList(
+        query: String,
+        bindValues: List<*> = emptyList<Any>(),
+    ): List<Map<String, Any?>> =
+        executeSelectAsCursor(query, bindValues).use { cursor ->
+            cursor.toMapList()
+        }
+
+    /**
+     * ## SELECT 実行
+     * ### Select クラスで生成した SQL を読み出し用 DB で実行し、Cursor を返す
+     * @param query Select クエリのインスタンス
+     * @return 検索結果 Cursor
+     * @author Masahiro Inoue
+     * @since 2026-06-03
+     */
+    fun executeSelectAsCursor(query: Select<out SelectEntity>): Cursor =
+        executeSelectAsCursor(query.build(), query.bindValues)
+
+    /**
+     * ## SELECT 実行
+     * ### 生成済み SELECT 文字列を読み出し用 DB で実行し、Cursor を返す
+     * @param query 実行クエリ文字列
+     * @param bindValues 実行クエリ用バインド変数
+     * @return 検索結果 Cursor
+     * @author Masahiro Inoue
+     * @since 2026-06-03
+     */
+    fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor =
+        readableDatabase.rawQuery(query, bindValues.toSelectionArgs())
+
+    /**
+     * ## SELECT 用バインド値変換
+     * ### rawQuery の selectionArgs に渡すため、値を String 配列へ変換する
+     * @receiver バインド値リスト
+     * @return rawQuery に渡す selectionArgs。バインド値なしの場合は null
+     * @author Masahiro Inoue
+     * @since 2026-06-03
+     */
+    private fun List<*>.toSelectionArgs(): Array<String>? {
+        if (this.isEmpty()) return null
+        return this.mapIndexed { index, value ->
+            val bindIndex = index + 1
+            require(value.isNotNull()) { AE00023.format(bindIndex) }
+            require(value !is ByteArray) { AE00024.format(bindIndex) }
+            when (value) {
+                is Boolean -> if (value) "1" else "0"
+                else -> value.toString()
+            }
+        }.toTypedArray()
+    }
+
+    /**
+     * ## Cursor Map 変換
+     * ### Cursor の全行を List<Map<String, Any?>> に変換する
+     * @receiver SELECT 結果 Cursor
+     * @return Cursor を基に構築した Map リスト
+     * @author Masahiro Inoue
+     * @since 2026-06-04
+     */
+    private fun Cursor.toMapList(): List<Map<String, Any?>> {
+        val result = mutableListOf<Map<String, Any?>>()
+        // カラム名の取得
+        val columnNames = this.columnNames
+        // カーソルの次行読みk出し
+        while (this.moveToNext()) {
+            val row = linkedMapOf<String, Any?>()
+            // カラム名を基に値の取得
+            columnNames.forEachIndexed { index, columnName ->
+                row[columnName] = this.getValue(index)
+            }
+            result.add(row)
+        }
+        return result
+    }
+
+    /**
+     * ## Cursor 値取得
+     * ### Cursor の列型に応じて値を取得する
+     * @receiver SELECT 結果 Cursor
+     * @param index カラム index
+     * @return Cursor から取得した値
+     * @author Masahiro Inoue
+     * @since 2026-06-04
+     */
+    private fun Cursor.getValue(index: Int): Any {
+        val columnType = this.getType(index)
+        return columnToFieldMap[columnType]?.invoke(this, index)
+            ?: error(AE00025.format(index, columnType))
     }
 
     /**

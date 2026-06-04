@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.utility
 
+import android.database.Cursor
 import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
@@ -229,7 +230,7 @@ object EntityManager {
      */
     fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
 
-    /** 型変換用マップ */
+    /** 型変換用データクラス */
     data class ColumnChanger<T : Any>(
         val columnType: String,
         val func: (SQLiteStatement, Int, T) -> Unit
@@ -240,6 +241,7 @@ object EntityManager {
         }
     }
 
+    /** フィールド型 → カラム型変換用マップ */
     val fieldToColumnMap = mapOf(
         Int::class to ColumnChanger<Int>(
             "INTEGER",
@@ -271,6 +273,15 @@ object EntityManager {
         ByteArray::class to ColumnChanger<ByteArray>(
             "BLOB",
             { statement, index, value -> statement.bindBlob(index, value) }),
+    )
+
+    /** カラム型 → フィールド型変換用マップ */
+    val columnToFieldMap = mapOf<Int, (Cursor, Int) -> Any?>(
+        Cursor.FIELD_TYPE_NULL to { _, _ -> null },
+        Cursor.FIELD_TYPE_INTEGER to { cursor, index -> cursor.getLong(index) },
+        Cursor.FIELD_TYPE_FLOAT to { cursor, index -> cursor.getDouble(index) },
+        Cursor.FIELD_TYPE_STRING to { cursor, index -> cursor.getString(index) },
+        Cursor.FIELD_TYPE_BLOB to { cursor, index -> cursor.getBlob(index) },
     )
 
     /**

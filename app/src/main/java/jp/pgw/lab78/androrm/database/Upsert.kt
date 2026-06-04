@@ -44,15 +44,18 @@ class Upsert<T : UpsertEntity>(
 
     /** Upsert 対象 Entity 一覧 */
     private var entities: MutableList<T> = mutableListOf()
-        set(value) {
-            field = value
-        }
 
     /** 衝突判定カラム */
     private val conflictColumns: MutableList<String> = mutableListOf()
 
     /** 衝突時に更新するカラム */
     private val updateColumns: MutableList<String> = mutableListOf()
+
+    /** ビルドフラグ */
+    private var isBuild: Boolean = false
+
+    /** クエリ格納 */
+    private lateinit var query: String
 
     /**
      * ## エンティティ追加
@@ -85,6 +88,7 @@ class Upsert<T : UpsertEntity>(
     fun onConflict(
         vararg properties: KProperty1<T, *>,
     ): Upsert<T> {
+        isBuild = false
         conflictColumns.clear()
         conflictColumns.addAll(
             properties.map { property ->
@@ -105,6 +109,7 @@ class Upsert<T : UpsertEntity>(
     fun updateColumns(
         vararg properties: KProperty1<T, *>,
     ): Upsert<T> {
+        isBuild = false
         updateColumns.clear()
         updateColumns.addAll(
             properties.map { property ->
@@ -135,42 +140,36 @@ class Upsert<T : UpsertEntity>(
         require(entities.isNotEmpty()) {
             AE00016
         }
-
         require(conflictColumns.isNotEmpty()) {
             AE00017
         }
-
         require(updateColumns.isNotEmpty()) {
             AE00018
         }
-
         this.entities = entities.toMutableList()
         clearBindValues()
-
         val valuesClause = placeholders(
             rowCount = entities.size,
             columnCount = columnList.size,
         )
-
         val conflictClause = conflictColumns.joinToString(", ", "on conflict(", ")")
-
         val updateClause = updateColumns.joinToString(", ") { columnName ->
             "$columnName = excluded.$columnName"
         }
-
-        val query =
+        query = if (isBuild) {
+            query
+        } else {
+            isBuild = true
             "insert into $tableName $columnDefine values$valuesClause " +
                     "$conflictClause do update set $updateClause"
-
-        val values = entities.flatMap { entity ->
+        }
+        val bindValues = entities.flatMap { entity ->
             columnList.map { (propertyName, _) ->
                 getPropertyValue(entity, propertyName)
             }
         }
-
-        addBindValues(values)
-
-        return query to values
+        addBindValues(bindValues)
+        return query to bindValues
     }
 
     /**

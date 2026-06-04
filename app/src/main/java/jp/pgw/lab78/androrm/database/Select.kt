@@ -143,9 +143,6 @@ class Select<T : SelectEntity>(
     /** HAVING 句用バインド値リスト */
     private val havingBindValues: MutableList<Any?> = mutableListOf()
 
-    /** クエリ格納 */
-    private lateinit var query: String
-
     /** 使用済みテーブルエイリアス */
     private val usedTableAliases = mutableSetOf<String>()
 
@@ -161,6 +158,9 @@ class Select<T : SelectEntity>(
 
     /** ビルドフラグ */
     private var isBuild: Boolean = false
+
+    /** クエリ格納 */
+    private lateinit var query: String
 
     /**
      * ## select 文を構成要素列挙クラス

@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
@@ -9,7 +10,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.*
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentCaptor
@@ -20,7 +21,7 @@ import kotlin.reflect.KClass
 class AndrOrmDatabaseHelperTest {
 
     @Test
-    fun testOnCreate_executeCreateTableAndIndexQueries() {
+    fun testOnCreate_executeDmlCreateTableAndIndexQueries() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val helper = TestAndrOrmDatabaseHelper(
             TestMigrationEntity::class,
@@ -40,7 +41,7 @@ class AndrOrmDatabaseHelperTest {
     }
 
     @Test
-    fun testOnUpgrade_executeStandardMigrationQueries() {
+    fun testOnUpgrade_executeDmlStandardMigrationQueries() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val helper = TestAndrOrmDatabaseHelper(
             TestMigrationEntity::class,
@@ -141,7 +142,7 @@ class AndrOrmDatabaseHelperTest {
     }
 
     @Test
-    fun testExecute_withoutBindValues_execute() {
+    fun testExecute_withoutBindValues_executeDml() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val statement = Mockito.mock(SQLiteStatement::class.java)
         val helper = Mockito.spy(
@@ -162,7 +163,7 @@ class AndrOrmDatabaseHelperTest {
             query = "delete from TEST_MIGRATION_ENTITY",
         )
 
-        val actual = helper.execute(query)
+        val actual = helper.executeDml(query)
 
         assertEquals(1, actual)
         Mockito.verify(db).compileStatement(
@@ -172,7 +173,7 @@ class AndrOrmDatabaseHelperTest {
     }
 
     @Test
-    fun testExecute_withBindValues_executeWithBindArgs() {
+    fun testExecute_withBindValues_bindArgsAndExecuteDml() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val statement = Mockito.mock(SQLiteStatement::class.java)
         val helper = Mockito.spy(
@@ -200,7 +201,7 @@ class AndrOrmDatabaseHelperTest {
             bindValues = listOf(20, "00010"),
         )
 
-        val actual = helper.execute(query)
+        val actual = helper.executeDml(query)
 
         assertEquals(1, actual)
 
@@ -211,7 +212,7 @@ class AndrOrmDatabaseHelperTest {
     }
 
     @Test
-    fun testExecute_withBindValues_executeInsert() {
+    fun testExecute_withBindValues_executeDmlInsert() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val statement = Mockito.mock(SQLiteStatement::class.java)
         val helper = Mockito.spy(
@@ -242,7 +243,7 @@ class AndrOrmDatabaseHelperTest {
             bindValues = listOf("川流", "愛知県豊田市", barth, 58, now),
         )
 
-        val actual = helper.execute(query)
+        val actual = helper.executeDml(query)
 
         assertEquals(1, actual)
 
@@ -253,6 +254,65 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(statement).bindLong(4, 58)
         Mockito.verify(statement).bindString(5, now.toString())
         Mockito.verify(statement).executeUpdateDelete()
+    }
+
+    @Test
+    fun testExecuteSelectAsCursor_withoutBindValues_rawQuery() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(
+            TestAndrOrmDatabaseHelper(
+                TestMigrationEntity::class,
+            )
+        )
+        val sql = "select ID, NEW_NAME, AGE from TEST_MIGRATION_ENTITY"
+
+        Mockito.doReturn(db)
+            .`when`(helper)
+            .readableDatabase
+
+        Mockito.`when`(
+            db.rawQuery(sql, null),
+        ).thenReturn(cursor)
+
+        val actual = helper.executeSelectAsCursor(sql)
+
+        assertSame(cursor, actual)
+        Mockito.verify(db).rawQuery(sql, null)
+    }
+
+    @Test
+    fun testExecuteSelectAsCursor_withBindValues_rawQueryWithSelectionArgs() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(
+            TestAndrOrmDatabaseHelper(
+                TestMigrationEntity::class,
+            )
+        )
+        val sql =
+            "select ID, NEW_NAME, AGE from TEST_MIGRATION_ENTITY where AGE = ? and NEW_NAME = ?"
+
+        Mockito.doReturn(db)
+            .`when`(helper)
+            .readableDatabase
+
+        Mockito.`when`(
+            db.rawQuery(Mockito.eq(sql), Mockito.any<Array<String>>()),
+        ).thenReturn(cursor)
+
+        val actual = helper.executeSelectAsCursor(sql, listOf(20, "川流"))
+
+        val bindArgsCaptor = ArgumentCaptor.forClass(Array<String>::class.java)
+        assertSame(cursor, actual)
+        Mockito.verify(db).rawQuery(
+            Mockito.eq(sql),
+            bindArgsCaptor.capture(),
+        )
+        assertEquals(
+            listOf("20", "川流"),
+            bindArgsCaptor.value.toList(),
+        )
     }
 
     private class TestQueryBuilderLike(

@@ -55,19 +55,24 @@ class Insert<T : InsertEntity>(
     private val columnDefine: String =
         columnList.joinToString(", ", "(", ")") { it.second }
 
+    /** ビルドフラグ */
+    private var isBuild: Boolean = false
+
+    /** クエリ格納 */
+    private lateinit var query: String
+
     /** エンティティ一覧 */
     private var entities: MutableList<T> = mutableListOf()
-        set(value) {
-            field = value
-        }
 
     /** エンティティを1件追加 */
     fun addEntity(entity: T) {
+        isBuild = false
         entities.add(entity)
     }
 
     /** エンティティを複数件追加 */
     fun addEntities(entities: List<T>) {
+        isBuild = false
         this.entities.addAll(entities)
     }
 
@@ -93,16 +98,21 @@ class Insert<T : InsertEntity>(
         require(entities.isNotEmpty()) { AE00011 }
         this.entities = entities.toMutableList()
         clearBindValues()
-        val result =
+        query = if (isBuild) {
+            query
+        } else {
+            isBuild = true
             "insert into $tableName $columnDefine values${
                 placeholders(entities.size, columnList.size)
-            }" to entities.flatMap { entity ->
-                columnList.map { (propertyName, _) ->
-                    getPropertyValue(entity, propertyName)
-                }
+            }"
+        }
+        val bindValues = entities.flatMap { entity ->
+            columnList.map { (propertyName, _) ->
+                getPropertyValue(entity, propertyName)
             }
-        addBindValues(result.second)
-        return result
+        }
+        addBindValues(bindValues)
+        return query to bindValues
     }
 
     /**

@@ -95,9 +95,9 @@ object MessageConstants {
      */
     const val AE00010 = "%s.%s() has already been specified."
 
-    /*
-     * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
-     * 現時点の app/src/main には Warning 用メッセージは見当たらない。
+    /**
+     * ## AE00011
+     * ### Insert に使用する entity が設定されていない場合
      */
     const val AE00011 = "Insert requires at least one value."
 
@@ -173,6 +173,35 @@ object MessageConstants {
      * 第1引数: 存在し無いカラム
      */
     const val AE00022 = "Column mapping does not exist: %s"
+
+    /**
+     * ## AE00023
+     * ### セレクト句に使用するバインド変数に null が設定されている場合
+     *
+     * 第1引数: 該当インデックス
+     */
+    const val AE00023 = "Null bind value is not supported for executeSelect. index=%s"
+
+    /**
+     * ## AE00024
+     * ### セレクト句に使用するバインド変数に BLOB(ByteArray) が設定されている場合
+     *
+     * 第1引数: 該当インデックス
+     */
+    const val AE00024 = "BLOB bind value is not supported for executeSelect. index=%s"
+
+    /**
+     * ## AE00024
+     * ### 取得対象のカラムの型が存在しない（事実上あり得ない）
+     *
+     * 第1引数: 該当インデックス
+     */
+    const val AE00025 = "Unsupported cursor field type. index=%s, type=%s"
+
+    /*
+     * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
+     * 現時点の app/src/main には Warning 用メッセージは見当たらない。
+     */
 
     /**
      * ## CE00001
