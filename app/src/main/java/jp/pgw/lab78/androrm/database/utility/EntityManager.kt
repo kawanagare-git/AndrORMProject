@@ -5,12 +5,15 @@ import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00026
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00027
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
@@ -61,7 +64,17 @@ object EntityManager {
     )
 
     /** テーブルメタデータ管理 */
-    private val tableMetadata = mutableMapOf<String, TableDefinition<Entity>>()
+    private val _tableMetadata = mutableMapOf<String, TableDefinition<Entity>>()
+
+    /** テーブルメタデータ参照 */
+    internal val tableMetadata: Map<String, TableDefinition<Entity>>
+        get() = _tableMetadata
+
+    /** SELECT 結果カラムとプロパティの紐づけ */
+    data class SelectColumnTarget(
+        val propertyName: String,
+        val resultColumnName: String,
+    )
 
     /**
      * ## クラス取得
@@ -87,7 +100,7 @@ object EntityManager {
      */
     fun <T : Entity> KClass<out T>.createTableName(): String {
         val tableAnnotation = this.getTableAnnotation()
-        return tableMetadata.getOrPut(tableAnnotation.name.ifEmpty { this.getTableName() }) {
+        return _tableMetadata.getOrPut(tableAnnotation.name.ifEmpty { this.getTableName() }) {
             // テーブル名の生成
             val tableName = tableAnnotation.name
                 .ifBlank { this.getTableName() }
@@ -168,6 +181,37 @@ object EntityManager {
     }
 
     /**
+     * ## SELECT 結果カラム紐づけ取得
+     * ### Entity のプロパティ名と SELECT 結果のカラム名を取得する
+     * @receiver SELECT 用 Entity クラス
+     * @return プロパティ名と SELECT 結果カラム名のリスト
+     * @author Masahiro Inoue
+     * @since 2026-06-05
+     */
+    @Synchronized
+    fun <T : SelectEntity> KClass<out T>.getSelectColumnTargets(): List<SelectColumnTarget> {
+        // tableMetadata にカラム情報を登録する
+        this.getDmlTargets()
+        // テーブル名の取得
+        val tableName = this.createTableName()
+        // テーブルエイリアス取得
+        val alias = this.getTableAlias()
+        // テーブル無いのプロパティ一覧取得
+        val columns = _tableMetadata[tableName]?.aliases?.get(alias)?.columns
+            ?: error(AE00026.format(tableName, alias))
+        val constructor = this.primaryConstructor
+            ?: error(AE00007.format(this.simpleName))
+        return constructor.parameters.map { param ->
+            val propertyName = param.name
+                ?: error(AE00007.format(this.simpleName))
+            val resultColumnName = columns.entries.firstOrNull { (_, property) ->
+                property.name == propertyName
+            }?.key ?: error(AE00027.format(propertyName, tableName, alias))
+            SelectColumnTarget(propertyName, resultColumnName)
+        }
+    }
+
+    /**
      * ## テーブル内カラム定義情報抽出
      * ### テーブル内に定義されているカラム情報を抽出する
      * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
@@ -186,7 +230,7 @@ object EntityManager {
         columnAlias: String,
         property: KProperty1<out T, *>
     ): String {
-        val definedProperty: KProperty1<out Entity, *>? = tableMetadata.getOrPut(tableName) {
+        val definedProperty: KProperty1<out Entity, *>? = _tableMetadata.getOrPut(tableName) {
             // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
             val entityDefinition = EntityDefinition<Entity>(
                 alias,
@@ -206,6 +250,8 @@ object EntityManager {
      * ### プライマリコンストラクタの定義順でプロパティを取得する
      * @receiver テーブル定義 Entity クラス
      * @return コンストラクタ定義順のプロパティ一覧
+     * @author Masahiro Inoue
+     * @since 2026-06-05
      */
     fun <T : TableDefinitionEntity> KClass<out T>.getConstructorOrderedProperties():
             List<KProperty1<out T, *>> {

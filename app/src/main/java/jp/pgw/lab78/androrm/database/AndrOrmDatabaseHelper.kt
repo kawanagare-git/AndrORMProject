@@ -5,11 +5,14 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
@@ -17,13 +20,21 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.utility.EntityManager.SelectColumnTarget
 import jp.pgw.lab78.androrm.database.utility.EntityManager.columnToFieldMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.fieldToColumnMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
 import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.util.concurrent.FutureTask
 import kotlin.reflect.KClass
+import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * ## AndrORM データベースヘルパークラス
@@ -189,6 +200,28 @@ open class AndrOrmDatabaseHelper(
 
     /**
      * ## SELECT 実行
+     * ### Select クラスで生成した SQL を実行し、結果を Entity のリストで返す
+     * @param query Select クエリのインスタンス
+     * @return SELECT 結果 Entity リスト
+     * @author Masahiro Inoue
+     * @since 2026-06-05
+     */
+    fun <T : SelectEntity> executeSelectAsEntityList(query: Select<T>): List<Map<String, SelectEntity>> {
+        val columnTargetsTaskMap = query.usedEntityClasses.associateWith { usedEntity ->
+            usedEntity.entityClass.createSelectColumnTargetsTask()
+        }
+        val usedEntityList = query.usedEntityClasses
+        val mapList = executeSelectAsMapList(query)
+        return mapList.map { row ->
+            usedEntityList.associate { usedEntity ->
+                val columnTargets = columnTargetsTaskMap.getValue(usedEntity).get()
+                usedEntity.alias to usedEntity.entityClass.createSelectEntity(row, columnTargets)
+            }
+        }
+    }
+
+    /**
+     * ## SELECT 実行
      * ### Select クラスで生成した SQL を実行し、結果を Map のリストで返す
      * @param query Select クエリのインスタンス
      * @return SELECT 結果
@@ -257,6 +290,85 @@ open class AndrOrmDatabaseHelper(
                 else -> value.toString()
             }
         }.toTypedArray()
+    }
+
+    /**
+     * ## SELECT 結果カラム紐づけ取得タスク生成
+     * ### Entity メタ情報取得を別スレッドで開始する
+     * @receiver SELECT 結果 Entity クラス
+     * @return SELECT 結果カラム紐づけ取得タスク
+     * @author Masahiro Inoue
+     * @since 2026-06-05
+     */
+    private fun <T : SelectEntity> KClass<out T>.createSelectColumnTargetsTask(): FutureTask<List<SelectColumnTarget>> {
+        val task = FutureTask<List<SelectColumnTarget>> {
+            this.getSelectColumnTargets()
+        }
+        Thread(task, "AndrORM-select-column-metadata").start()
+        return task
+    }
+
+    /**
+     * ## SELECT 結果 Entity 変換
+     * ### Map 化した SELECT 結果から Entity を生成する
+     * @receiver SELECT 結果 Entity クラス
+     * @param row SELECT 結果1行分
+     * @param columnTargets プロパティ名と SELECT 結果カラム名の紐づけ
+     * @return 生成した Entity
+     * @author Masahiro Inoue
+     * @since 2026-06-05
+     */
+    private fun <T : SelectEntity> KClass<out T>.createSelectEntity(
+        row: Map<String, Any?>,
+        columnTargets: List<SelectColumnTarget>,
+    ): T {
+        val constructor = this.primaryConstructor
+            ?: error(AE00007.format(this.qualifiedName))
+        val columnTargetMap = columnTargets.associateBy { it.propertyName }
+        val args = constructor.parameters.associateWith { parameter ->
+            val propertyName = parameter.name
+                ?: error(AE00007.format(this.qualifiedName))
+            val columnTarget = columnTargetMap[propertyName]
+                ?: error(AE00028.format(propertyName))
+
+            require(row.containsKey(columnTarget.resultColumnName)) {
+                AE00029.format(columnTarget.resultColumnName)
+            }
+            convertSelectValue(row[columnTarget.resultColumnName], parameter.type)
+        }
+        return constructor.callBy(args)
+    }
+
+    /**
+     * ## SELECT 結果値変換
+     * ### Cursor 由来の値を Entity コンストラクタの型へ変換する
+     * @param value SELECT 結果値
+     * @param targetType 変換先型
+     * @return 変換後の値
+     * @author Masahiro Inoue
+     * @since 2026-06-05
+     */
+    private fun convertSelectValue(value: Any?, targetType: KType): Any? {
+        if (value.isNull()) {
+            require(targetType.isMarkedNullable) {
+                "Null value is not supported for non-null property. type=$targetType"
+            }
+            return null
+        }
+
+        return when (targetType.classifier) {
+            Int::class -> (value as Number).toInt()
+            Long::class -> (value as Number).toLong()
+            Float::class -> (value as Number).toFloat()
+            Double::class -> (value as Number).toDouble()
+            Boolean::class -> (value as Number).toLong() != 0L
+            String::class -> value.toString()
+            LocalDate::class -> LocalDate.parse(value as String)
+            LocalTime::class -> LocalTime.parse(value as String)
+            LocalDateTime::class -> LocalDateTime.parse(value as String)
+            ByteArray::class -> value as ByteArray
+            else -> value
+        }
     }
 
     /**
@@ -349,6 +461,8 @@ open class AndrOrmDatabaseHelper(
      *
      * @param db SQLiteDatabase
      * @param queries 実行対象クエリ郡
+     * @author Masahiro Inoue
+     * @since 2026-06-05
      */
     private fun executeQuery(
         db: SQLiteDatabase,

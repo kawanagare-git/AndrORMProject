@@ -103,15 +103,15 @@ class Select<T : SelectEntity>(
                 registerTableAlias(joinedEntityMeta.tableName, joinedTable.alias)
                 appendSelectableColumns(joinedEntityMeta, joinedTable.alias)
 
-                usedEntityClasses += joinedTable.entityClass
+                usedEntityClasses += joinedTable
             },
         )
 
+    /** Select クラスで使用するエンティティクラスのリスト */
+    val usedEntityClasses = mutableListOf<TableRef<out SelectEntity>>()
+
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
-
-    /** Select クラスで使用するエンティティクラスのリスト */
-    private val usedEntityClasses = mutableListOf<KClass<out SelectEntity>>()
 
     /** Entity メタ情報生成 */
     private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
@@ -200,7 +200,7 @@ class Select<T : SelectEntity>(
             queryStructureMap[SelectClause.SELECT] =
                 mutableListOf("from $mainTableName $mainTableAlias")
             // select 文で使用するエンティティクラスを登録
-            usedEntityClasses += fromTable.entityClass
+            usedEntityClasses += fromTable
             registerTableAlias(mainTableName, mainTableAlias)
         }
         initialize()
@@ -223,9 +223,11 @@ class Select<T : SelectEntity>(
         joinedEntity: KClass<out SelectEntity>,
         on: ConditionBuilder.() -> Unit,
     ): Select<T> =
-        joinDelegate.join(
+        this.join(
             joinType = joinType,
-            joinedEntity = joinedEntity,
+            joinedTable = TableRef(
+                joinedEntity, alias = RuntimeEntityMetaFactory().create(joinedEntity).tableAlias,
+            ),
             on = on,
         )
 
@@ -266,9 +268,11 @@ class Select<T : SelectEntity>(
         joinType: JoinType,
         joinedEntity: KClass<out SelectEntity>,
     ) =
-        joinDelegate.join(
+        join(
             joinType = joinType,
-            joinedEntity = joinedEntity,
+            joinedTable = TableRef(
+                joinedEntity, alias = RuntimeEntityMetaFactory().create(joinedEntity).tableAlias,
+            ),
         )
 
     /**
@@ -378,8 +382,8 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     private fun detectGroupColumns() =
-        usedEntityClasses.flatMap { entityClass ->
-            entityClass.memberProperties
+        usedEntityClasses.flatMap { tableRef ->
+            tableRef.entityClass.memberProperties
                 .filter { !it.isFunctionColumn() }
                 .filterNot { it.isHiddenFromSelect() }
         }

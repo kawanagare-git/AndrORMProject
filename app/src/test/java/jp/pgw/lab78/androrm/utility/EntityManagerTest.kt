@@ -1,9 +1,16 @@
 package jp.pgw.lab78.androrm.utility
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00027
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
 import jp.pgw.lab78.androrm.database.utility.EntityManager.mapKotlinTypeToSqlType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvFileSource
@@ -41,6 +48,23 @@ class EntityManagerTest {
         assertEquals(expected, mapKotlinTypeToSqlType(actual::class.createType()))
     }
 
+
+    @Test
+    fun testGetSelectColumnTargets_withDuplicateColumnMetadata_throwsAE00027() {
+        val actual = assertThrows<IllegalStateException> {
+            TestDuplicateColumnAliasEntity::class.getSelectColumnTargets()
+        }
+
+        assertEquals(
+            AE00027.format(
+                "first",
+                "TEST_DUPLICATE_COLUMN_ALIAS_ENTITY",
+                "TDCAE",
+            ),
+            actual.message,
+        )
+    }
+
     /**
      * ParameterizedTest 用動的キャスト関数
      * @param value キャスト対象の値
@@ -60,5 +84,14 @@ class EntityManagerTest {
             else -> require(false) { AE00009.format(targetType) }
         }
     }
+
+
+    @Table(name = "TEST_DUPLICATE_COLUMN_ALIAS_ENTITY", alias = "TDCAE")
+    private data class TestDuplicateColumnAliasEntity(
+        @Column(name = "DUPLICATE_COLUMN")
+        val first: String,
+        @Column(name = "DUPLICATE_COLUMN")
+        val second: String,
+    ) : SelectEntity
 
 }

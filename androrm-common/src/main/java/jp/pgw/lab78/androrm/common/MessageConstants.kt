@@ -191,12 +191,51 @@ object MessageConstants {
     const val AE00024 = "BLOB bind value is not supported for executeSelect. index=%s"
 
     /**
-     * ## AE00024
+     * ## AE00025
      * ### 取得対象のカラムの型が存在しない（事実上あり得ない）
      *
      * 第1引数: 該当インデックス
+     * 第2引数: カラムの型
      */
     const val AE00025 = "Unsupported cursor field type. index=%s, type=%s"
+
+    /**
+     * ## AE00026
+     * ### 取得対象のテーブルにカラムのメタデータが存在しない場合
+     *
+     * 第1引数: 該当インデックス
+     * 第2引数: カラムの型
+     */
+    const val AE00026 = "Column metadata not found. table=%s, alias=%s"
+
+    /**
+     * ## AE00027
+     * ### 取得対象のテーブルに特定プロパティのメタデータが存在しない場合
+     *
+     * 第1引数: プロパティ名
+     * 第2引数: テーブル名
+     * 第3引数: テーブルエイリアス
+     */
+    const val AE00027 =
+        "Column metadata not found. property=%s, table=%s, alias=%s"
+
+    /**
+     * ## AE00028
+     * ### 取得対象のカラムが見つからない場合
+     *
+     * 第1引数: 該当プロパティ
+     */
+    const val AE00028 =
+        "Column target not found. property=%s"
+
+    /**
+     * ## AE00029
+     * ### 取得対象のカラムの値が見つからない場合
+     *
+     * 第1引数: カラム名
+     */
+    const val AE00029 =
+        "Column value not found. column=%s"
 
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
