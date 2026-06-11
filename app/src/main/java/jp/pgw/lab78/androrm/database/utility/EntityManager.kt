@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00026
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00027
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
@@ -17,7 +16,9 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.shared.library.Utils.isNotNull
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -189,25 +190,49 @@ object EntityManager {
      * @since 2026-06-05
      */
     @Synchronized
-    fun <T : SelectEntity> KClass<out T>.getSelectColumnTargets(): List<SelectColumnTarget> {
+    fun <T : SelectEntity> KClass<out T>.getSelectColumnTargets(): List<SelectColumnTarget> =
+        TableRef(this, this.getTableAlias()).getSelectColumnTargets()
+
+    /**
+     * ## SELECT 結果カラム紐づけ取得
+     * ### TableRef の alias を基準に、Entity のプロパティ名と SELECT 結果カラム名を取得する
+     * @receiver SELECT 用 TableRef
+     * @return プロパティ名と SELECT 結果カラム名のリスト
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
+    @Synchronized
+    fun <T : SelectEntity> TableRef<out T>.getSelectColumnTargets(): List<SelectColumnTarget> {
         // tableMetadata にカラム情報を登録する
-        this.getDmlTargets()
+        val entityMeta = RuntimeEntityMetaFactory().create(this.entityClass)
         // テーブル名の取得
-        val tableName = this.createTableName()
+        val tableName = entityMeta.tableName
         // テーブルエイリアス取得
-        val alias = this.getTableAlias()
-        // テーブル無いのプロパティ一覧取得
-        val columns = _tableMetadata[tableName]?.aliases?.get(alias)?.columns
-            ?: error(AE00026.format(tableName, alias))
-        val constructor = this.primaryConstructor
-            ?: error(AE00007.format(this.simpleName))
+        val alias = this.alias
+        val constructor = this.entityClass.primaryConstructor
+            ?: error(AE00007.format(this.entityClass.simpleName))
+        // テーブル名のプロパティ一覧取得
+        val propertyMetaMap = entityMeta.properties.associateBy { it.propertyName }
+        val propertyMap = this.entityClass.memberProperties.associateBy { it.name }
         return constructor.parameters.map { param ->
+            // プロパティ名の取得
             val propertyName = param.name
-                ?: error(AE00007.format(this.simpleName))
-            val resultColumnName = columns.entries.firstOrNull { (_, property) ->
-                property.name == propertyName
-            }?.key ?: error(AE00027.format(propertyName, tableName, alias))
-            SelectColumnTarget(propertyName, resultColumnName)
+                ?: error(AE00007.format(this.entityClass.simpleName))
+            val propertyMeta = propertyMetaMap[propertyName]
+                ?: error(AE00027.format(propertyName, tableName, alias))
+            val property = propertyMap[propertyName]
+                ?: error(AE00027.format(propertyName, tableName, alias))
+            // カラムエイリアスの生成
+            val resultColumnName = "${alias}_${propertyMeta.aliasName}"
+            _tableMetadata.getOrPut(tableName) {
+                TableDefinition(tableName, mutableMapOf())
+            }.aliases.getOrPut(alias) {
+                EntityDefinition(alias, this.entityClass, mutableMapOf())
+            }.columns[resultColumnName] = property
+            SelectColumnTarget(
+                propertyName = propertyName,
+                resultColumnName = resultColumnName,
+            )
         }
     }
 
@@ -277,48 +302,72 @@ object EntityManager {
     fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
 
     /** 型変換用データクラス */
-    data class ColumnChanger<T : Any>(
+    data class DataConverter<T : Any>(
         val columnType: String,
-        val func: (SQLiteStatement, Int, T) -> Unit
+        val toBindValue: (SQLiteStatement, Int, T) -> Unit,
+        val toProperty: (Any?) -> T
     ) {
         @Suppress("UNCHECKED_CAST")
-        fun bind(statement: SQLiteStatement, index: Int, value: Any) {
-            func(statement, index, value as T)
+        fun toBind(statement: SQLiteStatement, index: Int, value: Any) {
+            toBindValue(statement, index, value as T)
         }
+
+        @Suppress("UNCHECKED_CAST")
+        fun toProp(value: Any?): T = toProperty(value)
     }
 
     /** フィールド型 → カラム型変換用マップ */
-    val fieldToColumnMap = mapOf(
-        Int::class to ColumnChanger<Int>(
+    val DataConvertedMap = mapOf(
+        Int::class to DataConverter(
             "INTEGER",
-            { statement, index, value -> statement.bindLong(index, value.toLong()) }),
-        Long::class to ColumnChanger<Long>(
+            { statement, index, value -> statement.bindLong(index, value.toLong()) },
+            { value -> (value as Number).toInt() }
+        ),
+        Long::class to DataConverter(
             "INTEGER",
-            { statement, index, value -> statement.bindLong(index, value) }),
-        Float::class to ColumnChanger<Float>(
+            { statement, index, value -> statement.bindLong(index, value) },
+            { value -> (value as Number).toLong() }
+        ),
+        Float::class to DataConverter(
             "REAL",
-            { statement, index, value -> statement.bindDouble(index, value.toDouble()) }),
-        Double::class to ColumnChanger<Double>(
+            { statement, index, value -> statement.bindDouble(index, value.toDouble()) },
+            { value -> (value as Number).toFloat() }
+        ),
+        Double::class to DataConverter(
             "REAL",
-            { statement, index, value -> statement.bindDouble(index, value) }),
-        Boolean::class to ColumnChanger<Boolean>(
+            { statement, index, value -> statement.bindDouble(index, value) },
+            { value -> (value as Number).toDouble() }
+        ),
+        Boolean::class to DataConverter(
             "INTEGER",
-            { statement, index, value -> statement.bindLong(index, if (value) 1L else 0L) }),
-        String::class to ColumnChanger<String>(
+            { statement, index, value -> statement.bindLong(index, if (value) 1L else 0L) },
+            { value -> (value as Number).toLong() != 0L }
+        ),
+        String::class to DataConverter(
             "TEXT",
-            { statement, index, value -> statement.bindString(index, value) }),
-        LocalDate::class to ColumnChanger<LocalDate>(
+            { statement, index, value -> statement.bindString(index, value) },
+            { value -> value.toString() }
+        ),
+        LocalDate::class to DataConverter<LocalDate>(
             "DATETIME",
-            { statement, index, value -> statement.bindString(index, value.toString()) }),
-        LocalTime::class to ColumnChanger<LocalTime>(
+            { statement, index, value -> statement.bindString(index, value.toString()) },
+            { value -> LocalDate.parse(value as String) }
+        ),
+        LocalTime::class to DataConverter<LocalTime>(
             "DATETIME",
-            { statement, index, value -> statement.bindString(index, value.toString()) }),
-        LocalDateTime::class to ColumnChanger<LocalDateTime>(
+            { statement, index, value -> statement.bindString(index, value.toString()) },
+            { value -> LocalTime.parse(value as String) }
+        ),
+        LocalDateTime::class to DataConverter<LocalDateTime>(
             "DATETIME",
-            { statement, index, value -> statement.bindString(index, value.toString()) }),
-        ByteArray::class to ColumnChanger<ByteArray>(
+            { statement, index, value -> statement.bindString(index, value.toString()) },
+            { value -> LocalDateTime.parse(value as String) }
+        ),
+        ByteArray::class to DataConverter(
             "BLOB",
-            { statement, index, value -> statement.bindBlob(index, value) }),
+            { statement, index, value -> statement.bindBlob(index, value) },
+            { value -> value as ByteArray }
+        )
     )
 
     /** カラム型 → フィールド型変換用マップ */
@@ -346,11 +395,11 @@ object EntityManager {
         }
         require(
             valueForJudgment.isNotNull()
-                    || fieldToColumnMap[valueForJudgment].isNotNull()
+                    || DataConvertedMap[valueForJudgment].isNotNull()
         ) {
             AE00009.format(valueForJudgment)
         }
-        return fieldToColumnMap[valueForJudgment]?.columnType!!
+        return DataConvertedMap[valueForJudgment]?.columnType!!
     }
 
     /**

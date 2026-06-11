@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.DEFAULT_LIMIT_VALUE
 import jp.pgw.lab78.androrm.common.Constants.DEFAULT_OFFSET_VALUE
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
@@ -8,8 +9,6 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00003
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00004
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00005
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00006
-import jp.pgw.lab78.androrm.common.database.SupportFunction.isFunctionColumn
-import jp.pgw.lab78.androrm.common.database.SupportFunction.isHiddenFromSelect
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
 import jp.pgw.lab78.androrm.common.logging.LogScope.APP
@@ -109,6 +108,9 @@ class Select<T : SelectEntity>(
 
     /** Select クラスで使用するエンティティクラスのリスト */
     val usedEntityClasses = mutableListOf<TableRef<out SelectEntity>>()
+
+    /** OUTER JOIN により Entity 自体が null になり得るテーブル参照 */
+    private val nullableByJoinTables = mutableSetOf<TableRef<out SelectEntity>>()
 
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
@@ -247,17 +249,22 @@ class Select<T : SelectEntity>(
         joinType: JoinType,
         joinedTable: TableRef<out SelectEntity>,
         on: ConditionBuilder.() -> Unit,
-    ): Select<T> =
-        joinDelegate.join(
+    ): Select<T> {
+        val result = joinDelegate.join(
             joinType = joinType,
             joinedTable = joinedTable,
             on = on,
         )
+        if (joinType.nullableByJoin) {
+            nullableByJoinTables += joinedTable
+        }
+        return result
+    }
 
     /**
      * ## join メソッド
      * ### テーブル結合を指定する
-     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
+     * @param joinType 結合方法（LEFT CROSS等）を指定
      * @param joinedEntity 結合するエンティティクラス（副クラス）
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
@@ -350,12 +357,23 @@ class Select<T : SelectEntity>(
         // HAVING 句が指定されると自動的に GROUP BY 句を生成する
         // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
         if (groupByColumns.isEmpty()) {
-            detectGroupColumns().map { column ->
+            detectGroupColumns().forEach { column ->
                 groupByColumns += GroupByColumn(column)
             }
         }
         return this
     }
+
+    /**
+     * ## OUTER JOIN null 対象判定
+     * ### LEFT JOIN の結合先 Entity など、Entity 自体が null になり得るかを判定する
+     * @param tableRef 判定対象テーブル参照
+     * @return Entity 自体が null になり得る場合 true
+     * @author Masahiro Inoue
+     * @since 2026-06-11
+     */
+    internal fun isNullableByJoin(tableRef: TableRef<out SelectEntity>): Boolean =
+        tableRef in nullableByJoinTables
 
     /**
      * ## テーブルエイリアス登録
@@ -383,9 +401,17 @@ class Select<T : SelectEntity>(
     @InfoLog
     private fun detectGroupColumns() =
         usedEntityClasses.flatMap { tableRef ->
-            tableRef.entityClass.memberProperties
-                .filter { !it.isFunctionColumn() }
-                .filterNot { it.isHiddenFromSelect() }
+            val entityMeta = runtimeEntityMetaFactory.create(tableRef.entityClass)
+            val propertyMap = tableRef.entityClass.memberProperties.associateBy { it.name }
+            entityMeta.properties
+                .asSequence()
+                .filterNot { it.isFunction }
+                .filterNot { it.hideFromSelect }
+                .map { propertyMeta ->
+                    propertyMap[propertyMeta.propertyName]
+                        ?: error("Property not found: ${propertyMeta.propertyName}")
+                }
+                .toList()
         }
 
     /**
@@ -631,8 +657,8 @@ class Select<T : SelectEntity>(
             }
             addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereDelegate.conditions)
             addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
-            addClauseIfNotEmpty(SelectClause.GROUP, PRIMARY_DELIMITER, groupByColumns.toList())
-            addClauseIfNotEmpty(SelectClause.ORDER, PRIMARY_DELIMITER, orderColumns.toList())
+            addClauseIfNotEmpty(SelectClause.GROUP, ARGUMENT_DELIMITER, groupByColumns.toList())
+            addClauseIfNotEmpty(SelectClause.ORDER, ARGUMENT_DELIMITER, orderColumns.toList())
             limitValue?.let {
                 queryStructureMap[SelectClause.LIMIT] = mutableListOf("${SelectClause.LIMIT.sql} ?")
             }

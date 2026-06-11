@@ -237,6 +237,15 @@ object MessageConstants {
     const val AE00029 =
         "Column value not found. column=%s"
 
+    /**
+     * ## AE00030
+     * ### プロパティが null を許容していないのに null を設定しようとした場合
+     *
+     * 第1引数: 型宣言
+     */
+    const val AE00030 =
+        "Null value is not supported for non-null property. type=%s"
+
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
      * 現時点の app/src/main には Warning 用メッセージは見当たらない。
@@ -347,12 +356,6 @@ object MessageConstants {
      */
     const val CE00015 =
         "Failed to obtain the simple name of ColumnFunction."
-
-    /**
-     * ## CE00016
-     * ### Null 値が許可されていない項目に Null が設定された場合
-     */
-    const val CE00016 = "Null value is not allowed for this field."
 
     /**
      * ## CE00017

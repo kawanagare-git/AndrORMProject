@@ -1,5 +1,10 @@
 package jp.pgw.lab78.androrm.common.meta
 
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00011
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00012
+import jp.pgw.lab78.androrm.common.MessageConstants.CE00013
+import jp.pgw.lab78.androrm.common.MessageConstants.CW00001
+
 /**
  * ## Entity メタ情報検証クラス
  * ### KSP と Select 系クラスから共通利用する
@@ -61,9 +66,11 @@ class EntityMetaValidator {
             // @Column と @Function の併用検査
             .filter { it.hasColumnAnnotation && it.hasFunctionAnnotation }
             .forEach { property ->
-                errors += "Property '${property.propertyName}' in entity '${entityMeta.entityName}' " +
-                        "cannot have both @Column and @Function. " +
-                        "Source entity: '${entityMeta.defineEntityQualifiedName}'."
+                errors += CE00011.format(
+                    property.propertyName,
+                    entityMeta.entityName,
+                    entityMeta.defineEntityQualifiedName
+                )
             }
     }
 
@@ -81,8 +88,7 @@ class EntityMetaValidator {
         val visibleProperties = entityMeta.properties.filterNot { it.hideFromSelect }
         // 全プロパティが hideFromSelect = true になっていないか検査する
         if (visibleProperties.isEmpty()) {
-            errors += "Entity '${entityMeta.entityName}' derived from '${entityMeta.defineEntityQualifiedName}' " +
-                    "has no selectable properties. All properties are hidden from SELECT."
+            errors += CE00012.format(entityMeta.entityName, entityMeta.defineEntityQualifiedName)
         }
     }
 
@@ -107,15 +113,19 @@ class EntityMetaValidator {
             when {
                 // SELECT 対象プロパティに重複 alias が含まれている場合はエラーとする
                 visibleCount >= 2 -> {
-                    errors += "Duplicate alias '$alias' in entity '${entityMeta.entityName}' " +
-                            "defined in '${entityMeta.defineEntityQualifiedName}'."
+                    errors += CE00013.format(
+                        alias,
+                        entityMeta.entityName,
+                        entityMeta.defineEntityQualifiedName
+                    )
                 }
                 // SELECT 対象プロパティに重複 alias が含まれていない場合は警告とする
                 else -> {
-                    warnings +=
-                        "Query construction is not affected, but alias '$alias' " +
-                                "appears multiple times in entity '${entityMeta.entityName}' " +
-                                "defined in '${entityMeta.defineEntityQualifiedName}'."
+                    warnings += CW00001.format(
+                        alias,
+                        entityMeta.entityName,
+                        entityMeta.defineEntityQualifiedName
+                    )
                 }
             }
         }

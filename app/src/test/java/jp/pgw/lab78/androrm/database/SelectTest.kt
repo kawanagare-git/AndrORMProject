@@ -1,332 +1,627 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00002
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00003
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00004
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00005
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00010
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Function
+import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.MAX
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.entities.define.DepartmentEntity
-import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
-import jp.pgw.lab78.androrm.database.entities.select.*
+import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
+import jp.pgw.lab78.androrm.database.entities.select.SalaryEntitySelective
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.*
-import jp.pgw.lab78.androrm.database.reference.Support.tableRef
+import jp.pgw.lab78.androrm.database.reference.TableRef
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import java.time.LocalDate
-import java.time.LocalDateTime
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
-import kotlin.reflect.full.memberProperties
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity as EmployeeEntityJoined
+import org.junit.jupiter.api.assertThrows
 
+/**
+ * ## Select テスト
+ * ### Select 文生成、bindValues、JOIN / WHERE / HAVING / ORDER / LIMIT / OFFSET を確認する
+ * @author Masahiro Inoue
+ * @since 2026-06-09
+ */
 class SelectTest {
 
-    companion object {
-        @JvmStatic
-        lateinit var SELECT: Select<*>
-
-    }
-
     @Test
-    fun build00() {
-        SELECT = Select(TestSelectEntity::class)
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(TestSelectEntityWithAlias::class)
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(TestSelectEntity::class, isDistinct = true)
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build01() {
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(
-                LEFT, TestSelectEntity::class, {
-                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
-                })
-            .where {
-                or {
-                    TestSelectEntity::name like "kawanagare%"
-                    condition("name like ?", "川流%")
-                }
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .where {
-                and {
-                    TestSelectEntityWithAlias::name eq "川流"
-                    TestSelectEntityWithAlias::address like "%Shinjuku%"
-                }
-                or {
-                    TestSelectEntityWithAlias::id gt 100
-                    TestSelectEntityWithAlias::id le 10
-                }
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build02() {
-        // 最終TEST
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(INNER, TestSelectEntity::class, {
-                and {
-                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
-                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
-                }
-            })
-            .join(LEFT, TestAllEntity::class, {
-                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
-            })
-            .where {
-                and {
-                    TestSelectEntityWithAlias::name eq "川流"
-                    TestSelectEntity::address like "%Shinjuku%"
-                }
-                or {
-                    TestAllEntity::insertDateTime gt LocalDateTime.parse("2025-01-01T00:00:00.000")
-                    TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
-                }
-            }
-            .having {
-                TestSelectEntity::newestBirthday lt LocalDate.parse("2020-01-01")
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        // 新エンティティクラス
-        SELECT = Select(DepartmentEntityInfo::class)
-            .order {
-                DepartmentEntityInfo::employeeId.asc
-                DepartmentEntityInfo::section.asc.nullsLast
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build03() {
-        // 最終TEST
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class, {
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .order { DepartmentEntityInfo::department.asc }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class, {
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .where({
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .order { DepartmentEntityInfo::department.desc }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class, {
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .where({
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .order { DepartmentEntityInfo::department.asc }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build04() {
-        // 最終TEST
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class, {
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntityInfo::employeeId
-            })
-            .order { DepartmentEntityInfo::department.asc }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(INNER, DepartmentEntityInfo::class) {
-                EmployeeEntityIdSelection::employeeId eq DepartmentEntity::employeeId
-            }
-            .join(LEFT, SalaryEntitySelective::class) {
-                EmployeeEntityIdSelection::employeeId eq SalaryEntitySelective::employeeId
-            }
-            .where({
-                DepartmentEntityInfo::department eq DepartmentEntity::department
-                or {
-                    DepartmentEntityInfo::section eq "10"
-                    DepartmentEntityInfo::section eq "20"
-                    EmployeeEntityIdSelection::employeeId between ("1000" to "2000")
-                }
-            })
-            .having {
-                SalaryEntitySelective::maxGross gt 100000
-            }
-            .order {
-                DepartmentEntityInfo::department.nullsFirst
-                EmployeeEntityIdSelection::employeeId.nullsLast
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build05() {
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(LEFT, TestSelectEntity::class).on {
-                TestSelectEntityWithAlias::id eq DepartmentEntityInfo::employeeId
-                TestSelectEntity::name like "%kawanagare"
-            }
-            .where {
-                or {
-                    TestSelectEntity::name like "%kawanagare"
-                    TestSelectEntityWithAlias::address like "%Shinjuku%"
-                    DepartmentEntityInfo::section eq "20"
-                    DepartmentEntityInfo::department between "10" and "50"
-                }
-            }
-            .order { TestSelectEntity::address.nullsLast }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build06() {
-        val fromTable: KClass<out SelectEntity> = TestSelectEntityWithAlias::class
-        val joinTable: KClass<out SelectEntity> = TestSelectEntity::class
-        SELECT = Select(fromTable)
-            .join(
-                LEFT, joinTable, on = {
-                    fromTable.prop("id") eq TestSelectEntity::id
-                    joinTable.prop("name") like "%kawanagare"
-                })
-            .where {
-                or {
-                    joinTable.prop("name") like "%kawanagare"
-                    fromTable.prop("address") like "%Shinjuku%"
-                }
-            }
-            .order { joinTable.prop("address").nullsLast }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build07() {
-        SELECT = Select(TestSelectEntityWithAlias::class)
-            .join(INNER, TestSelectEntity::class, on = {
-                and {
-                    TestSelectEntityWithAlias::id eq TestSelectEntity::id
-                    TestSelectEntityWithAlias::name eq TestSelectEntity::name
-                }
-            })
-            .join(LEFT, TestAllEntity::class).on {
-                TestSelectEntityWithAlias::birthday ge TestAllEntity::birthday
-            }
-            .where {
-                and {
-                    TestSelectEntityWithAlias::name eq "川流"
-                    TestSelectEntity::address like "%Shinjuku%"
-                    or {
-                        TestAllEntity::insertDateTime gt
-                                LocalDateTime.parse("2025-01-01T00:00:00.000")
-                        TestAllEntity::updateDate lt LocalDate.parse("2025-07-01")
-                    }
-                    TestSelectEntityWithAlias::id between (100) and (200)
-                }
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build08() {
-        SELECT = Select(TestSelectEntity::class)
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT.where {
-            TestSelectEntity::id inList listOf(1, 2, 3, 4, 5)
-        }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT = Select(TestSelectEntity::class)
-        SELECT.where {
-            TestSelectEntity::name like "川流%"
-        }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-        SELECT.order {
-            TestSelectEntity::id.asc
-        }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
-
-    @Test
-    fun build09() {
-        val bindValues = TestAllEntity(
-            id = 10,
-            name = "川流%",
-            address = "新宿区",
-            birthday = LocalDate.parse("1990-01-01"),
+    fun testTableColumns_buildsSelectForTableTransfer() {
+        val actual = Select.tableColumns(
+            tableName = "SOURCE_TABLE",
+            columnList = listOf("ID", "NAME", "AGE"),
         )
-        SELECT = Select(TestSelectEntity::class)
-            .join(LEFT, TestAllEntity::class) {
-                TestSelectEntity::id eq TestAllEntity::id
-                TestAllEntity::birthday eq "2026-01-15"
-            }
-            .where {
-                TestSelectEntity::name like bindValues.name
-                TestSelectEntity::address eq bindValues.address
-                TestAllEntity::subId eq TestAllEntity::id
-                TestAllEntity::id ge "20"
-            }
-            .order { TestSelectEntity::id.asc }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+
+        assertEquals(
+            "select ID,NAME,AGE from SOURCE_TABLE",
+            actual,
+        )
     }
 
     @Test
-    fun build10() {
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .join(
-                LEFT, EmployeeEntityJoined::class
-            ).on {
-                EmployeeEntityIdSelection::employeeId eq EmployeeEntityJoined::employeeId
-            }
-            .order {
-                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
-                EmployeeEntityJoined::name.desc
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+    fun testBuild_withoutCondition_buildsBasicSelect() {
+        val select = Select(EmployeeEntity::class)
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+            { assertFalse(select.build().contains("EMPLOYEE_SUB_ID")) },
+            { assertFalse(select.build().contains("EMP_EMPLOYEE_SUB_ID")) },
+        )
     }
 
     @Test
-    fun build11() {
-        SELECT = Select(DepartmentEntityInfo::class)
+    fun testBuild_withDistinct_buildsDistinctSelect() {
+        val select = Select(EmployeeEntityIdSelection::class, isDistinct = true)
+
+        assertAll(
+            {
+                assertEquals(
+                    "select distinct EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withFunctionProjection_buildsFunctionColumns() {
+        val select = Select(SalaryEntitySelective::class)
+
+        assertAll(
+            {
+                assertEquals(
+                    "select SAL.EMPLOYEE_ID as SAL_EMPLOYEE_ID, " +
+                            "SAL.PAY_MONTH as SAL_PAY_MONTH, " +
+                            "SAL.GROSS as SAL_GROSS, " +
+                            "sum(SAL.GROSS) as SAL_TOTAL_GROSS, " +
+                            "max(SAL.GROSS) as SAL_MAX_GROSS, " +
+                            "avg(SAL.GROSS) as SAL_AVG_GROSS, " +
+                            "max(deduction) as SAL_MAX_DEDUCTION, " +
+                            "avg(deduction) as SAL_AVG_DEDUCTION " +
+                            "from SALARY SAL",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withWhereLogicalConditions_buildsWhereAndBindValues() {
+        val select = Select(EmployeeEntity::class)
             .where {
-                DepartmentEntityInfo::employeeId between ("1000" to "2000")
+                and {
+                    EmployeeEntity::name eq "川流"
+                    EmployeeEntity::address like "%Shinjuku%"
+                }
+                or {
+                    EmployeeEntity::gender eq "MALE"
+                    EmployeeEntity::position eq "PG"
+                }
             }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP " +
+                            "where (EMP.NAME = ? and EMP.ADDRESS like ?) " +
+                            "and (EMP.GENDER = ? or EMP.POSITION = ?)",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("川流", "%Shinjuku%", "MALE", "PG"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withRawCondition_buildsWhereAndBindValues() {
+        val select = Select(EmployeeEntity::class)
+            .where {
+                condition(
+                    "EMP.NAME like ? OR EMP.ADDRESS like ?",
+                    "川流%",
+                    "%東京%",
+                )
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP " +
+                            "where EMP.NAME like ? OR EMP.ADDRESS like ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("川流%", "%東京%"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withInListAndBetween_buildsWhereAndBindValues() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .where {
+                EmployeeEntityIdSelection::employeeId inList listOf("EMP001", "EMP002")
+                EmployeeEntityIdSelection::employeeId between ("EMP001" to "EMP999")
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID " +
+                            "where EMP_ID.EMPLOYEE_ID in (?, ?) " +
+                            "and EMP_ID.EMPLOYEE_ID between ? and ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("EMP001", "EMP002", "EMP001", "EMP999"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withJoinOnBlock_buildsJoinSelect() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .join(LEFT, EmployeeEntity::class) {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID, " +
+                            "EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP_ID " +
+                            "left join EMPLOYEE EMP on EMP_ID.EMPLOYEE_ID = EMP.EMPLOYEE_ID",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+            { assertEquals(listOf("EMP_ID", "EMP"), select.usedEntityClasses.map { it.alias }) },
+        )
+    }
+
+    @Test
+    fun testBuild_withJoinConditionOn_buildsJoinSelect() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .join(INNER, EmployeeEntity::class)
+            .on {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+                EmployeeEntity::name like "川流%"
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID, " +
+                            "EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP_ID " +
+                            "inner join EMPLOYEE EMP on EMP_ID.EMPLOYEE_ID = EMP.EMPLOYEE_ID " +
+                            "AND EMP.NAME like ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("川流%"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withTableRefSelfJoin_buildsJoinWithCustomAlias() {
+        val mainTable = TableRef(EmployeeEntity::class, "M")
+        val joinedTable = TableRef(EmployeeEntity::class, "S")
+        val select = Select(mainTable)
+            .join(LEFT, joinedTable) {
+                mainTable[EmployeeEntity::employeeId] eq joinedTable[EmployeeEntity::employeeId]
+            }
+            .where {
+                mainTable[EmployeeEntity::name] like "川流%"
+            }
+            .limit(10)
+            .offset(5)
+
+        assertAll(
+            {
+                assertEquals(
+                    "select M.EMPLOYEE_ID as M_EMPLOYEE_ID, " +
+                            "M.NAME as M_NAME, " +
+                            "M.ADDRESS as M_ADDRESS, " +
+                            "M.GENDER as M_GENDER, " +
+                            "M.POSITION as M_POSITION, " +
+                            "S.EMPLOYEE_ID as S_EMPLOYEE_ID, " +
+                            "S.NAME as S_NAME, " +
+                            "S.ADDRESS as S_ADDRESS, " +
+                            "S.GENDER as S_GENDER, " +
+                            "S.POSITION as S_POSITION " +
+                            "from EMPLOYEE M " +
+                            "left join EMPLOYEE S on M.EMPLOYEE_ID = S.EMPLOYEE_ID " +
+                            "where M.NAME like ? limit ? offset ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("川流%", 10, 5), select.bindValues) },
+            { assertEquals(listOf("M", "S"), select.usedEntityClasses.map { it.alias }) },
+        )
+    }
+
+    @Test
+    fun testBuild_withHaving_buildsGroupByAndHaving() {
+        val select = Select(SalaryEntitySelective::class)
             .having {
-                DepartmentEntityInfo::allLine gt 100000
+                SalaryEntitySelective::totalGross gt 100_000
             }
-            .order {
-                DepartmentEntityInfo::employeeId.nullsFirst
-            }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
+
+        assertAll(
+            {
+                assertEquals(
+                    "select SAL.EMPLOYEE_ID as SAL_EMPLOYEE_ID, " +
+                            "SAL.PAY_MONTH as SAL_PAY_MONTH, " +
+                            "SAL.GROSS as SAL_GROSS, " +
+                            "sum(SAL.GROSS) as SAL_TOTAL_GROSS, " +
+                            "max(SAL.GROSS) as SAL_MAX_GROSS, " +
+                            "avg(SAL.GROSS) as SAL_AVG_GROSS, " +
+                            "max(deduction) as SAL_MAX_DEDUCTION, " +
+                            "avg(deduction) as SAL_AVG_DEDUCTION " +
+                            "from SALARY SAL " +
+                            "group by SAL.EMPLOYEE_ID, SAL.PAY_MONTH, SAL.GROSS " +
+                            "having SAL.TOTAL_GROSS > ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf(100_000), select.bindValues) },
+        )
     }
 
     @Test
-    fun build12() {
-        SELECT = Select(EmployeeEntityIdSelection::class)
-            .where { EmployeeEntityIdSelection::employeeId inList (listOf(10, 20, 30)) }
+    fun testBuild_withOrder_buildsOrderBy() {
+        val select = Select(EmployeeEntity::class)
             .order {
-                EmployeeEntityIdSelection::employeeId.asc.nullsFirst
+                EmployeeEntity::employeeId.asc
+                EmployeeEntity::name.desc.nullsLast
+                EmployeeEntity::address.nullsFirst
             }
-        println("${SELECT.build()}; values = ${SELECT.bindValues}")
-    }
 
-    private fun KClass<out SelectEntity>.prop(name: String): KProperty1<out SelectEntity, *> =
-        this.memberProperties
-            .firstOrNull { it.name == name } as KProperty1<out SelectEntity, *>
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP " +
+                            "order by EMP.EMPLOYEE_ID asc nulls first, " +
+                            "EMP.NAME desc nulls last, " +
+                            "EMP.ADDRESS asc nulls first",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+        )
+    }
 
     @Test
-    fun build13() {
-        val fromTable = tableRef(TestSelectEntity::class, "FR")
-        val join1Table = tableRef(TestSelectEntity::class, "J1")
-        val join2Table = tableRef(TestSelectEntity::class, "J2")
-        val select = Select(fromTable).join(
-            LEFT,
-            join1Table,
-            { fromTable[TestSelectEntity::id] eq join1Table[TestSelectEntity::id] })
-            .join(
-                INNER,
-                join2Table,
-                { join1Table[TestSelectEntity::name] eq join2Table[TestSelectEntity::name] })
-            .where { fromTable[TestSelectEntity::id] like "0010%" }
-            .limit(10).offset(5)
-        println("${select.build()}; values = ${select.bindValues}")
+    fun testBuild_withLimitOnly_buildsLimitAndBindValues() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .limit(20)
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID limit ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf(20), select.bindValues) },
+        )
     }
+
+    @Test
+    fun testBuild_withDefaultLimitAndDefaultOffset_buildsLimitOffsetAndBindValues() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .limit()
+            .offset()
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID limit ? offset ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf(10, 0), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_afterAlreadyBuiltAndWhereAdded_rebuildsSql() {
+        val select = Select(EmployeeEntityIdSelection::class)
+        val before = select.build()
+
+        select.where {
+            EmployeeEntityIdSelection::employeeId eq "EMP001"
+        }
+        val after = select.build()
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID from EMPLOYEE EMP_ID",
+                    before,
+                )
+            },
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID where EMP_ID.EMPLOYEE_ID = ?",
+                    after,
+                )
+            },
+            { assertEquals(listOf("EMP001"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withExistsSubQuery_buildsExistsCondition() {
+        val subQuery = Select(EmployeeEntityIdSelection::class)
+            .where {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+            }
+        val select = Select(EmployeeEntity::class)
+            .where {
+                exists(subQuery)
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP " +
+                            "where exists (select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID " +
+                            "from EMPLOYEE EMP_ID where EMP_ID.EMPLOYEE_ID = EMP.EMPLOYEE_ID)",
+                    select.build(),
+                )
+            },
+            { assertEquals(emptyList<Any?>(), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testWhere_withRawConditionPlaceholderMismatch_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(EmployeeEntity::class)
+                .where {
+                    condition("EMP.NAME = ? AND EMP.ADDRESS = ?", "川流")
+                }
+        }
+
+        assertEquals(
+            AE00002.format("EMP.NAME = ? AND EMP.ADDRESS = ?", 2, 1),
+            actual.message,
+        )
+    }
+
+    @Test
+    fun testJoin_withDuplicateAlias_throwsIllegalArgumentException() {
+        val mainTable = TableRef(EmployeeEntity::class, "EMP")
+        val joinedTable = TableRef(EmployeeEntity::class, "EMP")
+
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(mainTable)
+                .join(LEFT, joinedTable) {
+                    mainTable[EmployeeEntity::employeeId] eq joinedTable[EmployeeEntity::employeeId]
+                }
+        }
+
+        assertEquals(
+            AE00003.format("EMP", "EMPLOYEE"),
+            actual.message,
+        )
+    }
+
+    @Test
+    fun testWhere_calledTwice_throwsIllegalStateException() {
+        val select = Select(EmployeeEntity::class)
+            .where {
+                EmployeeEntity::name eq "川流"
+            }
+
+        val actual = assertThrows<IllegalStateException> {
+            select.where {
+                EmployeeEntity::address like "%東京%"
+            }
+        }
+
+        assertEquals(AE00010.format("Select", "where"), actual.message)
+    }
+
+    @Test
+    fun testHaving_calledTwice_throwsIllegalStateException() {
+        val select = Select(SalaryEntitySelective::class)
+            .having {
+                SalaryEntitySelective::totalGross gt 100_000
+            }
+
+        val actual = assertThrows<IllegalStateException> {
+            select.having {
+                SalaryEntitySelective::maxGross gt 100_000
+            }
+        }
+
+        assertEquals(AE00010.format("Select", "having"), actual.message)
+    }
+
+    @Test
+    fun testOrder_calledTwice_throwsIllegalStateException() {
+        val select = Select(EmployeeEntity::class)
+            .order {
+                EmployeeEntity::employeeId.asc
+            }
+
+        val actual = assertThrows<IllegalStateException> {
+            select.order {
+                EmployeeEntity::name.desc
+            }
+        }
+
+        assertEquals(AE00010.format("Select", "order"), actual.message)
+    }
+
+    @Test
+    fun testLimit_calledTwice_throwsIllegalStateException() {
+        val select = Select(EmployeeEntity::class)
+        select.limit(10)
+
+        val actual = assertThrows<IllegalStateException> {
+            select.limit(20)
+        }
+
+        assertEquals(AE00010.format("Select", "limit"), actual.message)
+    }
+
+    @Test
+    fun testOffset_calledTwice_throwsIllegalStateException() {
+        val limitClause = Select(EmployeeEntity::class).limit(10)
+        limitClause.offset(5)
+
+        val actual = assertThrows<IllegalStateException> {
+            limitClause.offset(10)
+        }
+
+        assertEquals(AE00010.format("Select", "offset"), actual.message)
+    }
+
+    @Test
+    fun testLimit_withNegativeValue_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(EmployeeEntity::class).limit(-1)
+        }
+
+        assertEquals(AE00004, actual.message)
+    }
+
+    @Test
+    fun testOffset_withNegativeValue_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(EmployeeEntity::class).limit(10).offset(-1)
+        }
+
+        assertEquals(AE00005, actual.message)
+    }
+
+    @Test
+    fun testConstructor_withDualAnnotationEntity_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(InvalidDualAnnotationEntity::class)
+        }
+        println(actual)
+        assertTrue(
+            actual.message.orEmpty().contains(
+                "Property 'id' in entity 'InvalidDualAnnotationEntity' cannot have both @Column and @Function."
+            )
+        )
+    }
+
+    @Test
+    fun testConstructor_withAllHiddenEntity_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(InvalidAllHiddenEntity::class)
+        }
+
+        assertTrue(
+            actual.message.orEmpty().contains(
+                "Entity 'InvalidAllHiddenEntity' derived from "
+            )
+        )
+        assertTrue(
+            actual.message.orEmpty().contains(
+                "has no selectable properties. All properties are hidden from SELECT."
+            )
+        )
+    }
+
+    @Test
+    fun testConstructor_withDuplicateAliasEntity_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(InvalidDuplicateAliasEntity::class)
+        }
+
+        assertTrue(
+            actual.message.orEmpty().contains(
+                "Duplicate alias 'DUPLICATE_ALIAS' in entity 'InvalidDuplicateAliasEntity'"
+            )
+        )
+    }
+
+    @Test
+    fun testConstructor_withDuplicateColumnNameEntity_throwsIllegalArgumentException() {
+        val actual = assertThrows<IllegalArgumentException> {
+            Select(InvalidDuplicateAliasEntity::class)
+        }
+        println(actual.message)
+        assertTrue(
+            actual.message.orEmpty().contains(
+                "Duplicate alias 'DUPLICATE_ALIAS' in entity 'InvalidDuplicateAliasEntity'"
+            )
+        )
+    }
+
+    @Table(name = "INVALID_DUAL_ANNOTATION", alias = "IDA")
+    private data class InvalidDualAnnotationEntity(
+        @Column(name = "ID")
+        @Function(columnFunction = MAX, alias = "MAX_ID", args = ["id"])
+        val id: Int,
+    ) : SelectEntity
+
+    @Table(name = "INVALID_ALL_HIDDEN", alias = "IAH")
+    private data class InvalidAllHiddenEntity(
+        @Column(name = "ID", hideFromSelect = true)
+        val id: Int,
+    ) : SelectEntity
+
+    @Table(name = "INVALID_DUPLICATE_ALIAS", alias = "IDA2")
+    private data class InvalidDuplicateAliasEntity(
+        @Column(name = "ID", alias = "DUPLICATE_ALIAS")
+        val id: Int,
+        @Column(name = "NAME", alias = "DUPLICATE_ALIAS")
+        val name: String,
+    ) : SelectEntity
+
 }

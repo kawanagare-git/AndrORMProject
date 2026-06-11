@@ -4,10 +4,10 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Dependencies
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.TypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
+import jp.pgw.lab78.androrm.ksp.factory.GeneratedProperty
 import jp.pgw.lab78.androrm.ksp.helper.AnnotationHelper
 import jp.pgw.lab78.androrm.ksp.helper.ImportHelper
 import jp.pgw.lab78.androrm.ksp.helper.TypeHelper
@@ -44,13 +44,14 @@ class DataClassWriter(
     fun write(
         classNameFQN: ClassName,
         tableAnnotationSpec: AnnotationSpec,
-        normalProps: List<PropertySpec>,
-        functionProps: List<PropertySpec>,
+        normalProps: List<GeneratedProperty>,
+        functionProps: List<GeneratedProperty>,
         interfaces: List<TypeName>
     ) {
         logTraceEntered(classNameFQN, tableAnnotationSpec, normalProps, functionProps, interfaces)
         // コンストラクタのプロパティは、通常のプロパティと関数プロパティを結合したリストとする
         val constructorProps = normalProps + functionProps
+        val propertySpecs = constructorProps.map { it.propertySpec }
         // データクラスのコードを生成する
         val file = codeGenerator.createNewFile(
             dependencies = Dependencies(false),
@@ -61,7 +62,7 @@ class DataClassWriter(
         file.bufferedWriter().use { writer ->
             val imports = importHelper.collectImports(
                 tableAnnotationSpec,
-                constructorProps,
+                propertySpecs,
                 interfaces
             )
             // クラスの package 名、インポート文、クラス宣言を出力する
@@ -84,13 +85,21 @@ class DataClassWriter(
             // クラス宣言を出力する
             writer.appendLine("public data class ${classNameFQN.simpleName}(")
             // コンストラクタのプロパティを出力する
-            constructorProps.forEachIndexed { index, prop ->
+            constructorProps.forEachIndexed { index, generatedProperty ->
+                val prop = generatedProperty.propertySpec
                 prop.annotations.forEach { ann ->
                     writer.appendLine("  ${annotationHelper.getSimpleName(ann)}")
                 }
                 // プロパティの型を基に、必要なインポートを収集する
                 val comma = if (index == constructorProps.lastIndex) EMPTY_STRING else ","
-                writer.appendLine("  public val ${prop.name}: ${typeHelper.getSimpleName(prop)}$comma")
+                val defaultValue = if (generatedProperty.hideFromSelect) {
+                    " = null"
+                } else {
+                    EMPTY_STRING
+                }
+                writer.appendLine(
+                    "  public val ${prop.name}: ${typeHelper.getSimpleName(prop)}$defaultValue$comma"
+                )
                 writer.appendLine()
             }
             // クラス宣言の閉じ括弧を出力する

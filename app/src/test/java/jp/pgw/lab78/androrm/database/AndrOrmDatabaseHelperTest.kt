@@ -16,8 +16,11 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.entities.define.SalaryEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestLargeEntity
+import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.entities.select.SalaryEntitySelective
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.queryparts.JoinType.LEFT
 import jp.pgw.lab78.androrm.database.utility.EntityManager.SelectColumnTarget
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -28,6 +31,7 @@ import java.lang.reflect.InvocationTargetException
 import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.reflect.KClass
+import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity as EmployeeTableEntity
 
 class AndrOrmDatabaseHelperTest {
 
@@ -557,7 +561,7 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(cursor.getLong(6)).thenReturn(50_000L, 55_000L)
         Mockito.`when`(cursor.getDouble(7)).thenReturn(50_000.0, 52_500.0)
 
-        val actual: List<Map<String, SelectEntity>> =
+        val actual: List<Map<String, SelectEntity?>> =
             helper.executeSelectAsEntityList(query = select)
 
         assertEquals(
@@ -671,6 +675,169 @@ class AndrOrmDatabaseHelperTest {
 
         assertEquals(1L, actual[0]["ID"])
         assertArrayEquals(binary, actual[0]["MEMO"] as ByteArray)
+        Mockito.verify(cursor).close()
+    }
+
+    @Test
+    fun testExecuteSelectAsEntityList_withLeftJoin_returnsOneToOneOneToManyAndNoJoinedEntity() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(
+            TestAndrOrmDatabaseHelper(
+                EmployeeTableEntity::class,
+            )
+        )
+        val select = Select(EmployeeEntityIdSelection::class)
+            .join(LEFT, EmployeeEntity::class) {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+            }
+        val expectedSql = select.build()
+
+        Mockito.doReturn(db)
+            .`when`(helper)
+            .readableDatabase
+
+        Mockito.`when`(
+            db.rawQuery(expectedSql, null),
+        ).thenReturn(cursor)
+
+        Mockito.`when`(cursor.columnNames).thenReturn(
+            arrayOf(
+                "EMP_ID_EMPLOYEE_ID",
+                "EMP_EMPLOYEE_ID",
+                "EMP_NAME",
+                "EMP_ADDRESS",
+                "EMP_GENDER",
+                "EMP_POSITION",
+            )
+        )
+
+        Mockito.`when`(cursor.moveToNext()).thenReturn(true, true, true, true, false)
+
+        Mockito.`when`(cursor.getType(0)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+        )
+        Mockito.`when`(cursor.getType(1)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_NULL,
+        )
+        Mockito.`when`(cursor.getType(2)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_NULL,
+        )
+        Mockito.`when`(cursor.getType(3)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_NULL,
+        )
+        Mockito.`when`(cursor.getType(4)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_NULL,
+        )
+        Mockito.`when`(cursor.getType(5)).thenReturn(
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_STRING,
+            Cursor.FIELD_TYPE_NULL,
+        )
+
+        Mockito.`when`(cursor.getString(0)).thenReturn(
+            "EMP001",
+            "EMP002",
+            "EMP002",
+            "EMP003",
+        )
+        Mockito.`when`(cursor.getString(1)).thenReturn(
+            "EMP001",
+            "EMP002",
+            "EMP002",
+        )
+        Mockito.`when`(cursor.getString(2)).thenReturn(
+            "川流一郎",
+            "川流二郎A",
+            "川流二郎B",
+        )
+        Mockito.`when`(cursor.getString(3)).thenReturn(
+            "東京都千代田区",
+            "東京都中央区A",
+            "東京都中央区B",
+        )
+        Mockito.`when`(cursor.getString(4)).thenReturn(
+            "M",
+            "M",
+            "M",
+        )
+        Mockito.`when`(cursor.getString(5)).thenReturn(
+            "SE",
+            "PG-A",
+            "PG-B",
+        )
+
+        val actual: List<Map<String, SelectEntity?>> =
+            helper.executeSelectAsEntityList(query = select)
+        println(actual)
+        assertEquals(
+            listOf(
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(
+                        employeeId = "EMP001",
+                    ),
+                    "EMP" to EmployeeEntity(
+                        employeeId = "EMP001",
+                        employeeSubId = null,
+                        name = "川流一郎",
+                        address = "東京都千代田区",
+                        gender = "M",
+                        position = "SE",
+                    ),
+                ),
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(
+                        employeeId = "EMP002",
+                    ),
+                    "EMP" to EmployeeEntity(
+                        employeeId = "EMP002",
+                        employeeSubId = null,
+                        name = "川流二郎A",
+                        address = "東京都中央区A",
+                        gender = "M",
+                        position = "PG-A",
+                    ),
+                ),
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(
+                        employeeId = "EMP002",
+                    ),
+                    "EMP" to EmployeeEntity(
+                        employeeId = "EMP002",
+                        employeeSubId = null,
+                        name = "川流二郎B",
+                        address = "東京都中央区B",
+                        gender = "M",
+                        position = "PG-B",
+                    ),
+                ),
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(
+                        employeeId = "EMP003",
+                    ),
+                    "EMP" to null,
+                ),
+            ),
+            actual,
+        )
+
+        Mockito.verify(db).rawQuery(expectedSql, null)
         Mockito.verify(cursor).close()
     }
 

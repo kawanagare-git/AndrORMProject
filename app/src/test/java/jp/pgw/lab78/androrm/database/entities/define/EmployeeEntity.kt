@@ -1,6 +1,5 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
-import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
@@ -17,7 +16,6 @@ import java.time.LocalDateTime
  * @author Masahiro Inoue
  * @since 2025-09-06
  */
-@GenerateProps
 @Projections(
     [
         Projection(

@@ -16,6 +16,7 @@ import jp.pgw.lab78.androrm.ksp.Constants.F_COLUMN_FUNCTION
 import jp.pgw.lab78.androrm.ksp.Constants.F_RAW
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 
+
 /**
  * ## Function プロパティファクトリークラス
  * ### KSPropertyDeclaration から @Function アノテーションを生成するためのクラス
@@ -38,19 +39,28 @@ class FunctionPropertyFactory : LoggerLike by logger {
     fun createAll(
         functions: List<FunctionProjection>,
         propsByName: Map<String, KSPropertyDeclaration>
-    ): List<PropertySpec> {
+    ): List<GeneratedProperty> {
         logTraceEntered(functions, propsByName)
         // プロパティ名のセットを取得する
         val properties = propsByName.keys
         // 各 FunctionProjection について、引数の検査、戻り値の型の解決、@Function の生成を行い、PropertySpec を作成する
         val result = functions.map { func ->
             checkFunctionArgs(func, properties)
-            val typeName = resolveReturnType(func, propsByName)
+            val typeName = resolveReturnType(func, propsByName).let { resolvedType ->
+                if (func.hideFromSelect) {
+                    resolvedType.copy(nullable = true)
+                } else {
+                    resolvedType
+                }
+            }
             val annotation = buildFunctionAnnotation(func)
             // PropertySpec を作成する
-            PropertySpec.builder(func.alias.toCamelCase(), typeName)
-                .addAnnotation(annotation)
-                .build()
+            GeneratedProperty(
+                propertySpec = PropertySpec.builder(func.alias.toCamelCase(), typeName)
+                    .addAnnotation(annotation)
+                    .build(),
+                hideFromSelect = func.hideFromSelect,
+            )
         }
         logTraceExiting(result)
         return result

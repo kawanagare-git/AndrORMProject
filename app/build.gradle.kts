@@ -340,6 +340,13 @@ val weaveDebugAspectJ by tasks.registering {
     }
 }
 
+tasks.matching {
+    it.name == "bundleDebugClassesToRuntimeJar" ||
+            it.name == "bundleDebugClassesToCompileJar"
+}.configureEach {
+    dependsOn(weaveDebugAspectJ)
+}
+
 // Kotlin compile 後に weaving する
 tasks.matching { it.name == "compileDebugKotlin" }.configureEach {
     outputs.upToDateWhen { false }
@@ -386,6 +393,6 @@ tasks.withType<Test>().configureEach {
             TestLogEvent.FAILED
         )
         exceptionFormat = TestExceptionFormat.FULL
-        showStandardStreams = false
+        showStandardStreams = true
     }
 }

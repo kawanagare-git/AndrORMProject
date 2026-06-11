@@ -13,6 +13,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00030
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
@@ -20,18 +21,17 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.utility.EntityManager.DataConvertedMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.SelectColumnTarget
 import jp.pgw.lab78.androrm.database.utility.EntityManager.columnToFieldMap
-import jp.pgw.lab78.androrm.database.utility.EntityManager.fieldToColumnMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
 import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.concurrent.FutureTask
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
@@ -192,7 +192,7 @@ open class AndrOrmDatabaseHelper(
             if (value.isNull()) {
                 statement.bindNull(bindIndex)
             } else {
-                fieldToColumnMap[value!!::class]!!.bind(statement, bindIndex, value)
+                DataConvertedMap[value!!::class]!!.toBind(statement, bindIndex, value)
             }
         }
         return statement.executeUpdateDelete()
@@ -206,16 +206,24 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-06-05
      */
-    fun <T : SelectEntity> executeSelectAsEntityList(query: Select<T>): List<Map<String, SelectEntity>> {
+    fun <T : SelectEntity> executeSelectAsEntityList(query: Select<T>): List<Map<String, SelectEntity?>> {
         val columnTargetsTaskMap = query.usedEntityClasses.associateWith { usedEntity ->
-            usedEntity.entityClass.createSelectColumnTargetsTask()
+            usedEntity.createSelectColumnTargetsTask()
         }
-        val usedEntityList = query.usedEntityClasses
+        // エンティティリストの生成
+        val entityResultTargets = query.usedEntityClasses.map { usedEntity ->
+            EntityResultTarget(
+                tableRef = usedEntity,
+                columnTargets = columnTargetsTaskMap.getValue(usedEntity).get(),
+                nullableByJoin = query.isNullableByJoin(usedEntity),
+            )
+        }
+        // データの取得 ※マップ形式
         val mapList = executeSelectAsMapList(query)
+        // エンティティの生成
         return mapList.map { row ->
-            usedEntityList.associate { usedEntity ->
-                val columnTargets = columnTargetsTaskMap.getValue(usedEntity).get()
-                usedEntity.alias to usedEntity.entityClass.createSelectEntity(row, columnTargets)
+            entityResultTargets.associate { target ->
+                target.alias to target.createSelectEntityOrNull(row)
             }
         }
     }
@@ -293,6 +301,24 @@ open class AndrOrmDatabaseHelper(
     }
 
     /**
+     * ## Entity 復元対象情報
+     * ### SELECT 結果1行から alias 単位で Entity を復元するための情報
+     * @param tableRef 復元対象テーブル参照
+     * @param columnTargets プロパティ名と SELECT 結果カラム名の紐づけ
+     * @param nullableByJoin OUTER JOIN により Entity 自体が null になり得る場合 true
+     * @author Masahiro Inoue
+     * @since 2026-06-11
+     */
+    private data class EntityResultTarget(
+        val tableRef: TableRef<out SelectEntity>,
+        val columnTargets: List<SelectColumnTarget>,
+        val nullableByJoin: Boolean,
+    ) {
+        val alias: String = tableRef.alias
+        val entityClass: KClass<out SelectEntity> = tableRef.entityClass
+    }
+
+    /**
      * ## SELECT 結果カラム紐づけ取得タスク生成
      * ### Entity メタ情報取得を別スレッドで開始する
      * @receiver SELECT 結果 Entity クラス
@@ -300,12 +326,43 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-06-05
      */
-    private fun <T : SelectEntity> KClass<out T>.createSelectColumnTargetsTask(): FutureTask<List<SelectColumnTarget>> {
+    private fun <T : SelectEntity> TableRef<out T>.createSelectColumnTargetsTask(): FutureTask<List<SelectColumnTarget>> {
         val task = FutureTask<List<SelectColumnTarget>> {
             this.getSelectColumnTargets()
         }
         Thread(task, "AndrORM-select-column-metadata").start()
         return task
+    }
+
+    /**
+     * ## SELECT 結果 Entity null 判定・変換
+     * ### OUTER JOIN により結合先が存在しない場合は Entity 自体を null とする
+     * @receiver Entity 復元対象情報
+     * @param row SELECT 結果1行分
+     * @return 生成した Entity。結合先が存在しない場合は null
+     * @author Masahiro Inoue
+     * @since 2026-06-11
+     */
+    private fun EntityResultTarget.createSelectEntityOrNull(
+        row: Map<String, Any?>,
+    ): SelectEntity? {
+        val selectedColumnTargets = columnTargets.filter { columnTarget ->
+            row.containsKey(columnTarget.resultColumnName)
+        }
+        val isNullJoinedEntity = nullableByJoin &&
+                selectedColumnTargets.isNotEmpty() &&
+                selectedColumnTargets.all { columnTarget ->
+                    row[columnTarget.resultColumnName].isNull()
+                }
+
+        return if (isNullJoinedEntity) {
+            null
+        } else {
+            entityClass.createSelectEntity(
+                row = row,
+                columnTargets = columnTargets,
+            )
+        }
     }
 
     /**
@@ -325,16 +382,26 @@ open class AndrOrmDatabaseHelper(
         val constructor = this.primaryConstructor
             ?: error(AE00007.format(this.qualifiedName))
         val columnTargetMap = columnTargets.associateBy { it.propertyName }
-        val args = constructor.parameters.associateWith { parameter ->
+        val args = mutableMapOf<KParameter, Any?>()
+        // コンストラクタの検証（保険機能）
+        constructor.parameters.forEach { parameter ->
             val propertyName = parameter.name
                 ?: error(AE00007.format(this.qualifiedName))
             val columnTarget = columnTargetMap[propertyName]
                 ?: error(AE00028.format(propertyName))
-
-            require(row.containsKey(columnTarget.resultColumnName)) {
-                AE00029.format(columnTarget.resultColumnName)
+            // カラム名の検証
+            if (!row.containsKey(columnTarget.resultColumnName)) {
+                when {
+                    parameter.isOptional -> Unit
+                    parameter.type.isMarkedNullable -> args[parameter] = null
+                    else -> error(AE00029.format(columnTarget.resultColumnName))
+                }
+            } else {
+                args[parameter] = convertSelectValue(
+                    row[columnTarget.resultColumnName],
+                    parameter.type,
+                )
             }
-            convertSelectValue(row[columnTarget.resultColumnName], parameter.type)
         }
         return constructor.callBy(args)
     }
@@ -351,24 +418,11 @@ open class AndrOrmDatabaseHelper(
     private fun convertSelectValue(value: Any?, targetType: KType): Any? {
         if (value.isNull()) {
             require(targetType.isMarkedNullable) {
-                "Null value is not supported for non-null property. type=$targetType"
+                AE00030.format(targetType)
             }
             return null
         }
-
-        return when (targetType.classifier) {
-            Int::class -> (value as Number).toInt()
-            Long::class -> (value as Number).toLong()
-            Float::class -> (value as Number).toFloat()
-            Double::class -> (value as Number).toDouble()
-            Boolean::class -> (value as Number).toLong() != 0L
-            String::class -> value.toString()
-            LocalDate::class -> LocalDate.parse(value as String)
-            LocalTime::class -> LocalTime.parse(value as String)
-            LocalDateTime::class -> LocalDateTime.parse(value as String)
-            ByteArray::class -> value as ByteArray
-            else -> value
-        }
+        return DataConvertedMap[targetType.classifier]?.toProp(value) ?: value
     }
 
     /**
@@ -404,10 +458,11 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-06-04
      */
-    private fun Cursor.getValue(index: Int): Any {
+    private fun Cursor.getValue(index: Int): Any? {
         val columnType = this.getType(index)
-        return columnToFieldMap[columnType]?.invoke(this, index)
+        val invokeGetter = columnToFieldMap[columnType]
             ?: error(AE00025.format(index, columnType))
+        return invokeGetter(this, index)
     }
 
     /**

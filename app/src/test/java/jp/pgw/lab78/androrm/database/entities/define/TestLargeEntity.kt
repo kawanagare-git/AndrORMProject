@@ -1,6 +1,12 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
+import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
+import jp.pgw.lab78.androrm.common.annotation.Projection
+import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.*
+import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.SUM
+import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -9,6 +15,27 @@ import java.time.LocalDateTime
  * ## 大項目テスト用 Entity
  * ### CREATE TABLE / INDEX / UNIQUE 生成確認用
  */
+@Projections(
+    [
+        Projection(
+            entityNameExtend = "Selective",
+            properties = [
+                ColumnProjection("id"),
+                ColumnProjection("name"),
+                ColumnProjection("postalCode"),
+            ],
+            functions = [
+                FunctionProjection(
+                    function = SUM,
+                    args = ["score"],
+                    alias = "TOTAL_SCORE",
+                    hideFromSelect = true
+                ),
+            ],
+            commonInterface = [DMLInterfaceEnum.SELECT]
+        ),
+    ]
+)
 @Table(name = "TEST_LARGE_ENTITY", alias = "TLE")
 @Unique(
     name = "UQ_TEST_CODE",

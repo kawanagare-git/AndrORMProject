@@ -7,7 +7,6 @@ import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeName
-import jp.pgw.lab78.androrm.common.GenerateProps
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
@@ -50,9 +49,6 @@ class PropsProcessor(
 
         /** プロパティ名一覧 Enum 名 */
         private const val GENERATED_PROPERTIES = "AllClassProperties"
-
-        /** @GenerateProps */
-        private val GENERATE_PROPS = GenerateProps::class.qualifiedName!!
 
         /** @EntityPackageInfo */
         private val ENTITY_PACKAGE_INFO = EntityPackageInfo::class.simpleName!!

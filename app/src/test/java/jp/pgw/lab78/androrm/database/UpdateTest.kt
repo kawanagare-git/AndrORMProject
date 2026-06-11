@@ -6,7 +6,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00015
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.update.TestAllEntityUpdate
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.INNER
-import jp.pgw.lab78.androrm.database.reference.Support.tableRef
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -38,9 +38,9 @@ class UpdateTest {
     @Test
     fun testBuild_setDslFromJoinAndWhere() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
-        val targetTable = tableRef(TestAllEntityUpdate::class, "A")
-        val fromTable = tableRef(TestSelectEntity::class, "X")
-        val joinTable = tableRef(TestSelectEntity::class, "Y")
+        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val fromTable = TableRef(TestSelectEntity::class, "X")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
             .set {
                 TestAllEntityUpdate::name setTo fromTable[TestSelectEntity::name]
@@ -98,8 +98,8 @@ class UpdateTest {
 
     @Test
     fun testJoin_beforeFrom_throwsIllegalStateException() {
-        val targetTable = tableRef(TestAllEntityUpdate::class, "A")
-        val joinTable = tableRef(TestSelectEntity::class, "Y")
+        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
         val actual = assertThrows(IllegalStateException::class.java) {
             update.join(INNER, joinTable) {

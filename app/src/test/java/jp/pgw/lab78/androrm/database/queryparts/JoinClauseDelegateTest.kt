@@ -2,7 +2,6 @@ package jp.pgw.lab78.androrm.database.queryparts
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
-import jp.pgw.lab78.androrm.database.reference.Support.tableRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -29,8 +28,8 @@ class JoinClauseDelegateTest {
         val joinedTables = mutableListOf<TableRef<out Entity>>()
 
         val owner = TestOwner()
-        val fromTable = tableRef(TestSelectEntity::class, "X")
-        val joinTable = tableRef(TestSelectEntity::class, "Y")
+        val fromTable = TableRef(TestSelectEntity::class, "X")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
 
         val target = JoinClauseDelegate<TestOwner, Entity>(
             owner = owner,
@@ -66,7 +65,7 @@ class JoinClauseDelegateTest {
     @Test
     fun testJoin_tableRef_columnToValue() {
         val owner = TestOwner()
-        val joinTable = tableRef(TestSelectEntity::class, "Y")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
 
         val target = JoinClauseDelegate<TestOwner, Entity>(
             owner = owner,
@@ -119,8 +118,8 @@ class JoinClauseDelegateTest {
     @Test
     fun testJoin_onSyntax() {
         val owner = TestOwner()
-        val fromTable = tableRef(TestSelectEntity::class, "X")
-        val joinTable = tableRef(TestSelectEntity::class, "Y")
+        val fromTable = TableRef(TestSelectEntity::class, "X")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
 
         val target = JoinClauseDelegate<TestOwner, Entity>(
             owner = owner,
@@ -143,9 +142,9 @@ class JoinClauseDelegateTest {
     @Test
     fun testJoin_multiClauses() {
         val owner = TestOwner()
-        val fromTable = tableRef(TestSelectEntity::class, "X")
-        val joinTable1 = tableRef(TestSelectEntity::class, "Y")
-        val joinTable2 = tableRef(TestSelectEntity::class, "Z")
+        val fromTable = TableRef(TestSelectEntity::class, "X")
+        val joinTable1 = TableRef(TestSelectEntity::class, "Y")
+        val joinTable2 = TableRef(TestSelectEntity::class, "Z")
 
         val target = JoinClauseDelegate<TestOwner, Entity>(
             owner = owner,

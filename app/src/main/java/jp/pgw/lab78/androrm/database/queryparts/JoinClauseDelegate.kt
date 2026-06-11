@@ -145,12 +145,11 @@ class JoinClauseDelegate<O, E : Entity>(
  * @author Masahiro Inoue
  * @since 2026-05-24
  */
-enum class JoinType(
-    val sql: String,
-) {
+enum class JoinType(val sql: String, val nullableByJoin: Boolean = false) {
     INNER("inner"),
-    LEFT("left"),
-    RIGHT("right"),
+    LEFT("left", true),
     CROSS("cross"),
     NATURAL("natural"),
+    // RIGHT("right", true),
+    // FULL("full", true)
 }

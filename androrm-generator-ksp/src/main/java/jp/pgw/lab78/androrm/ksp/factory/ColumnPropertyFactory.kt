@@ -38,12 +38,19 @@ class ColumnPropertyFactory : LoggerLike by logger {
     fun create(
         prop: KSPropertyDeclaration,
         hideFromSelect: Boolean = false
-    ): PropertySpec {
+    ): GeneratedProperty {
         logTraceEntered(prop, hideFromSelect)
+        val propertyType = prop.type.toTypeName().let { typeName ->
+            if (hideFromSelect) {
+                typeName.copy(nullable = true)
+            } else {
+                typeName
+            }
+        }
         // KSPropertyDeclaration からプロパティの型と名前を取得し、PropertySpec のビルダーを作成する
         val builder = PropertySpec.builder(
             prop.simpleName.asString(),
-            prop.type.toTypeName()
+            propertyType
         )
         // @Column を追加するためのフラグ。プロパティに @Column が存在しない場合は、デフォルトの @Column を追加する
         var shouldAddDefaultColumnAnnotation = true
@@ -63,9 +70,12 @@ class ColumnPropertyFactory : LoggerLike by logger {
             builder.addAnnotation(buildFallbackColumnAnnotation(prop, hideFromSelect))
         }
         // プロパティの PropertySpec を生成する
-        val result = builder
-            .initializer(prop.simpleName.asString())
-            .build()
+        val result = GeneratedProperty(
+            propertySpec = builder
+                .initializer(prop.simpleName.asString())
+                .build(),
+            hideFromSelect = hideFromSelect,
+        )
         logTraceExiting(result)
         return result
     }

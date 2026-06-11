@@ -12,6 +12,8 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
+@Target(AnnotationTarget.PROPERTY)
+@Retention(AnnotationRetention.RUNTIME)
 annotation class Function(
     val columnFunction: ColumnFunction,
     val alias: String,

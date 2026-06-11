@@ -8,8 +8,11 @@ import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
+import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
+import jp.pgw.lab78.shared.library.Utils.isNotNull
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
@@ -74,12 +77,14 @@ class RuntimeEntityMetaFactory {
      * - @Function がなく @Column がある → 通常カラム
      * - 両方ない → 暗黙 @Column
      */
+    @InfoLog
+    @TraceLog
     private fun KProperty1<out SelectEntity, *>.toPropertyMeta(): PropertyMeta {
         val columnAnnotation = findAnnotation<Column>()
         val functionAnnotation = findAnnotation<Function>()
 
-        val hasColumnAnnotation = columnAnnotation != null
-        val hasFunctionAnnotation = functionAnnotation != null
+        val hasColumnAnnotation = columnAnnotation.isNotNull()
+        val hasFunctionAnnotation = functionAnnotation.isNotNull()
         val propertySnakeCase = simpleNameToSnakeCase()
 
         return if (hasFunctionAnnotation) {
