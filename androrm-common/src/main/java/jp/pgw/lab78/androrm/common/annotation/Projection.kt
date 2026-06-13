@@ -8,9 +8,11 @@ import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
  * ### このアノテーションに定義された情報を基に
  * ### 新たなエンティティクラスを生成する
  * @param entityNameExtend エンティティ派生名
- * @param properties クラスに定義するプロパティ名
- * @param commonInterface 共通インターフェース
- * @param customInterface 独自インターフェース
+ * @param aliasExtend エイリアス派生
+ * @param properties クラスに定義する ColumnProjection ※複数指定可
+ * @param functions クラスに定義する FunctionProjection ※複数指定可
+ * @param commonInterface 共通インターフェース ※複数指定可
+ * @param customInterface 独自インターフェース ※複数指定可
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

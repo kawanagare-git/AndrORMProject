@@ -14,6 +14,12 @@ object LogUtils {
         "warning",
         "error",
         "debug",
+        "logInfo",
+        "logInfoEntered",
+        "logInfoExiting",
+        "logWarning",
+        "logError",
+        "logDebug",
         "logTraceEntered",
         "logTraceExiting",
     )

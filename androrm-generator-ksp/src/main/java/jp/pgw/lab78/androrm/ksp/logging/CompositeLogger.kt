@@ -162,10 +162,8 @@ class CompositeLogger(
                             ""
                         } else {
                             ": ${
-                                concat(
-                                    details.toList(),
-                                    ARGUMENT_DELIMITER
-                                ).toSingleLineLogString()
+                                concat(details.toList(), ARGUMENT_DELIMITER)
+                                    .toSingleLineLogString()
                             }"
                         }
             )

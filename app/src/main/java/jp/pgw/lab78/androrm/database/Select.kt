@@ -295,8 +295,8 @@ class Select<T : SelectEntity>(
     fun join(
         joinType: JoinType,
         joinedTable: TableRef<out SelectEntity>,
-    ) =
-        joinDelegate.join(
+    ): JoinCondition =
+        JoinCondition(
             joinType = joinType,
             joinedTable = joinedTable,
         )

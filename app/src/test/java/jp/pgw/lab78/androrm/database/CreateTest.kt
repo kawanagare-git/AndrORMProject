@@ -12,6 +12,9 @@ import jp.pgw.lab78.androrm.database.entities.define.TestLargeEntity
 import org.junit.Assert.assertThrows
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 
 class CreateTest {
 
@@ -63,6 +66,24 @@ class CreateTest {
                 "create unique index if not exists UQ_TEST_PERSONAL_INFO2 " +
                         "on TEST_LARGE_ENTITY (NAME, FURIGANA, GENDER, BIRTHDAY, PLACE_OF_BIRTH)",
             ),
+            actual,
+        )
+    }
+
+    @Test
+    fun testBuild_withDefaultColumn_buildsDefaultClause() {
+        val actual = Create(TestDefaultColumnEntity::class).build()
+
+        assertEquals(
+            "create table TEST_DEFAULT_COLUMN_ENTITY " +
+                    "(ID INTEGER default 0, " +
+                    "NAME TEXT default '未設定', " +
+                    "ACTIVE INTEGER default 1 /* 0:false / 1:true */, " +
+                    "REGISTERED_DATE DATETIME default CURRENT_DATE, " +
+                    "REGISTERED_TIME DATETIME default CURRENT_TIME, " +
+                    "CREATED_AT DATETIME default CURRENT_TIMESTAMP, " +
+                    "MEMO TEXT default NULL, " +
+                    "BINARY_DATA BLOB default NULL)",
             actual,
         )
     }
@@ -212,4 +233,61 @@ class CreateTest {
         @Column(name = "ID")
         val id: Int,
     ) : TableDefinitionEntity
+
+    @Table(name = "TEST_DEFAULT_COLUMN_ENTITY", alias = "TDC")
+    private data class TestDefaultColumnEntity(
+        @Column(name = "ID", default = "0")
+        val id: Int,
+
+        @Column(name = "NAME", default = "'未設定'")
+        val name: String,
+
+        @Column(name = "ACTIVE", default = "1")
+        val active: Boolean,
+
+        @Column(name = "REGISTERED_DATE", default = "CURRENT_DATE")
+        val registeredDate: LocalDate,
+
+        @Column(name = "REGISTERED_TIME", default = "CURRENT_TIME")
+        val registeredTime: LocalTime,
+
+        @Column(name = "CREATED_AT", default = "CURRENT_TIMESTAMP")
+        val createdAt: LocalDateTime,
+
+        @Column(name = "MEMO", default = "NULL")
+        val memo: String?,
+
+        @Column(name = "BINARY_DATA", default = "NULL")
+        val binaryData: ByteArray?,
+    ) : TableDefinitionEntity {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as TestDefaultColumnEntity
+
+            if (id != other.id) return false
+            if (active != other.active) return false
+            if (name != other.name) return false
+            if (registeredDate != other.registeredDate) return false
+            if (registeredTime != other.registeredTime) return false
+            if (createdAt != other.createdAt) return false
+            if (memo != other.memo) return false
+            if (!binaryData.contentEquals(other.binaryData)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = id
+            result = 31 * result + active.hashCode()
+            result = 31 * result + name.hashCode()
+            result = 31 * result + registeredDate.hashCode()
+            result = 31 * result + registeredTime.hashCode()
+            result = 31 * result + createdAt.hashCode()
+            result = 31 * result + (memo?.hashCode() ?: 0)
+            result = 31 * result + (binaryData?.contentHashCode() ?: 0)
+            return result
+        }
+    }
 }

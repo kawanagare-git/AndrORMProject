@@ -688,9 +688,8 @@ class AndrOrmDatabaseHelperTest {
             )
         )
         val select = Select(EmployeeEntityIdSelection::class)
-            .join(LEFT, EmployeeEntity::class) {
-                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
-            }
+            .join(LEFT, EmployeeEntity::class)
+            .on { EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId }
         val expectedSql = select.build()
 
         Mockito.doReturn(db)

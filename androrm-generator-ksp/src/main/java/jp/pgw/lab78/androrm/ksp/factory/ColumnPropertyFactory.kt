@@ -11,10 +11,12 @@ import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_ALIAS
+import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_DEFAULT_VALUE
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_FQN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_HIDE_FROM_SELECT
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
+import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**
  * ## Column プロパティファクトリークラス
@@ -100,12 +102,12 @@ class ColumnPropertyFactory : LoggerLike by logger {
                     it.annotationType.resolve().declaration.qualifiedName?.asString() == COLUMN_FQN
         }
         // @Column が存在しない場合は null を返す
-        if (columnAnnotation == null) {
+        if (columnAnnotation.isNull()) {
             logTraceExiting("null")
             return null
         }
         // @Column の引数を抽出し、AnnotationSpec を生成する
-        val columnName = columnAnnotation.arguments
+        val columnName = columnAnnotation!!.arguments
             .firstOrNull { it.name?.asString() == COLUMN_NAME }
             ?.value as? String
         // @Column alias 引数 を抽出し、適切な値を設定する。null または空白の場合は、プロパティ名をスネークケースに変換して使用する
@@ -113,12 +115,19 @@ class ColumnPropertyFactory : LoggerLike by logger {
             .firstOrNull { it.name?.asString() == COLUMN_ALIAS }
             ?.value as? String ?: EMPTY_STRING
         // columnAlias が null または空白の場合は、プロパティ名をスネークケースに変換して使用する
+        val defaultValue = columnAnnotation.arguments
+            .firstOrNull { it.name?.asString() == COLUMN_DEFAULT_VALUE }
+            ?.value as? String ?: EMPTY_STRING
         val result = AnnotationSpec.builder(Column::class).apply {
-            if (!columnName.isNullOrBlank()) {
-                addMember("$COLUMN_NAME = %S", columnName)
-            }
+            // カラム名の取得・生成
+            columnName?.takeUnless { name -> name.isBlank() }
+                ?.let { name -> addMember("$COLUMN_NAME = %S", name) }
+            // カラムエイリアスと抽出項目除外を追加
             addMember("$COLUMN_ALIAS = %S", columnAlias)
             addMember("$COLUMN_HIDE_FROM_SELECT = %L", hideFromSelect)
+            // デフォルト値の取得・生成
+            defaultValue.takeUnless { value -> value.isBlank() }
+                ?.let { value -> addMember("$COLUMN_DEFAULT_VALUE = %S", value) }
         }.build()
         logTraceExiting(result)
         return result

@@ -52,6 +52,9 @@ object Constants {
     /** @Function の変数名定義（hideFromSelect） */
     const val F_HIDE_FROM_SELECT = "hideFromSelect"
 
+    /** @Column の変数名定義（defaultValue） */
+    const val COLUMN_DEFAULT_VALUE = "default"
+
     /** @Function のエイリアス定義がない場合のフォールバック値 */
     const val FP_ALIAS_FALLBACK = "FUNCTION"
 }

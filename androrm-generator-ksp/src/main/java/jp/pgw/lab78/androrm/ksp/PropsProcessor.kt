@@ -28,6 +28,7 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionExtractor
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionValidator
 import jp.pgw.lab78.androrm.ksp.resolver.InterfaceResolver
+import jp.pgw.lab78.androrm.ksp.validator.ColumnDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
 
 /**
@@ -135,6 +136,9 @@ class PropsProcessor(
     /** KSP Entity メタ情報生成 */
     private val kspEntityMetaFactory = KspEntityMetaFactory()
 
+    /** @Column defaultValue 妥当性検証 */
+    private val columnDefaultValueValidator = ColumnDefaultValueValidator()
+
     /** data class 生成 */
     private val dataClassWriter = DataClassWriter(
         codeGenerator = codeGenerator,
@@ -164,46 +168,48 @@ class PropsProcessor(
 
     /**
      * ## エンティティ(data class)生成エントリポイント
-     * ### @Projection / @Projections を探索し、
-     * ### 対応するエンティティを生成する
-     * - @Projection: 単一の射影指定
-     * - @Projections: 複数の射影指定
-     * @param resolver KSP のアノテーション解析リゾルバ
+     * ### @Projection / @Projections を探索し、対応するエンティティを生成する
+     * @param resolver KSP のアノテーション解析機能を提供
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
     @OptIn(KspExperimental::class)
     private fun generateDataClassFromProjections(resolver: Resolver) {
         logTraceEntered(resolver)
-        // @Projection と @Projections を両方まとめて拾う
+        // 全プロジェクションクラスを取得
         val allProjectionClasses = projectionExtractor.findProjectionClasses(resolver)
-        // 各クラスごとに Projection 系アノテーションを展開
+        // 全プロジェクションクラスを捜査
         allProjectionClasses.forEach { classDecl ->
-            // クラスに付与された @Projection / @Projections を抽出
             val annotations = projectionExtractor.extractFromClass(classDecl)
+            // 全アノテーションを捜査
             for (annotation in annotations) {
-                // アノテーション引数を解析して ProjectionDefinition を生成
                 val definition = projectionArgumentParser.parse(annotation)
+                // ヴァリデータにかけて定期内容を検査
                 projectionValidator.validateAggregateConflicts(classDecl, definition)
                 projectionValidator.validateProperties(
-                    classDecl, definition, allClassProperties
+                    classDecl,
+                    definition,
+                    allClassProperties,
                 )
-                // ProjectionDefinition から EntityMeta を生成して検証
-                val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
-                // Entity メタ情報検証
-                val requireSelectableProperties =
-                    definition.commonInterfaces.contains(DMLInterfaceEnum.SELECT)
-                val validationResult = EntityMetaValidator().validate(
-                    entityMeta = entityMeta,
-                    requireSelectableProperties = requireSelectableProperties,
-                )
-                validationResult.warnings.forEach { logWarning(it) }
-                // エラーがある場合はログに出力して次のアノテーションへ
-                if (validationResult.hasErrors) {
-                    validationResult.errors.forEach { logError(it) }
-                    continue
+                if (columnDefaultValueValidator.validate(classDecl, definition)) {
+                    val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
+                    val requireSelectableProperties =
+                        definition.commonInterfaces.contains(DMLInterfaceEnum.SELECT)
+                    val validationResult = EntityMetaValidator().validate(
+                        entityMeta = entityMeta,
+                        requireSelectableProperties = requireSelectableProperties,
+                    )
+                    validationResult.warnings.forEach { warning ->
+                        logWarning(warning)
+                    }
+                    if (validationResult.hasErrors) {
+                        validationResult.errors.forEach { error ->
+                            logError(error)
+                        }
+                        continue
+                    }
+                    processSingleProjection(classDecl, definition, resolver)
                 }
-                processSingleProjection(classDecl, definition, resolver)
             }
         }
         logTraceExiting()

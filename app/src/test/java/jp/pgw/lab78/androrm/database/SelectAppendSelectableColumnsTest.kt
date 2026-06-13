@@ -116,7 +116,7 @@ class SelectAppendSelectableColumnsTest {
             },
             {
                 assertTrue(
-                    query.contains("S.EMPLOYEE_ID as S_EMPLOYEE_ID"),
+                    query.contains("M.EMPLOYEE_ID as M_EMPLOYEE_ID"),
                     "main table column should use original alias."
                 )
             },

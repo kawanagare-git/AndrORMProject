@@ -210,7 +210,7 @@ class SelectTest {
     }
 
     @Test
-    fun testBuild_withJoinConditionOn_buildsJoinSelect() {
+    fun testBuild_withJoinConditionOn_buildsInnerJoinSelect() {
         val select = Select(EmployeeEntityIdSelection::class)
             .join(INNER, EmployeeEntity::class)
             .on {
@@ -229,6 +229,34 @@ class SelectTest {
                             "EMP.POSITION as EMP_POSITION " +
                             "from EMPLOYEE EMP_ID " +
                             "inner join EMPLOYEE EMP on EMP_ID.EMPLOYEE_ID = EMP.EMPLOYEE_ID " +
+                            "AND EMP.NAME like ?",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf("川流%"), select.bindValues) },
+        )
+    }
+
+    @Test
+    fun testBuild_withJoinConditionOn_buildsLeftJoinSelect() {
+        val select = Select(EmployeeEntityIdSelection::class)
+            .join(LEFT, EmployeeEntity::class)
+            .on {
+                EmployeeEntityIdSelection::employeeId eq EmployeeEntity::employeeId
+                EmployeeEntity::name like "川流%"
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select EMP_ID.EMPLOYEE_ID as EMP_ID_EMPLOYEE_ID, " +
+                            "EMP.EMPLOYEE_ID as EMP_EMPLOYEE_ID, " +
+                            "EMP.NAME as EMP_NAME, " +
+                            "EMP.ADDRESS as EMP_ADDRESS, " +
+                            "EMP.GENDER as EMP_GENDER, " +
+                            "EMP.POSITION as EMP_POSITION " +
+                            "from EMPLOYEE EMP_ID " +
+                            "left join EMPLOYEE EMP on EMP_ID.EMPLOYEE_ID = EMP.EMPLOYEE_ID " +
                             "AND EMP.NAME like ?",
                     select.build(),
                 )

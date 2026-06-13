@@ -2,11 +2,13 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.IndexType
+import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Unique
@@ -44,6 +46,12 @@ class Create<T : TableDefinitionEntity>(
 
     /** インデックス名格納領域 */
     private val usedIndexNames = mutableSetOf<String>()
+
+    /** Boolean DEFAULT コメント */
+    private val booleanDefaultComments: Map<String, String> = mapOf(
+        "0" to "/* 0:false / 1:true */",
+        "1" to "/* 0:false / 1:true */",
+    )
 
     /**
      * ## CREATE 文文字列生成関数
@@ -203,7 +211,31 @@ class Create<T : TableDefinitionEntity>(
     ): String {
         val columnName = property.getColumn()
         val sqlType = mapKotlinTypeToSqlType(property.returnType)
-        return "$columnName $sqlType"
+        val defaultValue = property.findAnnotation<Column>()
+            ?.default
+            ?.trim()
+            .orEmpty()
+        val defaultClause =
+            if (defaultValue.isBlank()) {
+                EMPTY_STRING
+            } else {
+                "default ${normalizeDefaultValue(defaultValue)}"
+            }
+        val booleanComment =
+            if (property.returnType.classifier == Boolean::class) {
+                booleanDefaultComments[defaultValue] ?: EMPTY_STRING
+            } else {
+                EMPTY_STRING
+            }
+        return buildList {
+            add("$columnName $sqlType")
+            defaultClause
+                .takeUnless { value -> value.isBlank() }
+                ?.let { value -> add(value) }
+            booleanComment
+                .takeUnless { value -> value.isBlank() }
+                ?.let { value -> add(value) }
+        }.joinToString(" ")
     }
 
     /**
@@ -245,4 +277,21 @@ class Create<T : TableDefinitionEntity>(
             MessageConstants.AE00020.format(indexName)
         }
     }
+
+    /**
+     * ## DEFAULT 値正規化
+     * ### SQL 上の NULL は大文字に正規化する
+     * @param defaultValue @Column(defaultValue) の値
+     * @return CREATE 文へ出力する DEFAULT 値
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
+    private fun normalizeDefaultValue(
+        defaultValue: String,
+    ): String =
+        if (defaultValue.equals(NULL_STRING, ignoreCase = false)) {
+            NULL_STRING.uppercase()
+        } else {
+            defaultValue
+        }
 }
