@@ -9,8 +9,10 @@ import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_FQN
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 
 /**
  * ## @Column defaultValue 検証クラス
@@ -43,7 +45,8 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
         private val timeRegex = "^\\d{2}:\\d{2}:\\d{2}$".toRegex()
         private val dateTimeTRegex = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$".toRegex()
         private val dateTimeSpaceRegex = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$".toRegex()
-        private val dateTimeSpaceFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        private val dateTimeSpaceFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")
+            .withResolverStyle(ResolverStyle.STRICT)
     }
 
     private data class DefaultValueContext(
@@ -114,7 +117,7 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
             regex = dateTimeTRegex,
             formatChecker = { literal ->
                 runCatching {
-                    LocalTime.parse(literal, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
+                    LocalDateTime.parse(literal, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                 }.isSuccess
             },
         ),
@@ -122,7 +125,7 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
             regex = dateTimeSpaceRegex,
             formatChecker = { literal ->
                 runCatching {
-                    LocalTime.parse(literal, dateTimeSpaceFormatter)
+                    LocalDateTime.parse(literal, dateTimeSpaceFormatter)
                 }.isSuccess
             },
         ),

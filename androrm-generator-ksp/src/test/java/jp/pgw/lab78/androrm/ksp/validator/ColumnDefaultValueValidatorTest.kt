@@ -122,6 +122,12 @@ class ColumnDefaultValueValidatorTest {
                 false,
                 "'2026-02-30T12:30:00'"
             ),
+            arguments(
+                "LocalDateTime / 空白区切り存在しない日時",
+                TYPE_LOCAL_DATE_TIME,
+                false,
+                "'2026-02-30 12:30:00'"
+            ),
             arguments("LocalDateTime / CURRENT_DATE", TYPE_LOCAL_DATE_TIME, false, "CURRENT_DATE"),
             arguments("LocalDateTime / NULL 非nullable", TYPE_LOCAL_DATE_TIME, false, "NULL"),
 
