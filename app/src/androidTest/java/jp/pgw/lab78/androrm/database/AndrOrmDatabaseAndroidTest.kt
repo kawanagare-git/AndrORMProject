@@ -17,7 +17,6 @@ import org.junit.Assert.*
 import org.junit.rules.TestName
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
-import java.io.File
 import kotlin.reflect.KClass
 
 /**
@@ -454,37 +453,6 @@ class AndrOrmDatabaseAndroidTest {
      */
     private fun String.toSnakeCase(): String =
         replace(Regex("([a-z])([A-Z])"), "$1_$2").uppercase()
-
-    /**
-     * ## CSV ファイル退避
-     * ### app専用外部領域の entitiesCsv を Download 配下へ退避する
-     * @param sourceEntitiesCsvDirectory entitiesCsv ディレクトリ
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun copyCsvToDownload(
-        sourceEntitiesCsvDirectory: File,
-    ) {
-        val destinationDirectory = "/storage/emulated/0/Download/AndrORM"
-
-        val command =
-            "mkdir -p \"$destinationDirectory\" && " +
-                    "rm -rf \"$destinationDirectory/entitiesCsv\" && " +
-                    "cp -R \"${sourceEntitiesCsvDirectory.absolutePath}\" \"$destinationDirectory/\" && " +
-                    "ls -la \"$destinationDirectory/entitiesCsv\""
-
-        val result = executeShellCommand(command)
-
-        Log.i(
-            "AndrOrmCsv",
-            "copyCsvToDownload command=$command",
-        )
-
-        Log.i(
-            "AndrOrmCsv",
-            "copyCsvToDownload result=$result",
-        )
-    }
 
     /**
      * ## shell コマンド実行
