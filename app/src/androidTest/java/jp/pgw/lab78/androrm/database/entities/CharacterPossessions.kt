@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities
+package jp.pgw.lab78.androrm.database.entities
 
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -18,7 +18,8 @@ import java.time.LocalDateTime
             aliasExtend = "DTA",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicId"),
+                ColumnProjection("itemPk"),
+                ColumnProjection("itemStatus"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
@@ -29,7 +30,8 @@ import java.time.LocalDateTime
             aliasExtend = "B",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicId"),
+                ColumnProjection("itemPk"),
+                ColumnProjection("itemStatus"),
             ],
             commonInterface = [SELECT],
         ),
@@ -38,7 +40,8 @@ import java.time.LocalDateTime
             aliasExtend = "UPS",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicId"),
+                ColumnProjection("itemPk"),
+                ColumnProjection("itemStatus"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
@@ -55,12 +58,13 @@ import java.time.LocalDateTime
     ]
 )
 @Table
-@Index("CHAR_UNIQ", ["characterPk", "magicId"])
-data class CharacterSpells(
+@Index("ITEM_UNIQ", ["characterPk", "itemPk"])
+data class CharacterPossessions(
     @PrimaryKey
     val characterPk: Int,
     @PrimaryKey
-    val magicId: Int,
+    val itemPk: Int,
+    val itemStatus: String,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
     val createTime: LocalDateTime,

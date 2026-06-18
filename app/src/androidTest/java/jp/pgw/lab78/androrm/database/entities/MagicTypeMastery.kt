@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities
+package jp.pgw.lab78.androrm.database.entities
 
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -18,8 +18,8 @@ import java.time.LocalDateTime
             aliasExtend = "DTA",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("itemPk"),
-                ColumnProjection("itemStatus"),
+                ColumnProjection("magicTypeMastery"),
+                ColumnProjection("mastery"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
@@ -30,8 +30,8 @@ import java.time.LocalDateTime
             aliasExtend = "B",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("itemPk"),
-                ColumnProjection("itemStatus"),
+                ColumnProjection("magicTypeMastery"),
+                ColumnProjection("mastery"),
             ],
             commonInterface = [SELECT],
         ),
@@ -40,8 +40,8 @@ import java.time.LocalDateTime
             aliasExtend = "UPS",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("itemPk"),
-                ColumnProjection("itemStatus"),
+                ColumnProjection("magicTypeMastery"),
+                ColumnProjection("mastery"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
@@ -58,13 +58,14 @@ import java.time.LocalDateTime
     ]
 )
 @Table
-@Index("ITEM_UNIQ", ["characterPk", "itemPk"])
-data class CharacterPossessions(
+@Index("CHAR_UNIQ", ["characterPk"])
+data class MagicTypeMastery(
     @PrimaryKey
     val characterPk: Int,
     @PrimaryKey
-    val itemPk: String,
-    val itemStatus: String,
+    val magicTypeMastery: Int,
+    @Column(default = "1")
+    val mastery: Int,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
     val createTime: LocalDateTime,

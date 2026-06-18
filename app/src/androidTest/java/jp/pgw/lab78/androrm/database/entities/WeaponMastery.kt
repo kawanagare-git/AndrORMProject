@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities
+package jp.pgw.lab78.androrm.database.entities
 
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -18,8 +18,7 @@ import java.time.LocalDateTime
             aliasExtend = "DTA",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicTypeMastery"),
-                ColumnProjection("mastery"),
+                ColumnProjection("weaponTypeId"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
@@ -30,7 +29,7 @@ import java.time.LocalDateTime
             aliasExtend = "B",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicTypeMastery"),
+                ColumnProjection("weaponTypeId"),
                 ColumnProjection("mastery"),
             ],
             commonInterface = [SELECT],
@@ -40,7 +39,7 @@ import java.time.LocalDateTime
             aliasExtend = "UPS",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("magicTypeMastery"),
+                ColumnProjection("weaponTypeId"),
                 ColumnProjection("mastery"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
@@ -58,12 +57,12 @@ import java.time.LocalDateTime
     ]
 )
 @Table
-@Index("CHAR_UNIQ", ["characterPk"])
-data class MagicTypeMastery(
+@Index("CHAR_UNIQ", ["weaponTypeId", "characterPk"])
+data class WeaponMastery(
     @PrimaryKey
     val characterPk: Int,
     @PrimaryKey
-    val magicTypeMastery: Int,
+    val weaponTypeId: Int,
     @Column(default = "1")
     val mastery: Int,
     val createMethod: String,

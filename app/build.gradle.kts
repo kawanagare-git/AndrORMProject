@@ -22,6 +22,7 @@ dependencies {
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
     kspTest(project(":androrm-generator-ksp"))
+    kspAndroidTest(project(":androrm-generator-ksp"))
 
     implementation(libs.core.ktx.v1131)
     testImplementation(libs.junit.jupiter)

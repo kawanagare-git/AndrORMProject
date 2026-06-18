@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities
+package jp.pgw.lab78.androrm.database.entities
 
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -41,16 +41,16 @@ import java.time.LocalDateTime
             properties = [
                 ColumnProjection("characterPk", hideFromSelect = true),
                 ColumnProjection("equipSlot"),
-                ColumnProjection("itemPk", hideFromSelect = true),
             ],
             commonInterface = [SELECT],
         ),
         Projection(
-            entityNameExtend = "Slot",
-            aliasExtend = "S",
+            entityNameExtend = "SlotItem",
+            aliasExtend = "SI",
             properties = [
                 ColumnProjection("characterPk", hideFromSelect = true),
                 ColumnProjection("equipSlot"),
+                ColumnProjection("itemPk", hideFromSelect = true),
             ],
             commonInterface = [SELECT],
         ),
@@ -83,7 +83,7 @@ data class CharacterEquip(
     val characterPk: Int,
     @PrimaryKey
     val equipSlot: Int,
-    val itemPk: String,
+    val itemPk: Int,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
     val createTime: LocalDateTime,

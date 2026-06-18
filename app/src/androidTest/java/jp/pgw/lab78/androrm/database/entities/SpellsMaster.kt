@@ -1,4 +1,4 @@
-package jp.pgw.lab78.generated.database.entities
+package jp.pgw.lab78.androrm.database.entities
 
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -17,8 +17,11 @@ import java.time.LocalDateTime
             entityNameExtend = "Insert",
             aliasExtend = "DTA",
             properties = [
-                ColumnProjection("characterPk"),
-                ColumnProjection("weaponTypeId"),
+                ColumnProjection("magicId"),
+                ColumnProjection("magicTypeId"),
+                ColumnProjection("magicName"),
+                ColumnProjection("mainEffect"),
+                ColumnProjection("subEffect"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
@@ -28,43 +31,44 @@ import java.time.LocalDateTime
             entityNameExtend = "Base",
             aliasExtend = "B",
             properties = [
-                ColumnProjection("characterPk"),
-                ColumnProjection("weaponTypeId"),
-                ColumnProjection("mastery"),
+                ColumnProjection("magicId"),
+                ColumnProjection("magicTypeId"),
+                ColumnProjection("magicName"),
+                ColumnProjection("mainEffect"),
+                ColumnProjection("subEffect"),
             ],
             commonInterface = [SELECT],
         ),
         Projection(
-            entityNameExtend = "Upsert",
+            entityNameExtend = "Update",
             aliasExtend = "UPS",
             properties = [
-                ColumnProjection("characterPk"),
-                ColumnProjection("weaponTypeId"),
-                ColumnProjection("mastery"),
-                ColumnProjection("createMethod"),
+                ColumnProjection("magicId"),
+                ColumnProjection("mainEffect"),
+                ColumnProjection("subEffect"),
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPSERT],
+            commonInterface = [UPDATE],
         ),
         Projection(
             entityNameExtend = "Delete",
             properties = [
-                ColumnProjection("characterPk"),
+                ColumnProjection("magicId"),
             ],
             commonInterface = [DELETE],
         ),
     ]
 )
 @Table
-@Index("CHAR_UNIQ", ["weaponTypeId", "characterPk"])
-data class WeaponMastery(
+@Index("MAGIC_UNIQ", ["magicId", "magicTypeId"])
+data class SpellsMaster(
     @PrimaryKey
-    val characterPk: Int,
-    @PrimaryKey
-    val weaponTypeId: Int,
-    @Column(default = "1")
-    val mastery: Int,
+    val magicId: Int,
+    val magicTypeId: Int,
+    val magicName: String,
+    val mainEffect: String,
+    val subEffect: String,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
     val createTime: LocalDateTime,

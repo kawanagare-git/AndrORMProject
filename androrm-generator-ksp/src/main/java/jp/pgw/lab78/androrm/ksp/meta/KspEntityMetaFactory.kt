@@ -19,6 +19,7 @@ import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
+import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**
  * ## KSP Entity メタ情報生成クラス
@@ -55,9 +56,12 @@ class KspEntityMetaFactory : LoggerLike by logger {
         val columnMetas = definition.properties.map { columnProjection ->
             // プロジェクション定義のプロパティ名に対応する KSPropertyDeclaration をクラス定義から取得。存在しない場合はエラー
             val sourceProperty = sourcePropertiesByName[columnProjection.property]
-                ?: logError(
+            if (sourceProperty.isNull()) {
+                val errorMessage =
                     "Property '${columnProjection.property}' is not declared in ${classDecl.qualifiedName?.asString()}."
-                )
+                logError(errorMessage)
+                throw IllegalArgumentException(errorMessage)
+            }
             // プロジェクション定義とクラス定義を突き合わせて PropertyMeta を生成
             createColumnMeta(
                 property = sourceProperty as KSPropertyDeclaration,

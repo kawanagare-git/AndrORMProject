@@ -7,10 +7,7 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.logging.FileHandler
-import java.util.logging.Formatter
-import java.util.logging.LogRecord
-import java.util.logging.Logger
+import java.util.logging.*
 
 /**
  * ## ログスコープ列挙型
@@ -64,25 +61,36 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
     override fun create(logFileSuffix: String, minLogLevel: LogLevel): Logger {
         this.minLogLevel = minLogLevel
         this.logFileSuffix = logFileSuffix
-        // ★ 日付フォーマットを ISO 風に固定
-        System.setProperty(
-            "java.util.logging.SimpleFormatter.format",
-            "%1\$tF %1\$tT [%4\$s] %5\$s%6\$s%n"
-        )
-        val dir = File(System.getProperty("user.dir"), "$LOG_ROOT/logs/$moduleName")
-        dir.mkdirs()
 
-        logger.level = minLogLevel.level
+        if (isFileLoggingEnabled()) {
+            System.setProperty(
+                "java.util.logging.SimpleFormatter.format",
+                "%1\$tF %1\$tT [%4\$s] %5\$s%6\$s%n"
+            )
+
+            val dir = File(System.getProperty("user.dir"), "$LOG_ROOT/logs/$moduleName")
+            dir.mkdirs()
+
+            logger.level = minLogLevel.level
+            logger.useParentHandlers = false
+            clearHandlers(logger)
+
+            val fileHandler = FileHandler(
+                dir.resolve("$logFilename.log").toString(),
+                true
+            )
+
+            fileHandler.level = logger.level
+            fileHandler.formatter = EnglishLevelFormatter()
+            logger.addHandler(fileHandler)
+
+            return logger
+        }
+
+        logger.level = Level.OFF
         logger.useParentHandlers = false
+        clearHandlers(logger)
 
-        val fileHandler = FileHandler(
-            dir.resolve("$logFilename.log").toString(),
-            true
-        )
-        // ★ Handler 側（重要）
-        fileHandler.level = logger.level
-        fileHandler.formatter = EnglishLevelFormatter()
-        logger.addHandler(fileHandler)
         return logger
     }
 
@@ -100,6 +108,35 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
     }
 
     companion object {
+        /** ログ出力有効フラグ */
+        private const val LOGGING_ENABLED_PROPERTY = "androrm.logging.enabled"
+
+        /**
+         * ## ファイルログ出力判定
+         * ### System Property によりファイルログ出力可否を判定する
+         * @return true:出力する / false:出力しない
+         * @author Masahiro Inoue
+         * @since 2026-06-16
+         */
+        private fun isFileLoggingEnabled(): Boolean =
+            System.getProperty(LOGGING_ENABLED_PROPERTY, "true") != "false"
+
+        /**
+         * ## Handler クリア
+         * ### 既存 Handler を解除する
+         * @param logger ロガー
+         * @author Masahiro Inoue
+         * @since 2026-06-16
+         */
+        private fun clearHandlers(
+            logger: Logger,
+        ) {
+            logger.handlers.forEach { handler ->
+                logger.removeHandler(handler)
+                handler.close()
+            }
+        }
+
         /** 日付フォーマッタ（ファイル名用） */
         @Suppress("SpellCheckingInspection")
         private val fileTimeFormatter =
