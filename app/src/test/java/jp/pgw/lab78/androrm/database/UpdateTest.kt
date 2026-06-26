@@ -43,9 +43,9 @@ class UpdateTest {
         val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
             .set {
-                TestAllEntityUpdate::name setTo fromTable[TestSelectEntity::name]
-                TestAllEntityUpdate::address setTo joinTable[TestSelectEntity::address]
-                TestAllEntityUpdate::updateDate setTo updateDate
+                TestAllEntityUpdate::name becomes fromTable[TestSelectEntity::name]
+                TestAllEntityUpdate::address becomes joinTable[TestSelectEntity::address]
+                TestAllEntityUpdate::updateDate assign updateDate
             }
             .from(fromTable)
             .join(INNER, joinTable) {

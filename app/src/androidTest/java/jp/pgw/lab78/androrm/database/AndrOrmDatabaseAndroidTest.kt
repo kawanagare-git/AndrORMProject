@@ -2,7 +2,6 @@ package jp.pgw.lab78.androrm.database
 
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
-import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -134,13 +133,31 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step02_verifyTables() {
-        val databaseHelper = createDatabaseHelper()
+        try {
+            val databaseHelper = createDatabaseHelper()
 
-        databaseHelper.use { helper ->
-            val actualTableNames = findUserTableNames(helper.readableDatabase).toSet()
-            val expectedTableNames = AndroidTestSeedData.rowCountByTable.keys
+            databaseHelper.use { helper ->
+                val actualTableNames = findUserTableNames(helper.readableDatabase).toSet()
+                val expectedTableNames = AndroidTestSeedData.rowCountByTable.keys
 
-            assertEquals(expectedTableNames, actualTableNames)
+                assertEquals(expectedTableNames, actualTableNames)
+            }
+        } catch (throwable: Throwable) {
+            Log.e(
+                "SeedDataInit",
+                "AndroidTestSeedData initialization failed.",
+                throwable,
+            )
+
+            throwable.cause?.let { cause ->
+                Log.e(
+                    "SeedDataInit",
+                    "cause=${cause::class.qualifiedName}: ${cause.message}",
+                    cause,
+                )
+            }
+
+            throw throwable
         }
     }
 
@@ -178,9 +195,25 @@ class AndrOrmDatabaseAndroidTest {
                     countRows(
                         db = helper.readableDatabase,
                         tableName = tableName,
-                    ),
+                    )
                 )
             }
+        }
+    }
+
+    /**
+     * ## step05 初期データ更新
+     * ### SeedData データを更新する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    @Test
+    fun step05_updatedSeedData() {
+        val databaseHelper = createDatabaseHelper()
+
+        databaseHelper.use { helper ->
+            clearAllTables(helper.writableDatabase)
+            insertSeedData(helper)
         }
     }
 
@@ -340,6 +373,14 @@ class AndrOrmDatabaseAndroidTest {
         )
     }
 
+//    private fun updateData(
+//        databaseHelper: AndrOrmDatabaseHelper,
+//    ) {
+//        val updateCharacterStatus = Update(CharacterStatusUpdate::class).set {
+//            CharacterStatusUpdate::value eq (CharacterStatusUpdate::value + 10)
+//        }
+//    }
+//
     /**
      * ## Insert 一括実行
      * ### InsertEntity のリストをまとめて投入する
@@ -428,7 +469,7 @@ class AndrOrmDatabaseAndroidTest {
         ).use { cursor ->
             cursor.moveToFirst()
             cursor.getInt(0)
-        }
+        }.also { Log.d("COUNT", "${quoteIdentifier(tableName)} has records = $it") }
 
     /**
      * ## SQL 識別子クォート
@@ -454,26 +495,4 @@ class AndrOrmDatabaseAndroidTest {
     private fun String.toSnakeCase(): String =
         replace(Regex("([a-z])([A-Z])"), "$1_$2").uppercase()
 
-    /**
-     * ## shell コマンド実行
-     * ### UiAutomation 経由で shell コマンドを実行し、標準出力を取得する
-     * @param command shell コマンド
-     * @return 標準出力
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun executeShellCommand(
-        command: String,
-    ): String {
-        val fileDescriptor = InstrumentationRegistry
-            .getInstrumentation()
-            .uiAutomation
-            .executeShellCommand(command)
-
-        return ParcelFileDescriptor.AutoCloseInputStream(fileDescriptor)
-            .bufferedReader()
-            .use { reader ->
-                reader.readText()
-            }
-    }
 }

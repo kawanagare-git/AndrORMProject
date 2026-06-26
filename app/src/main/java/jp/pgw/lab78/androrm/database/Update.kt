@@ -118,9 +118,10 @@ class Update<T : UpdateEntity>(
     /**
      * ## set メソッド
      * ### DSL で SET 句を指定する
-     *
      * @param block SET 句定義
      * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun set(block: SetClauseBuilder.() -> Unit): Update<T> {
         isBuild = false
@@ -136,9 +137,10 @@ class Update<T : UpdateEntity>(
     /**
      * ## from メソッド
      * ### UPDATE FROM の FROM 句を指定する
-     *
      * @param fromEntity 参照元 Entity クラス
      * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun <E : Entity> from(fromEntity: KClass<E>): Update<T> =
         from(TableRef(entityClass = fromEntity, alias = fromEntity.getTableAlias()))
@@ -148,6 +150,8 @@ class Update<T : UpdateEntity>(
      * ### UPDATE FROM の FROM 句を指定する
      * @param fromTable 参照元テーブル
      * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun from(fromTable: TableRef<out Entity>): Update<T> {
         check(fromClause.isBlank()) {
@@ -167,6 +171,11 @@ class Update<T : UpdateEntity>(
     /**
      * ## join メソッド
      * ### UPDATE FROM の JOIN 句を指定する
+     * @param joinType 結合方法
+     * @param joinedEntity 結合エンティティ
+     * @param on 結合条件
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun join(
         joinType: JoinType,
@@ -177,6 +186,11 @@ class Update<T : UpdateEntity>(
     /**
      * ## join メソッド
      * ### UPDATE FROM の JOIN 句を指定する
+     * @param joinType 結合方法
+     * @param joinedTable 結合テーブル参照
+     * @param on 結合条件
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun join(
         joinType: JoinType,
@@ -187,6 +201,10 @@ class Update<T : UpdateEntity>(
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
+     * @param joinType 結合方法
+     * @param joinedEntity 結合エンティティ
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun join(
         joinType: JoinType,
@@ -196,6 +214,10 @@ class Update<T : UpdateEntity>(
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
+     * @param joinType 結合方法
+     * @param joinedTable 結合テーブル参照
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun join(
         joinType: JoinType,
@@ -205,12 +227,17 @@ class Update<T : UpdateEntity>(
     /**
      * ## where
      * ### 更新対象条件を指定する
+     * @param block 検索条件
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun where(block: ConditionBuilder.() -> Unit): Update<T> =
         whereDelegate.where(block)
 
     /**
      * ## 全件更新を明示的に許可する
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     fun updateAll(): Update<T> {
         isBuild = true
@@ -221,6 +248,8 @@ class Update<T : UpdateEntity>(
     /**
      * ## 追加バインド値取得
      * ### SQL 句の出現順に合わせて bindValues を合成する
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     protected override fun additionalBindValues(): List<Any?> = buildList {
         addAll(joinDelegate.bindValues)
@@ -230,6 +259,8 @@ class Update<T : UpdateEntity>(
     /**
      * ## update 文生成
      * ### SQLite 用 UPDATE 文を生成する
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     override fun build(): String {
         if (!isBuild) {
@@ -276,6 +307,10 @@ class Update<T : UpdateEntity>(
     /**
      * ## テーブルエイリアス登録
      * ### 同一 Update 内で同じ alias が再利用されないよう検証する
+     * @param tableName テーブル名
+     * @param tableAlias テーブルエイリアス
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     private fun registerTableAlias(
         tableName: String,
@@ -292,6 +327,9 @@ class Update<T : UpdateEntity>(
     /**
      * ## SET 句ビルダー
      * ### Update.set DSL で使用する
+     * @param valueHolder バインド値条件生成
+     * @author Masahiro Inoue
+     * @since 2026-05-25
      */
     inner class SetClauseBuilder internal constructor(
         private val valueHolder: QueryWithBindValues,
@@ -300,38 +338,49 @@ class Update<T : UpdateEntity>(
         private val assignments = mutableListOf<Pair<String, String>>()
 
         /**
-         * ## setTo メソッド
+         * ## becomes メソッド
          * ### 左辺プロパティに右辺値を設定する
-         *
-         * 左辺は SQLite の仕様に合わせて alias を付けず、カラム名のみを出力する。
+         * ### 左辺は SQLite の仕様に合わせて alias を付けず、カラム名のみを出力する。
+         * @receiver エンティティのプロパティ
+         * @param value 設定する値
+         * @author Masahiro Inoue
+         * @since 2026-05-25
          */
-        infix fun KProperty1<T, *>.setTo(value: Any?) {
+        infix fun KProperty1<T, *>.becomes(value: Any?) {
             assignments += this.getColumn() to formatSetValue(value)
         }
 
         /**
          * ## assign メソッド
-         * ### setTo の別名
+         * ### becomes の別名
+         * @receiver エンティティのプロパティ
+         * @param value 設定する値
+         * @author Masahiro Inoue
+         * @since 2026-05-25
          */
         infix fun KProperty1<T, *>.assign(value: Any?) {
-            this setTo value
+            this becomes value
         }
 
         /**
          * ## SET 句リスト生成
+         * @author Masahiro Inoue
+         * @since 2026-05-25
          */
         fun buildList(): List<Pair<String, String>> = assignments
 
         /**
          * ## SET 値式生成
          * ### ColumnRef なら alias.column、それ以外は bind 値として扱う
+         * @param value 設定する値
+         * @author Masahiro Inoue
+         * @since 2026-05-25
          */
         private fun formatSetValue(value: Any?): String {
             if (value == null) {
                 valueHolder.addBindValue(null)
                 return "?"
             }
-
             return EntityManager.formatValue(valueHolder, value)
         }
     }

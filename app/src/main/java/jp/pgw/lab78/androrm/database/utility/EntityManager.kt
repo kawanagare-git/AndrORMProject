@@ -16,6 +16,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.interfaces.SqlExpression
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
@@ -419,8 +420,12 @@ object EntityManager {
         }
 
         is ColumnRef<*, *> -> {
-            val ref = (value as ColumnRef<out Entity, *>)
+            val ref = value as ColumnRef<out Entity, *>
             ref.build()
+        }
+
+        is SqlExpression -> {
+            value.build(valueHolder)
         }
 
         else -> {

@@ -12,148 +12,159 @@ import java.time.LocalDateTime
  */
 object AndroidTestSeedData {
 
-    private const val CHARACTER_COUNT = 40
+    private const val USER_COUNT = 10
+    private const val CHARACTER_COUNT = 4
     private const val MASTER_COUNT = 40
     private const val BROKEN_RELATION_COUNT = 4
 
     private const val CREATE_METHOD = "ANDROID_TEST_SEED"
     private const val UPDATE_METHOD = "ANDROID_TEST_SEED"
 
-    private val baseDateTime: LocalDateTime = LocalDateTime.of(2026, 6, 14, 10, 0, 0)
-
     private val statusTypes = arrayOf(
-        "HP",
-        "MP",
-        "SP",
-        "STR",
-        "VIT",
-        "DEX",
-        "AGI",
-        "INT",
-        "WIS",
-        "FTN",
+        "HP", "MP", "SP", "STR", "VIT", "DEX", "AGI", "INT", "WIS", "FTN",
     )
 
-    private val itemTypes = arrayOf(
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
-        7,
-        8,
-    )
+    private val itemTypes = arrayOf(1, 2, 3, 4, 5, 6, 7, 8)
 
-    private val equipableSlots = arrayOf(
-        1,
-        2,
-        3,
-        4,
-        5,
-        6,
+    private val equipableSlots = arrayOf(1, 2, 3, 4, 5, 6)
+
+    private val magicCategories = listOf(
+        "frame", "water", "wind", "earth", "thunderbolt", "light", "dark"
     )
 
     private val effectCategories = arrayOf(
+        null,
         "HP",
+        null,
         "MP",
+        null,
         "SP",
+        null,
         "STR",
+        null,
         "VIT",
+        null,
         "DEX",
+        null,
         "AGI",
+        null,
         "INT",
+        null,
         "WIS",
+        null,
         "FTN",
     )
 
+    /** プライマリキー管理 */
+    enum class Keys {
+        CHARACTER_PK,
+        ITEM_PK,
+        MAGIC_ID,
+        ;
+
+        val list = mutableListOf<Int>()
+    }
+
     /** キャラクタ基本固定情報 */
-    val characterStaticInfoList: List<CharacterStaticInfo> =
-        (1..CHARACTER_COUNT).map { index ->
+    val characterStaticInfoList: List<CharacterStaticInfo> = (1..USER_COUNT).flatMap { userIndex ->
+        (1..CHARACTER_COUNT).map { charIndex ->
+            val userId = "U%04d".format(userIndex)
             CharacterStaticInfo(
-                characterPk = index,
-                userId = "U%04d".format(index),
-                characterNo = index,
-                characterName = "CHAR%04d".format(index),
+                characterPk = createPk(Keys.CHARACTER_PK, userId, charIndex),
+                userId = userId,
+                characterNo = charIndex,
+                characterName = "CHAR%04d-%01d".format(userIndex, charIndex),
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
+    }
 
     /** アイテムマスタ */
-    val itemMasterList: List<ItemMaster> =
-        (1..MASTER_COUNT).map { index ->
-            val itemType = itemTypes[(index - 1) % itemTypes.size]
-            val equipableSlot = equipableSlots[(index - 1) % equipableSlots.size]
-
-            ItemMaster(
-                itemPk = index,
-                itemType = itemType,
-                itemName = "ITEM%04d".format(index),
-                mainEffect = effectCategories[(index - 1) % effectCategories.size],
-                subEffect = effectCategories[index % effectCategories.size],
-                equipableSlot = equipableSlot,
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
-        }
+    val itemMasterList: List<ItemMaster> = (1..MASTER_COUNT).map { index ->
+        val itemType = itemTypes[(index) % itemTypes.size]
+        val equipableSlot = equipableSlots[(index) % equipableSlots.size]
+        val effectCategory = effectCategories[itemType % effectCategories.size]
+        val mainEffectCategory =
+            effectCategory ?: effectCategories[(itemType + 1) % effectCategories.size]!!
+        ItemMaster(
+            itemPk = createPk(Keys.ITEM_PK, index),
+            itemType = itemType,
+            itemName = "ITEM%04d".format(index),
+            mainEffect = mainEffectCategory,
+            subEffect = effectCategory,
+            equipableSlot = equipableSlot,
+            createMethod = CREATE_METHOD,
+            createTime = LocalDateTime.now(),
+            updateMethod = UPDATE_METHOD,
+            updateTime = LocalDateTime.now(),
+        )
+    }
 
     /** 魔法マスタ */
     val spellsMasterList: List<SpellsMaster> =
-        (1..MASTER_COUNT).map { index ->
-            SpellsMaster(
-                magicId = index,
-                magicTypeId = ((index - 1) % 8) + 1,
-                magicName = "MAGIC%03d".format(index),
-                mainEffect = effectCategories[(index - 1) % effectCategories.size],
-                subEffect = effectCategories[index % effectCategories.size],
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
+        magicCategories.flatMapIndexed { effectIndex, effect ->
+            (1..MASTER_COUNT).map { index ->
+                val subEffect =
+                    effectCategories[(index + 1) % effectCategories.size]
+                SpellsMaster(
+                    magicId = createPk(Keys.MAGIC_ID, effectIndex * 10_0000, index * 10),
+                    magicTypeId = effectIndex,
+                    magicName = "MAGIC%03d-%01d".format(index, effectIndex),
+                    mainEffect = effect,
+                    subEffect = subEffect,
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         }
 
     /** キャラクタ最大値ステータス */
     val characterStatusList: List<CharacterStatus> =
-        (1..CHARACTER_COUNT).map { index ->
-            CharacterStatus(
-                characterPk = index,
-                statusType = statusTypes[(index - 1) % statusTypes.size],
-                value = 100 + (index * 5),
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
-        } + (1..BROKEN_RELATION_COUNT).map { index ->
-            CharacterStatus(
-                characterPk = 9000 + index,
-                statusType = statusTypes[(index - 1) % statusTypes.size],
-                value = 999,
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9000 + index).toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9000 + index).toLong()),
-            )
+        Keys.CHARACTER_PK.list.flatMapIndexed { index, characterPk ->
+            statusTypes.mapIndexed { stsIndex, statusName ->
+                CharacterStatus(
+                    characterPk = characterPk,
+                    statusType = statusName,
+                    value = 100 * index + stsIndex,
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
+        } + (1..BROKEN_RELATION_COUNT).flatMap { index ->
+            statusTypes.map { statusName ->
+                CharacterStatus(
+                    characterPk = 9000 + index,
+                    statusType = statusName,
+                    value = 999,
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         }
 
     /** キャラクタ所有全アイテム */
     val characterPossessionsList: List<CharacterPossessions> =
-        (1..CHARACTER_COUNT).map { index ->
-            CharacterPossessions(
-                characterPk = index,
-                itemPk = index,
-                itemStatus = "HOLD",
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
+        Keys.CHARACTER_PK.list.flatMap { characterPk ->
+            Keys.ITEM_PK.list.map { itemPk ->
+                CharacterPossessions(
+                    characterPk = characterPk,
+                    itemPk = itemPk,
+                    itemStatus = "HOLD",
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         } + (1..BROKEN_RELATION_COUNT).map { index ->
             val brokenCharacterPk = if (index <= 2) 9000 + index else index
             val brokenItemPk = if (index <= 2) index else 9000 + index
@@ -163,24 +174,29 @@ object AndroidTestSeedData {
                 itemPk = brokenItemPk,
                 itemStatus = "BROKEN_RELATION",
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9100 + index).toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9100 + index).toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
 
     /** キャラクタ装備 */
     val characterEquipList: List<CharacterEquip> =
-        (1..CHARACTER_COUNT).map { index ->
-            CharacterEquip(
-                characterPk = index,
-                equipSlot = equipableSlots[(index - 1) % equipableSlots.size],
-                itemPk = index,
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
+        Keys.CHARACTER_PK.list.flatMap { characterPk ->
+            equipableSlots.mapIndexed { index, slot ->
+                val item = characterPossessionsList.filter {
+                    it.characterPk == characterPk
+                }[index % (MASTER_COUNT / 2)].itemPk
+                CharacterEquip(
+                    characterPk = characterPk,
+                    equipSlot = slot,
+                    itemPk = item,
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         } + (1..BROKEN_RELATION_COUNT).map { index ->
             val brokenCharacterPk = if (index <= 2) 9200 + index else index
             val brokenItemPk = if (index <= 2) index else 9200 + index
@@ -190,23 +206,23 @@ object AndroidTestSeedData {
                 equipSlot = 100 + index,
                 itemPk = brokenItemPk,
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9200 + index).toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9200 + index).toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
 
     /** 武具キャラクタ熟練度 */
     val weaponMasteryList: List<WeaponMastery> =
-        (1..CHARACTER_COUNT).map { index ->
+        Keys.CHARACTER_PK.list.mapIndexed { index, characterPk ->
             WeaponMastery(
-                characterPk = index,
+                characterPk = characterPk,
                 weaponTypeId = ((index - 1) % 8) + 1,
                 mastery = 1 + (index % 10),
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
+                updateTime = LocalDateTime.now(),
             )
         } + (1..BROKEN_RELATION_COUNT).map { index ->
             WeaponMastery(
@@ -214,23 +230,23 @@ object AndroidTestSeedData {
                 weaponTypeId = index,
                 mastery = 1,
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9300 + index).toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9300 + index).toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
 
     /** 魔法キャラクタ熟練度 */
     val magicTypeMasteryList: List<MagicTypeMastery> =
-        (1..CHARACTER_COUNT).map { index ->
+        Keys.CHARACTER_PK.list.mapIndexed { index, characterPk ->
             MagicTypeMastery(
-                characterPk = index,
+                characterPk = characterPk,
                 magicTypeMastery = ((index - 1) % 8) + 1,
                 mastery = 1 + (index % 10),
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
+                updateTime = LocalDateTime.now(),
             )
         } + (1..BROKEN_RELATION_COUNT).map { index ->
             MagicTypeMastery(
@@ -238,23 +254,28 @@ object AndroidTestSeedData {
                 magicTypeMastery = index,
                 mastery = 1,
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9400 + index).toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9400 + index).toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
 
     /** キャラクタ所持魔法 */
     val characterSpellsList: List<CharacterSpells> =
-        (1..CHARACTER_COUNT).map { index ->
-            CharacterSpells(
-                characterPk = index,
-                magicId = index,
-                createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes(index.toLong()),
-                updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes(index.toLong()),
-            )
+        Keys.CHARACTER_PK.list.flatMapIndexed { index, characterPk ->
+            val picker = index % 10
+            Keys.MAGIC_ID.list.filterIndexed { magicIndex, _ ->
+                magicIndex % 10 == picker
+            }.map { magicId ->
+                CharacterSpells(
+                    characterPk = characterPk,
+                    magicId = magicId,
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         } + (1..BROKEN_RELATION_COUNT).map { index ->
             val brokenCharacterPk = if (index <= 2) 9500 + index else index
             val brokenMagicId = if (index <= 2) index else 9500 + index
@@ -263,11 +284,18 @@ object AndroidTestSeedData {
                 characterPk = brokenCharacterPk,
                 magicId = brokenMagicId,
                 createMethod = CREATE_METHOD,
-                createTime = baseDateTime.plusMinutes((9500 + index).toLong()),
+                createTime = LocalDateTime.now(),
                 updateMethod = UPDATE_METHOD,
-                updateTime = baseDateTime.plusMinutes((9500 + index).toLong()),
+                updateTime = LocalDateTime.now(),
             )
         }
+
+    /** プライマリキー作成 */
+    private fun createPk(keys: Keys, vararg keyParts: Any): Int =
+        (10_000 + Math.floorMod(
+            keyParts.joinToString(separator = "").hashCode(),
+            90_000,
+        )).also { keys.list.add(it) }
 
     /** テーブル別件数 */
     val rowCountByTable: Map<String, Int> = mapOf(

@@ -68,7 +68,7 @@ data class SpellsMaster(
     val magicTypeId: Int,
     val magicName: String,
     val mainEffect: String,
-    val subEffect: String,
+    val subEffect: String?,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
     val createTime: LocalDateTime,

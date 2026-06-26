@@ -113,7 +113,7 @@ data class ItemMaster(
     val itemType: Int,
     val itemName: String,
     val mainEffect: String,
-    val subEffect: String,
+    val subEffect: String?,
     val equipableSlot: Int,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP")
