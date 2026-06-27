@@ -13,6 +13,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.entities.select.SalaryEntitySelective
+import jp.pgw.lab78.androrm.database.interfaces.plus
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.*
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
@@ -628,6 +629,35 @@ class SelectTest {
             actual.message.orEmpty().contains(
                 "Duplicate alias 'DUPLICATE_ALIAS' in entity 'InvalidDuplicateAliasEntity'"
             )
+        )
+    }
+
+    @Test
+    fun testBuild_withWhereSqlExpression_buildsWhereExpressionAndBindValues() {
+        val salaryTable = TableRef(SalaryEntitySelective::class, "SAL")
+
+        val select = Select(SalaryEntitySelective::class)
+            .where {
+                SalaryEntitySelective::gross eq (salaryTable[SalaryEntitySelective::gross] + 10)
+            }
+
+        assertAll(
+            {
+                assertEquals(
+                    "select SAL.EMPLOYEE_ID as SAL_EMPLOYEE_ID, " +
+                            "SAL.PAY_MONTH as SAL_PAY_MONTH, " +
+                            "SAL.GROSS as SAL_GROSS, " +
+                            "sum(SAL.GROSS) as SAL_TOTAL_GROSS, " +
+                            "max(SAL.GROSS) as SAL_MAX_GROSS, " +
+                            "avg(SAL.GROSS) as SAL_AVG_GROSS, " +
+                            "max(deduction) as SAL_MAX_DEDUCTION, " +
+                            "avg(deduction) as SAL_AVG_DEDUCTION " +
+                            "from SALARY SAL " +
+                            "where SAL.GROSS = (SAL.GROSS + ?)",
+                    select.build(),
+                )
+            },
+            { assertEquals(listOf(10), select.bindValues) },
         )
     }
 

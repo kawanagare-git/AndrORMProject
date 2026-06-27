@@ -43,11 +43,11 @@ class WhereClauseDelegateTest {
         assertTrue(target.hasCondition)
         assertEquals(1, target.conditions.size)
         assertEquals(
-            "TEST_ALL_ENTITY_DELETE.ADDRESS like ?",
+            "TEST_ALL_ENTITY.ADDRESS like ?",
             target.buildCondition(),
         )
         assertEquals(
-            "where TEST_ALL_ENTITY_DELETE.ADDRESS like ?",
+            "where TEST_ALL_ENTITY.ADDRESS like ?",
             target.buildClause(),
         )
         assertEquals(
@@ -70,11 +70,11 @@ class WhereClauseDelegateTest {
         }
 
         assertEquals(
-            "TEST_ALL_ENTITY_DELETE.ID = ? and TEST_ALL_ENTITY_DELETE.ADDRESS like ?",
+            "TEST_ALL_ENTITY.ID = ? and TEST_ALL_ENTITY.ADDRESS like ?",
             target.buildCondition(),
         )
         assertEquals(
-            "where TEST_ALL_ENTITY_DELETE.ID = ? and TEST_ALL_ENTITY_DELETE.ADDRESS like ?",
+            "where TEST_ALL_ENTITY.ID = ? and TEST_ALL_ENTITY.ADDRESS like ?",
             target.buildClause(),
         )
         assertEquals(

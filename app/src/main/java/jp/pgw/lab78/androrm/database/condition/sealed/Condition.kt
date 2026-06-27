@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
@@ -48,8 +48,8 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    data class Value<T : Entity>(
-        val lhsProperty: KProperty1<T, *>,
+    data class Value(
+        val lhsProperty: String,
         val operator: ComparisonOperator,
         val value: Any
     ) : Condition() {
@@ -62,8 +62,7 @@ sealed class Compare : Condition() {
          * @since 2025-08-01
          */
         override fun build(): String {
-            return "${lhsProperty.extractClassFromProperty().getTableAlias()}." +
-                    "${lhsProperty.getColumn()} ${operator.symbol} ${value.toSqlConditionText()}"
+            return "$lhsProperty ${operator.symbol} ${value.toSqlConditionText()}"
         }
     }
 
@@ -77,8 +76,8 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-09-13
      */
-    data class Between<T : Entity>(
-        val lhsProperty: KProperty1<T, *>,
+    data class Between(
+        val lhsProperty: String,
         val start: Any,
         val end: Any
     ) : Condition() {
@@ -91,8 +90,7 @@ sealed class Compare : Condition() {
          * @since 2025-09-13
          */
         override fun build(): String {
-            return "${lhsProperty.extractClassFromProperty().getTableAlias()}." +
-                    "${lhsProperty.getColumn()} between $start and $end"
+            return "$lhsProperty between $start and $end"
         }
     }
 
@@ -104,8 +102,8 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-09-13
      */
-    class BetweenBuilder<T : Entity>(
-        private val property: KProperty1<T, *>,
+    class BetweenBuilder(
+        private val property: String,
         private val start: Any
     ) {
         /**
@@ -119,6 +117,36 @@ sealed class Compare : Condition() {
         infix fun and(end: Any): Condition {
             return Between(property, start, end)
         }
+    }
+
+    /**
+     * ## メンバーシップ検索条件用関数
+     * @param lhsProperty 検索対象
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    data class InSelect(
+        val lhsProperty: String,
+        val subQuery: Select<out SelectEntity>,
+    ) : Condition() {
+        override fun build(): String =
+            "$lhsProperty in (${subQuery.build()})"
+    }
+
+    /**
+     * ## メンバーシップ検索条件用関数
+     * @param lhsProperty 検索対象
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    data class NotInSelect(
+        val lhsProperty: String,
+        val subQuery: Select<out SelectEntity>,
+    ) : Condition() {
+        override fun build(): String =
+            "$lhsProperty not in (${subQuery.build()})"
     }
 
     /**
@@ -177,8 +205,8 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
-    data class IsNull<T : Entity>(
-        val lhsProperty: KProperty1<T, *>,
+    data class IsNull(
+        val lhsProperty: String,
     ) : Condition() {
 
         /**
@@ -189,9 +217,7 @@ sealed class Compare : Condition() {
          * @since 2025-10-03
          */
         override fun build(): String {
-            val alias = lhsProperty.extractClassFromProperty().getTableAlias()
-            val column = lhsProperty.getColumn()
-            return "${alias}.$column ${IS_NULL.symbol}"
+            return "$lhsProperty ${IS_NULL.symbol}"
         }
     }
 
@@ -203,8 +229,8 @@ sealed class Compare : Condition() {
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
-    data class IsNotNull<T : Entity>(
-        val lhsProperty: KProperty1<T, *>,
+    data class IsNotNull(
+        val lhsProperty: String,
     ) : Condition() {
 
         /**
@@ -215,97 +241,7 @@ sealed class Compare : Condition() {
          * @since 2025-10-03
          */
         override fun build(): String {
-            val alias = lhsProperty.extractClassFromProperty().getTableAlias()
-            val column = lhsProperty.getColumn()
-            return "${alias}.$column ${IS_NOT_NULL.symbol}"
-        }
-    }
-
-    /**
-     * ## alias 明示カラムと値の比較条件
-     * ### TableRef から生成した ColumnRef を使用する
-     * @param lhsColumn 検索条件のカラム参照情報
-     * @param operator 比較条件
-     * @param value 検索値
-     * @return 条件インスタンスを返却（this）
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    data class ColumnValue(
-        val lhsColumn: ColumnRef<out Entity, *>,
-        val operator: ComparisonOperator,
-        val value: Any
-    ) : Condition() {
-
-        override fun build(): String {
-            return "${lhsColumn.build()} ${operator.symbol} ${value.toSqlConditionText()}"
-        }
-    }
-
-    /**
-     * ## alias 明示カラム同士の比較条件
-     * ### 同一 Entity 複数 join 時に alias を明示して比較する
-     * @param lhsColumn 検索条件のカラム参照情報（左辺）
-     * @param operator 比較条件
-     * @param rhsColumn 検索条件のカラム参照情報（右辺）
-     * @return 条件インスタンスを返却（this）
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    data class ColumnColumn(
-        val lhsColumn: ColumnRef<out Entity, *>,
-        val operator: ComparisonOperator,
-        val rhsColumn: ColumnRef<out Entity, *>,
-    ) : Condition() {
-
-        override fun build(): String {
-            return "${lhsColumn.build()} ${operator.symbol} ${rhsColumn.build()}"
-        }
-    }
-
-    /**
-     * ## alias 明示カラムの BETWEEN 条件
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    data class ColumnBetween(
-        val column: ColumnRef<out Entity, *>,
-        val start: Any,
-        val end: Any,
-    ) : Condition() {
-
-        override fun build(): String {
-            return "${column.build()} between $start and $end"
-        }
-    }
-
-    /**
-     * ## alias 明示カラムの IS NULL 条件
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    data class ColumnIsNull(
-        val column: ColumnRef<out Entity, *>,
-    ) : Condition() {
-
-        override fun build(): String {
-            return "${column.build()} ${IS_NULL.symbol}"
-        }
-    }
-
-    /**
-     * ## alias 明示カラムの IS NOT NULL 条件
-     * ### where に使用する単一条件を指定
-     * @param column 検索条件のカラム
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    data class ColumnIsNotNull(
-        val column: ColumnRef<out Entity, *>,
-    ) : Condition() {
-
-        override fun build(): String {
-            return "${column.build()} ${IS_NOT_NULL.symbol}"
+            return "$lhsProperty ${IS_NOT_NULL.symbol}"
         }
     }
 }
@@ -318,9 +254,12 @@ sealed class Compare : Condition() {
  * @author Masahiro Inoue
  * @since 2026-05-12
  */
-private fun Any.toSqlConditionText(): String {
+private
+
+fun Any.toSqlConditionText(): String {
     return when (this) {
         is Collection<*> -> this.joinToString(", ", "(", ")")
+        is KProperty1<*, *> -> this.toSqlConditionText()
         is ColumnRef<*, *> -> this.build()
         else -> this.toString()
     }
@@ -366,7 +305,7 @@ data class GroupByColumn(
      */
     override fun build(): String {
         return column.let {
-            "${it.extractClassFromProperty().getTableAlias()}.${it.getColumn()}"
+            "${it.extractClassFromProperty().getTableAlias()}.${it.getColumnName()}"
         }
     }
 }
@@ -414,4 +353,3 @@ data class LogicalCondition(
         return "($body)"
     }
 }
-

@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.database.SupportFunction
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
@@ -347,7 +347,7 @@ class Update<T : UpdateEntity>(
          * @since 2026-05-25
          */
         infix fun KProperty1<T, *>.becomes(value: Any?) {
-            assignments += this.getColumn() to formatSetValue(value)
+            assignments += targetTable.entityClass.getColumnName(this.name) to formatSetValue(value)
         }
 
         /**

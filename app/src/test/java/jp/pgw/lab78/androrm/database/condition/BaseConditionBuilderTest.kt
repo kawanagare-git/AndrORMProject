@@ -3,12 +3,15 @@ package jp.pgw.lab78.androrm.database.condition
 import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder.NullMarker
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeColumnRef
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeProperty
 import jp.pgw.lab78.androrm.database.support.createConditionBuilderTestState
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
@@ -396,4 +399,148 @@ class BaseConditionBuilderTest {
         assertEquals(expected, state.singleSql())
         assertEquals(emptyList<Any?>(), state.valueHolder.bindValues)
     }
+
+    @DisplayName("EXISTS / NOT EXISTS DSL はサブクエリの bindValues を引き継ぐ")
+    @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
+    @CsvSource(
+        "'exists','exists'",
+        "'notExists','not exists'",
+    )
+    fun testExistsDsl_withSubQueryBindValues(
+        methodName: String,
+        expectedOperator: String,
+    ) {
+        val subQuery = createEmployeeIdSubQuery()
+        val state = createConditionBuilderTestState()
+
+        val operations = mapOf<String, ConditionBuilder.() -> Unit>(
+            "exists" to {
+                exists(subQuery)
+            },
+            "notExists" to {
+                notExists(subQuery)
+            },
+        )
+
+        with(state.builder) {
+            operations.getValue(methodName).invoke(this)
+        }
+
+        assertEquals(
+            "$expectedOperator (${subQuery.build()})",
+            state.singleSql(),
+        )
+        assertEquals(
+            listOf("EMP001"),
+            state.valueHolder.bindValues,
+        )
+    }
+
+    @DisplayName("KProperty1 の IN SELECT / NOT IN SELECT DSL を検証する")
+    @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
+    @CsvSource(
+        "'inSelect','in'",
+        "'notInSelect','not in'",
+    )
+    fun testKPropertyInSelectDsl_withSubQueryBindValues(
+        methodName: String,
+        expectedOperator: String,
+    ) {
+        val subQuery = createEmployeeIdSubQuery()
+        val state = createConditionBuilderTestState()
+
+        val operations = mapOf<String, ConditionBuilder.() -> Unit>(
+            "inSelect" to {
+                EmployeeEntity::employeeId inSelect subQuery
+            },
+            "notInSelect" to {
+                EmployeeEntity::employeeId notInSelect subQuery
+            },
+        )
+
+        with(state.builder) {
+            operations.getValue(methodName).invoke(this)
+        }
+
+        assertEquals(
+            "EMP.EMPLOYEE_ID $expectedOperator (${subQuery.build()})",
+            state.singleSql(),
+        )
+        assertEquals(
+            listOf("EMP001"),
+            state.valueHolder.bindValues,
+        )
+    }
+
+    @DisplayName("ColumnRef の IN SELECT / NOT IN SELECT DSL を検証する")
+    @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
+    @CsvSource(
+        "'inSelect','in'",
+        "'notInSelect','not in'",
+    )
+    fun testColumnRefInSelectDsl_withSubQueryBindValues(
+        methodName: String,
+        expectedOperator: String,
+    ) {
+        val employeeTable = TableRef(EmployeeEntity::class, "EMP_MAIN")
+        val subQuery = createEmployeeIdSubQuery()
+        val state = createConditionBuilderTestState()
+
+        val operations = mapOf<String, ConditionBuilder.() -> Unit>(
+            "inSelect" to {
+                employeeTable[EmployeeEntity::employeeId] inSelect subQuery
+            },
+            "notInSelect" to {
+                employeeTable[EmployeeEntity::employeeId] notInSelect subQuery
+            },
+        )
+
+        with(state.builder) {
+            operations.getValue(methodName).invoke(this)
+        }
+
+        assertEquals(
+            "EMP_MAIN.EMPLOYEE_ID $expectedOperator (${subQuery.build()})",
+            state.singleSql(),
+        )
+        assertEquals(
+            listOf("EMP001"),
+            state.valueHolder.bindValues,
+        )
+    }
+
+    @Test
+    fun testSubQueryDsl_addsBindValuesInConditionOrder() {
+        val subQuery = createEmployeeIdSubQuery()
+        val state = createConditionBuilderTestState()
+
+        with(state.builder) {
+            EmployeeEntity::name eq "TARO"
+            EmployeeEntity::employeeId inSelect subQuery
+            EmployeeEntity::position eq "PG"
+        }
+
+        val actualSql = state.builder
+            .buildList()
+            .joinToString(" and ") { condition ->
+                condition.build()
+            }
+
+        assertEquals(
+            "EMP.NAME = ? " +
+                    "and EMP.EMPLOYEE_ID in (${subQuery.build()}) " +
+                    "and EMP.POSITION = ?",
+            actualSql,
+        )
+        assertEquals(
+            listOf("TARO", "EMP001", "PG"),
+            state.valueHolder.bindValues,
+        )
+    }
+
+    private fun createEmployeeIdSubQuery(): Select<EmployeeEntityIdSelection> =
+        Select(EmployeeEntityIdSelection::class)
+            .where {
+                EmployeeEntityIdSelection::employeeId eq "EMP001"
+            }
 }

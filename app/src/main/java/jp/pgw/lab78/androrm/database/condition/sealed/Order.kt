@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
@@ -31,7 +31,7 @@ data class Order(
      */
     override fun build(): String {
         val columnName =
-            "${column.extractClassFromProperty().getTableAlias()}.${column.getColumn()}"
+            "${column.extractClassFromProperty().getTableAlias()}.${column.getColumnName()}"
         val orderDir = if (ascending) "asc" else "desc"
         val nullsClause = if (nullsLast) "nulls last" else "nulls first"
         return "$columnName $orderDir $nullsClause"

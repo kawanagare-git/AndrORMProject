@@ -111,8 +111,8 @@ object AndroidTestSeedData {
                     effectCategories[(index + 1) % effectCategories.size]
                 SpellsMaster(
                     magicId = createPk(Keys.MAGIC_ID, effectIndex * 10_0000, index * 10),
-                    magicTypeId = effectIndex,
-                    magicName = "MAGIC%03d-%01d".format(index, effectIndex),
+                    magicTypeId = index % 12,
+                    magicName = "MAGIC%03d-%01d".format(effectIndex, index),
                     mainEffect = effect,
                     subEffect = subEffect,
                     createMethod = CREATE_METHOD,

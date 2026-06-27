@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.database.reference
 
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import kotlin.reflect.KProperty1
@@ -25,5 +25,5 @@ data class ColumnRef<E : Entity, V>(
      * @since 2026-05-12
      */
     override fun build(): String =
-        "${tableRef.alias}.${property.getColumn()}"
+        "${tableRef.alias}.${tableRef.entityClass.getColumnName(property.name)}"
 }

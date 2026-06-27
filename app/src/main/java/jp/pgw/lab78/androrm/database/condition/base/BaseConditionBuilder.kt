@@ -14,6 +14,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.FreeText
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
+import jp.pgw.lab78.androrm.database.utility.EntityManager.toColumnString
 import kotlin.reflect.KProperty1
 
 abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
@@ -36,7 +37,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.eq(value: Any) =
-        list.add(Compare.Value(this, EQ, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), EQ, formatValue(valueHolder, value)))
 
     /**
      * ## 等価条件用関数
@@ -56,7 +57,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-12
      */
     infix fun <T : Entity> ColumnRef<out T, *>.eq(value: Any) =
-        list.add(Compare.ColumnValue(this, EQ, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), EQ, formatValue(valueHolder, value)))
 
     /**
      * ## 等価条件用関数
@@ -96,7 +97,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.ne(value: Any) =
-        list.add(Compare.Value(this, NE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), NE, formatValue(valueHolder, value)))
 
     /**
      * ## 不等価条件用関数
@@ -116,7 +117,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-12
      */
     infix fun <T : Entity> ColumnRef<out T, *>.ne(value: Any) =
-        list.add(Compare.ColumnValue(this, NE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), NE, formatValue(valueHolder, value)))
 
     /**
      * ## 不等条件用関数
@@ -157,7 +158,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.gt(value: Any) =
-        list.add(Compare.Value(this, GT, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), GT, formatValue(valueHolder, value)))
 
     /**
      * ## 超過（含まない）条件用関数
@@ -177,7 +178,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.gt(value: Any) =
-        list.add(Compare.ColumnValue(this, GT, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), GT, formatValue(valueHolder, value)))
 
     /**
      * ## 超過（含まない）条件用関数
@@ -219,7 +220,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.ge(value: Any) =
-        list.add(Compare.Value(this, GE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), GE, formatValue(valueHolder, value)))
 
     /**
      * ## 以上条件用関数
@@ -239,7 +240,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.ge(value: Any) =
-        list.add(Compare.ColumnValue(this, GE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), GE, formatValue(valueHolder, value)))
 
     /**
      * ## 以上条件用関数
@@ -280,7 +281,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.lt(value: Any) =
-        list.add(Compare.Value(this, LT, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), LT, formatValue(valueHolder, value)))
 
     /**
      * ## 未満条件用関数
@@ -300,7 +301,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.lt(value: Any) =
-        list.add(Compare.ColumnValue(this, LT, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), LT, formatValue(valueHolder, value)))
 
     /**
      * ## 未満条件用関数
@@ -341,7 +342,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.le(value: Any) =
-        list.add(Compare.Value(this, LE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), LE, formatValue(valueHolder, value)))
 
     /**
      * ## 以下条件用関数
@@ -361,7 +362,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.le(value: Any) =
-        list.add(Compare.ColumnValue(this, LE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), LE, formatValue(valueHolder, value)))
 
     /**
      * ## 以下条件用関数
@@ -402,7 +403,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.like(value: Any) =
-        list.add(Compare.Value(this, LIKE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), LIKE, formatValue(valueHolder, value)))
 
     /**
      * ## 包括検索条件用関数
@@ -412,7 +413,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.like(value: Any) =
-        list.add(Compare.ColumnValue(this, LIKE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), LIKE, formatValue(valueHolder, value)))
 
     /**
      * ## 除外検索条件用関数
@@ -422,7 +423,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.notLike(value: Any) =
-        list.add(Compare.Value(this, NOT_LIKE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.toColumnString(), NOT_LIKE, formatValue(valueHolder, value)))
 
     /**
      * ## 包括検索条件用関数
@@ -432,7 +433,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.notLike(value: Any) =
-        list.add(Compare.ColumnValue(this, NOT_LIKE, formatValue(valueHolder, value)))
+        list.add(Compare.Value(this.build(), NOT_LIKE, formatValue(valueHolder, value)))
 
     /**
      * ## 包括パターン検索条件用関数
@@ -442,7 +443,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.glob(value: Any) {
-        list += Compare.Value(this, GLOB, formatValue(valueHolder, value))
+        list += Compare.Value(this.toColumnString(), GLOB, formatValue(valueHolder, value))
     }
 
     /**
@@ -453,7 +454,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<out T, *>.glob(value: Any) {
-        list += Compare.ColumnValue(this, GLOB, formatValue(valueHolder, value))
+        list += Compare.Value(this.build(), GLOB, formatValue(valueHolder, value))
     }
 
     /**
@@ -464,7 +465,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> KProperty1<T, *>.notGlob(value: Any) {
-        list += Compare.Value(this, NOT_GLOB, formatValue(valueHolder, value))
+        list += Compare.Value(this.toColumnString(), NOT_GLOB, formatValue(valueHolder, value))
     }
 
     /**
@@ -475,7 +476,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity> ColumnRef<T, *>.notGlob(value: Any) {
-        list += Compare.ColumnValue(this, NOT_GLOB, formatValue(valueHolder, value))
+        list += Compare.Value(this.build(), NOT_GLOB, formatValue(valueHolder, value))
     }
 
     /**
@@ -486,7 +487,12 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity, V> KProperty1<T, V>.inList(values: Collection<V>) =
-        list.add(Compare.Value(this, IN, values.map { formatValue(valueHolder, it as Any) }))
+        list.add(
+            Compare.Value(
+                this.toColumnString(),
+                IN,
+                values.map { formatValue(valueHolder, it as Any) })
+        )
 
     /**
      * ## メンバーシップ検索条件用関数
@@ -496,7 +502,12 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity, V> ColumnRef<T, V>.inList(values: Collection<V>) =
-        list.add(Compare.ColumnValue(this, IN, values.map { formatValue(valueHolder, it as Any) }))
+        list.add(
+            Compare.Value(
+                this.build(),
+                IN,
+                values.map { formatValue(valueHolder, it as Any) })
+        )
 
     /**
      * ## 非メンバーシップ検索条件用関数
@@ -506,7 +517,75 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity, V> KProperty1<T, V>.notInList(values: Collection<V>) =
-        list.add(Compare.Value(this, NOT_IN, values.map { formatValue(valueHolder, it as Any) }))
+        list.add(
+            Compare.Value(
+                this.toColumnString(),
+                NOT_IN,
+                values.map { formatValue(valueHolder, it as Any) })
+        )
+
+    /**
+     * ## メンバーシップ検索条件用関数
+     * @receiver 検索条件のカラム
+     * @param values 検索値
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
+    infix fun <T : Entity, V> ColumnRef<T, V>.notInList(values: Collection<V>) =
+        list.add(
+            Compare.Value(
+                this.build(),
+                NOT_IN,
+                values.map { formatValue(valueHolder, it as Any) })
+        )
+
+    /**
+     * ## メンバーシップ検索条件用関数
+     * @receiver 検索条件のカラム
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
+    infix fun <T : Entity, V> KProperty1<T, V>.inSelect(subQuery: Select<out SelectEntity>) {
+        valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.InSelect(this.toColumnString(), subQuery))
+    }
+
+    /**
+     * ## メンバーシップ検索条件用関数
+     * @receiver 検索条件のカラム
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
+    infix fun <T : Entity, V> ColumnRef<T, V>.inSelect(subQuery: Select<out SelectEntity>) {
+        valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.InSelect(this.build(), subQuery))
+    }
+
+    /**
+     * ## 非メンバーシップ検索条件用関数
+     * @receiver 検索条件のカラム
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    infix fun <T : Entity, V> KProperty1<T, V>.notInSelect(subQuery: Select<out SelectEntity>) {
+        valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.NotInSelect(this.toColumnString(), subQuery))
+    }
+
+    /**
+     * ## 非メンバーシップ検索条件用関数
+     * @receiver 検索条件のカラム
+     * @param subQuery 検索値抽出クエリ
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
+    infix fun <T : Entity, V> ColumnRef<T, V>.notInSelect(subQuery: Select<out SelectEntity>) {
+        valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.NotInSelect(this.build(), subQuery))
+    }
 
     /**
      * ## 範囲検索条件用関数
@@ -538,7 +617,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
          * @since 2025-10-19
          */
         infix fun and(end: Any) {
-            list += Compare.Between(property, start, formatValue(valueHolder, end))
+            list += Compare.Between(property.toColumnString(), start, formatValue(valueHolder, end))
         }
     }
 
@@ -552,7 +631,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
     infix fun <T : Entity> KProperty1<T, *>.between(pair: Pair<Any, Any>) =
         list.add(
             Compare.Between(
-                this,
+                this.toColumnString(),
                 formatValue(valueHolder, pair.first),
                 formatValue(valueHolder, pair.second)
             )
@@ -581,7 +660,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
         private val start: Any,
     ) {
         infix fun and(end: Any) {
-            list += Compare.ColumnBetween(column, start, formatValue(valueHolder, end))
+            list += Compare.Between(column.build(), start, formatValue(valueHolder, end))
         }
     }
 
@@ -594,8 +673,8 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      */
     infix fun <T : Entity> ColumnRef<out T, *>.between(pair: Pair<Any, Any>) =
         list.add(
-            Compare.ColumnBetween(
-                this,
+            Compare.Between(
+                this.build(),
                 formatValue(valueHolder, pair.first),
                 formatValue(valueHolder, pair.second)
             )
@@ -608,6 +687,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun <T : SelectEntity> exists(subQuery: Select<T>) {
+        valueHolder.addBindValues(subQuery.bindValues)
         list += Compare.Exists(subQuery)
     }
 
@@ -618,6 +698,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun <T : SelectEntity> notExists(subQuery: Select<T>) {
+        valueHolder.addBindValues(subQuery.bindValues)
         list += Compare.NotExists(subQuery)
     }
 
@@ -630,7 +711,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      */
     @Suppress("UNUSED_PARAMETER")
     infix fun <T : Entity, V> KProperty1<T, V>.isNull(dummy: Unit) =
-        list.add(Compare.IsNull(this))
+        list.add(Compare.IsNull(this.toColumnString()))
 
     /**
      * ## not null チェック条件用関数
@@ -641,7 +722,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      */
     @Suppress("UNUSED_PARAMETER")
     infix fun <T : Entity, V> KProperty1<T, V>.isNotNull(dummy: Unit) =
-        list.add(Compare.IsNotNull(this))
+        list.add(Compare.IsNotNull(this.toColumnString()))
 
     /**
      * ## null チェック条件用関数
@@ -652,7 +733,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      */
     @Suppress("UNUSED_PARAMETER")
     infix fun <T : Entity> ColumnRef<out T, *>.isNull(dummy: Unit) =
-        list.add(Compare.ColumnIsNull(this))
+        list.add(Compare.IsNull(this.build()))
 
     /**
      * ## not null チェック条件用関数
@@ -663,7 +744,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      */
     @Suppress("UNUSED_PARAMETER")
     infix fun <T : Entity> ColumnRef<out T, *>.isNotNull(dummy: Unit) =
-        list.add(Compare.ColumnIsNotNull(this))
+        list.add(Compare.IsNotNull(this.build()))
 
     /**
      * ## null チェック条件用マーカー列挙型
@@ -680,9 +761,10 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity, V> KProperty1<T, V>.checkForNull(marker: NullMarker) {
-        when (marker) {
-            NullMarker.IS_NULL -> list += Compare.IsNull(this)
-            NullMarker.IS_NOT_NULL -> list += Compare.IsNotNull(this)
+        val column = this.toColumnString()
+        list += when (marker) {
+            NullMarker.IS_NULL -> Compare.IsNull(column)
+            NullMarker.IS_NOT_NULL -> Compare.IsNotNull(column)
         }
     }
 
@@ -694,9 +776,10 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity> ColumnRef<out T, *>.checkForNull(marker: NullMarker) {
-        when (marker) {
-            NullMarker.IS_NULL -> list += Compare.ColumnIsNull(this)
-            NullMarker.IS_NOT_NULL -> list += Compare.ColumnIsNotNull(this)
+        val column = this.build()
+        list += when (marker) {
+            NullMarker.IS_NULL -> Compare.IsNull(column)
+            NullMarker.IS_NOT_NULL -> Compare.IsNotNull(column)
         }
     }
 

@@ -40,6 +40,16 @@ import java.time.LocalDateTime
             commonInterface = [SELECT],
         ),
         Projection(
+            entityNameExtend = "Id",
+            aliasExtend = "",
+            properties = [
+                ColumnProjection("magicId"),
+                ColumnProjection("magicTypeId", true),
+                ColumnProjection("subEffect", true),
+            ],
+            commonInterface = [SELECT],
+        ),
+        Projection(
             entityNameExtend = "Update",
             aliasExtend = "UPS",
             properties = [

@@ -4,6 +4,7 @@ import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeColumnRef
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeProperty
+import jp.pgw.lab78.androrm.database.utility.EntityManager.toColumnString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -32,7 +33,7 @@ class ConditionTest {
         expected: String,
     ) {
         val condition = Compare.Value(
-            lhsProperty = EmployeeEntity::employeeId,
+            lhsProperty = EmployeeEntity::employeeId.toColumnString(),
             operator = operator,
             value = "?",
         )
@@ -54,7 +55,7 @@ class ConditionTest {
             valueList += "?"
         }
         val condition = Compare.Value(
-            lhsProperty = EmployeeEntity::employeeId,
+            lhsProperty = EmployeeEntity::employeeId.toColumnString(),
             operator = operator,
             value = valueList,
         )
@@ -65,7 +66,7 @@ class ConditionTest {
     @CsvSource("'EmployeeEntity::employeeId', 'EMP.EMPLOYEE_ID between ? and ?'")
     fun between_shouldBuildExpectedSql(refString: String, expected: String) {
         val ref = changeColumnRef(refString)
-        val condition = Compare.ColumnBetween(column = ref, start = "?", end = "?")
+        val condition = Compare.Between(lhsProperty = ref.build(), start = "?", end = "?")
         assertEquals(expected, condition.build())
     }
 
@@ -73,7 +74,7 @@ class ConditionTest {
     @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is null'")
     fun isNull_shouldBuildExpectedSql(propertyString: String, expected: String) {
         val property = changeProperty(propertyString)
-        val condition = Compare.IsNull(lhsProperty = property)
+        val condition = Compare.IsNull(lhsProperty = property.toColumnString())
         assertEquals(expected, condition.build())
     }
 
@@ -83,7 +84,7 @@ class ConditionTest {
         propertyString: String, expected: String
     ) {
         val property = changeProperty(propertyString)
-        val condition = Compare.IsNotNull(lhsProperty = property)
+        val condition = Compare.IsNotNull(lhsProperty = property.toColumnString())
         assertEquals(expected, condition.build())
     }
 

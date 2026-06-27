@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.database.function
 
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.function.interfaces.FunctionBuilderLike
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
@@ -22,9 +22,9 @@ class FunctionBuilder(private val query: String) : FunctionBuilderLike {
      * @author Masahiro Inoue
      * @since 2025-08-08
      */
-    override fun <T : Entity>build(column: KProperty1<T, *>, isDistinct: Boolean): String {
+    override fun <T : Entity> build(column: KProperty1<T, *>, isDistinct: Boolean): String {
         val distinct = if (isDistinct) "DISTINCT " else ""
         val alias = column.extractClassFromProperty().getAlias()
-        return "${this.query}($distinct${alias}.${column.getColumn()})"
+        return "${this.query}($distinct${alias}.${column.getColumnName()})"
     }
 }

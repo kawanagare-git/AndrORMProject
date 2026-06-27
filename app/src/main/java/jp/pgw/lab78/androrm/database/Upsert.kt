@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00016
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00017
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00018
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getPropertyValue
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.UpsertEntity
@@ -92,7 +92,7 @@ class Upsert<T : UpsertEntity>(
         conflictColumns.clear()
         conflictColumns.addAll(
             properties.map { property ->
-                property.getColumn()
+                property.getColumnName()
             }
         )
         return this
@@ -113,7 +113,7 @@ class Upsert<T : UpsertEntity>(
         updateColumns.clear()
         updateColumns.addAll(
             properties.map { property ->
-                property.getColumn()
+                property.getColumnName()
             }
         )
         return this

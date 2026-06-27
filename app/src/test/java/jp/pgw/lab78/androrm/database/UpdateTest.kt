@@ -5,6 +5,8 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00014
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00015
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
 import jp.pgw.lab78.androrm.database.entities.update.TestAllEntityUpdate
+import jp.pgw.lab78.androrm.database.interfaces.plus
+import jp.pgw.lab78.androrm.database.interfaces.rawExpression
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.INNER
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
@@ -24,9 +26,9 @@ class UpdateTest {
         val actualQuery = update.build()
         val actualValues = update.bindValues
         assertEquals(
-            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY_UPDATE " +
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
                     "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ? " +
-                    "where TEST_ALL_ENTITY_UPDATE.NAME = ?",
+                    "where TEST_ALL_ENTITY.NAME = ?",
             actualQuery,
         )
         assertEquals(
@@ -107,5 +109,30 @@ class UpdateTest {
             }
         }
         assertEquals(AE00015, actual.message)
+    }
+
+    @Test
+    fun testBuild_setDslWithSqlExpression_buildsSetExpressionAndBindValues() {
+        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+
+        val update = Update(targetTable)
+            .set {
+                TestAllEntityUpdate::name becomes (targetTable[TestAllEntityUpdate::name] + 10)
+                TestAllEntityUpdate::updateDate becomes rawExpression("CURRENT_TIMESTAMP")
+            }
+            .where {
+                targetTable[TestAllEntityUpdate::name] eq "更新前"
+            }
+
+        assertEquals(
+            "update TEST_ALL_ENTITY as A " +
+                    "set NAME = (A.NAME + ?), UPDATE_DATE = CURRENT_TIMESTAMP " +
+                    "where A.NAME = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf(10, "更新前"),
+            update.bindValues,
+        )
     }
 }

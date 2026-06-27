@@ -13,6 +13,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaGetter
 
 /**
  * SupportFunction オブジェクトクラス
@@ -37,6 +38,19 @@ object SupportFunction {
             ?: error(CE00008.format(this.qualifiedName))
 
     /**
+     * ## テーブルエイリアス取得
+     * ### 指定されたエンティティクラスから
+     * ### `@Table`アノテーションに定義されているテーブルエイリアスを取得
+     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return `KClass` に付与された `@Table` アノテーションのテーブルエイリアス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T : Entity> KClass<out T>.getTableAlias() =
+        this.getTableAnnotation().alias.ifEmpty { this.getTableName() }
+
+    /**
      * ## テーブル名取得
      * ### エンティティクラスからテーブル名を取得する
      * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
@@ -49,17 +63,45 @@ object SupportFunction {
         .ifEmpty { this.simpleNameToSnakeCase() }
 
     /**
+     * ## カラム名のエイリアスを取得
+     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @return プロパティに付与された @Column アノテーションからカラムのエイリアスを取得
+     *          / 取得できない場合、空文字列
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
+    fun <T : Entity> KProperty1<out T, *>.getColumnAlias() =
+        this.findColumnAnnotationSafely()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
+
+    /**
      * ## テーブルエイリアス取得
      * ### 指定されたエンティティクラスから
      * ### `@Table`アノテーションに定義されているテーブルエイリアスを取得
      * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
      * @param T [Entity] インターフェースを実装するクラスの型。
+     * @param propertyName プロパティ名
      * @return `KClass` に付与された `@Table` アノテーションのテーブルエイリアス
      * @author Masahiro Inoue
-     * @since 2025-08-01
+     * @since 2026-06-27
      */
-    fun <T : Entity> KClass<out T>.getTableAlias() = this.getTableAnnotation().alias
-        .ifEmpty { this.simpleNameToSnakeCase() }
+    fun <T : Entity> KClass<out T>.getColumnAlias(propertyName: String): String =
+        this.findColumnAnnotationByPropertyName(propertyName)
+            ?.alias?.takeIf { columnAlias -> columnAlias.isNotBlank() } ?: EMPTY_STRING
+
+    /**
+     * ## カラム名の取得
+     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @param T [Entity] インターフェースを実装するクラスの型。
+     * @param propertyName プロパティ名
+     * @return プロパティに付与された @Column アノテーションからカラム名を取得
+     *          / 取得できない場合、プロパティ名をスネークケースに変換
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    fun <T : Entity> KClass<out T>.getColumnName(propertyName: String): String =
+        this.findColumnAnnotationByPropertyName(propertyName)
+            ?.name?.takeIf { columnName -> columnName.isNotBlank() } ?: propertyName.toSnakeCase()
 
     /**
      * ## カラム名の取得
@@ -70,21 +112,9 @@ object SupportFunction {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> KProperty1<out T, *>.getColumn(): String =
-        this.findAnnotation<Column>()?.name?.takeIf { it.isNotBlank() }
+    fun <T : Entity> KProperty1<out T, *>.getColumnName(): String =
+        this.findColumnAnnotationSafely()?.name?.takeIf { it.isNotBlank() }
             ?: this.simpleNameToSnakeCase()
-
-    /**
-     * ## カラム名のエイリアスを取得
-     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
-     * @param T [Entity] インターフェースを実装するクラスの型。
-     * @return プロパティに付与された @Column アノテーションからカラムのエイリアスを取得
-     *          / 取得できない場合、空文字列
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    fun <T : Entity> KProperty1<out T, *>.getColumnAlias() =
-        this.findAnnotation<Column>()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
 
     /**
      * ## クラスをスネークケースに変換
@@ -212,5 +242,125 @@ object SupportFunction {
             .firstOrNull { it.name == propertyName }
             ?: throw IllegalArgumentException("Property '$propertyName' is not found.")
         return property.getter.call(target)
+    }
+
+    /**
+     * ## Column アノテーション安全取得
+     * ### Kotlin reflection で取得できない場合、Java reflection で $annotations メソッドから取得する
+     * @receiver KProperty1
+     * @return Column アノテーション
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun KProperty1<*, *>.findColumnAnnotationSafely(): Column? =
+        runCatching {
+            this.findAnnotation<Column>()
+        }.getOrNull()
+            ?: this.findAnnotationFromAnnotationMethod(Column::class.java)
+
+    /**
+     * ## プロパティアノテーション取得
+     * ### Kotlin が生成する getXxx$annotations メソッドからアノテーションを取得する
+     * @receiver KProperty1
+     * @param annotationClass アノテーションクラス
+     * @return アノテーション
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun <A : Annotation> KProperty1<*, *>.findAnnotationFromAnnotationMethod(
+        annotationClass: Class<A>,
+    ): A? {
+        val ownerClass = findOwnerJavaClassSafely()
+            ?: return null
+
+        val annotationMethodNames = createAnnotationMethodNames()
+
+        return annotationMethodNames.firstNotNullOfOrNull { methodName ->
+            ownerClass.declaredMethods
+                .firstOrNull { method ->
+                    method.name == methodName && method.parameterCount == 0
+                }
+                ?.getAnnotation(annotationClass)
+        }
+    }
+
+    /**
+     * ## アノテーションメソッド名生成
+     * ### Kotlin が生成する getXxx$annotations / isXxx$annotations 候補を生成する
+     * @receiver KProperty1
+     * @return アノテーションメソッド名候補
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun KProperty1<*, *>.createAnnotationMethodNames(): List<String> {
+        val capitalizedName =
+            name.replaceFirstChar { character ->
+                character.titlecase(Locale.ROOT)
+            }
+
+        return listOf(
+            "get${capitalizedName}\$annotations",
+            "${name}\$annotations",
+        )
+    }
+
+    /**
+     * ## 所有 Java クラス安全取得
+     * ### Kotlin reflection 解決に失敗する場合を考慮して Java getter から取得する
+     * @receiver KProperty1
+     * @return 所有 Java クラス
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun KProperty1<*, *>.findOwnerJavaClassSafely(): Class<*>? =
+        runCatching {
+            this.javaGetter?.declaringClass
+        }.getOrNull()
+            ?: runCatching {
+                this.ownerKClass().java
+            }.getOrNull()
+
+    /**
+     * ## カラムアノテーション検索
+     * ### プロパティ名を基に JAVA 形式の取得メソッドを抽出する
+     * @return 生成した取得メソッド名のリスト
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun <T : Entity> KClass<out T>.findColumnAnnotationByPropertyName(
+        propertyName: String,
+    ): Column? {
+        val annotationMethodNames = createAnnotationMethodNames(propertyName)
+
+        return annotationMethodNames.firstNotNullOfOrNull { methodName ->
+            this.java.declaredMethods
+                .firstOrNull { method ->
+                    method.name == methodName && method.parameterCount == 0
+                }
+                ?.getAnnotation(Column::class.java)
+        }
+    }
+
+    /**
+     * ## プロパティ名→メソッド名生成
+     * ### プロパティ名から JAVA 形式の取得メソッド名を生成する
+     * @param propertyName プロパティ名
+     * @return 生成した取得メソッド名のリスト
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun createAnnotationMethodNames(
+        propertyName: String,
+    ): List<String> {
+        val capitalizedName =
+            propertyName.replaceFirstChar { character ->
+                character.titlecase(Locale.ROOT)
+            }
+
+        return listOf(
+            "get${capitalizedName}\$annotations",
+            "is${capitalizedName}\$annotations",
+            "${propertyName}\$annotations",
+        )
     }
 }

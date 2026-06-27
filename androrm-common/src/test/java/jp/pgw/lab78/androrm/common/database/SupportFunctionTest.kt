@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.common.database
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.buildAlias
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
@@ -78,40 +78,40 @@ class SupportFunctionTest {
     @Test
     fun testGetTableAliasFromClassName() {
         val actual = EmptyTableAliasEntity::class.getTableAlias()
-        assertEquals("EMPTY_TABLE_ALIAS_ENTITY", actual)
+        assertEquals("EMPTY_ALIAS_ENTITY", actual)
     }
 
     @DisplayName("getColumn は @Column.name があればそれを返せる")
     @Test
-    fun testGetColumnFromAnnotation() {
-        val actual = AnnotatedEntity::explicitColumn.getColumn()
+    fun testGetColumnNameFromAnnotation() {
+        val actual = AnnotatedEntity::explicitColumn.getColumnName()
         assertEquals("EMPLOYEE_ID", actual)
     }
 
     @DisplayName("getColumn は @Column.name が空ならプロパティ名をスネークケース化して返せる")
     @Test
-    fun testGetColumnFromPropertyNameWhenColumnNameIsBlank() {
-        val actual = AnnotatedEntity::blankColumnName.getColumn()
+    fun testGetColumnFromPropertyNameWhenColumnNameNameIsBlank() {
+        val actual = AnnotatedEntity::blankColumnName.getColumnName()
         assertEquals("BLANK_COLUMN_NAME", actual)
     }
 
     @DisplayName("getColumn は @Column がない場合もプロパティ名をスネークケース化して返せる")
     @Test
-    fun testGetColumnFromPropertyNameWhenColumnAnnotationDoesNotExist() {
-        val actual = AnnotatedEntity::noAnnotationProperty.getColumn()
+    fun testGetColumnFromPropertyNameWhenColumnNameAnnotationDoesNotExist() {
+        val actual = AnnotatedEntity::noAnnotationProperty.getColumnName()
         assertEquals("NO_ANNOTATION_PROPERTY", actual)
     }
 
     @DisplayName("getColumnAlias は @Column.alias があればそれを返せる")
     @Test
-    fun testGetColumnAliasFromAnnotation() {
+    fun testGetColumnNameAliasFromAnnotation() {
         val actual = AnnotatedEntity::explicitColumn.getColumnAlias()
         assertEquals("EMPLOYEE_ID_ALIAS", actual)
     }
 
     @DisplayName("getColumnAlias は @Column.alias が空なら空文字を返せる")
     @Test
-    fun testGetColumnAliasReturnsEmptyWhenAliasIsBlank() {
+    fun testGetColumnNameAliasReturnsEmptyWhenAliasIsBlank() {
         val actual = AnnotatedEntity::blankColumnName.getColumnAlias()
         assertEquals("", actual)
     }

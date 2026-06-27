@@ -6,8 +6,8 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00027
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
@@ -135,7 +135,7 @@ object EntityManager {
             val property = this.memberProperties.first { it.name == param.name }
             // @Column の name/alias を取得
             val columnAlias =
-                "${alias}_${property.getColumnAlias().ifBlank { property.getColumn() }}"
+                "${alias}_${property.getColumnAlias().ifBlank { property.getColumnName() }}"
             // tableMetadata から、カラム情報抽出
             val columnName = this.extractColumnMetadata(tableName, alias, columnAlias, property)
             // SQL 型マッピング（既存関数を呼び出し）
@@ -170,7 +170,7 @@ object EntityManager {
             val property = this.memberProperties.first { it.name == propertyName }
             // プロパティ情報情報を基にカラムエイリアスを取得
             val columnAlias =
-                "${alias}_${property.getColumnAlias().ifBlank { property.getColumn() }}"
+                "${alias}_${property.getColumnAlias().ifBlank { property.getColumnName() }}"
             // カラム名を生成
             val columnName = this.extractColumnMetadata(
                 tableName = tableName,
@@ -268,7 +268,7 @@ object EntityManager {
             // このブロックは、createTableName の保険。但し無かった場合、columnAlias to property も登録
             EntityDefinition(alias, this, mutableMapOf(columnAlias to property))
         }.columns.put(columnAlias, property)
-        return definedProperty?.getColumn() ?: property.getColumn()
+        return definedProperty?.getColumnName() ?: property.getColumnName()
     }
 
     /**
@@ -413,24 +413,36 @@ object EntityManager {
      * @since 2025-08-01
      */
     @Suppress("UNCHECKED_CAST")
-    fun formatValue(valueHolder: QueryWithBindValues, value: Any): String = when (value) {
-        is KProperty1<*, *> -> {
-            val property = value as KProperty1<out Entity, *>
-            "${property.extractClassFromProperty().getTableAlias()}.${value.getColumn()}"
+    fun formatValue(valueHolder: QueryWithBindValues, value: Any): String =
+        when (value) {
+            is KProperty1<*, *> -> {
+                (value as KProperty1<out Entity, *>).toColumnString()
+            }
+
+            is ColumnRef<*, *> -> {
+                (value as ColumnRef<out Entity, *>).build()
+            }
+
+            is SqlExpression -> {
+                value.build(valueHolder)
+            }
+
+            else -> {
+                valueHolder.addBindValue(value)
+                "?"
+            }
         }
 
-        is ColumnRef<*, *> -> {
-            val ref = value as ColumnRef<out Entity, *>
-            ref.build()
-        }
-
-        is SqlExpression -> {
-            value.build(valueHolder)
-        }
-
-        else -> {
-            valueHolder.addBindValue(value)
-            "?"
-        }
+    /**
+     * ## プロパティ→カラム変換
+     * ### KProperty1<out Entity, *> を「テーブルエイリアス.カラム名」形式の文字列に変換する
+     * @receiver 変換対象の KProperty1<out Entity, *>
+     * @return 変換された文字列
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    fun KProperty1<out Entity, *>.toColumnString(): String {
+        val entityClass = this.extractClassFromProperty()
+        return "${entityClass.getTableAlias()}.${entityClass.getColumnName(this.name)}"
     }
 }

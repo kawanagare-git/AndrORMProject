@@ -76,7 +76,6 @@ import java.time.LocalDateTime
             entityNameExtend = "UpdateEffect",
             aliasExtend = "UPS_EFF",
             properties = [
-                ColumnProjection("itemPk"),
                 ColumnProjection("mainEffect"),
                 ColumnProjection("subEffect"),
                 ColumnProjection("updateMethod"),
@@ -88,7 +87,6 @@ import java.time.LocalDateTime
             entityNameExtend = "UpdateEquip",
             aliasExtend = "UPS_EQP",
             properties = [
-                ColumnProjection("itemPk"),
                 ColumnProjection("itemType"),
                 ColumnProjection("equipableSlot"),
                 ColumnProjection("updateMethod"),

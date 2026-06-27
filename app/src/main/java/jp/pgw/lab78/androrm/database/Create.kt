@@ -6,7 +6,7 @@ import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
@@ -195,7 +195,7 @@ class Create<T : TableDefinitionEntity>(
             .firstOrNull { property ->
                 property.name == propertyName
             } ?: error(AE00008.format(propertyName, entityClass.qualifiedName))
-        return property.getColumn()
+        return property.getColumnName()
     }
 
     /**
@@ -209,7 +209,7 @@ class Create<T : TableDefinitionEntity>(
     private fun buildColumnDefinition(
         property: KProperty1<out T, *>,
     ): String {
-        val columnName = property.getColumn()
+        val columnName = property.getColumnName()
         val sqlType = mapKotlinTypeToSqlType(property.returnType)
         val defaultValue = property.findAnnotation<Column>()
             ?.default
@@ -251,7 +251,7 @@ class Create<T : TableDefinitionEntity>(
                 property.findAnnotation<PrimaryKey>() != null
             }
             .map { property ->
-                property.getColumn()
+                property.getColumnName()
             }
         return if (primaryKeyColumns.isEmpty()) {
             EMPTY_STRING

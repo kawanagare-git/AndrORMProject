@@ -10,12 +10,20 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.entities.*
 import jp.pgw.lab78.androrm.database.entities.insert.*
 import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData
+import jp.pgw.lab78.androrm.database.entities.select.SpellsMasterId
+import jp.pgw.lab78.androrm.database.entities.update.CharacterStatusUpdate
+import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEffect
+import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEquip
+import jp.pgw.lab78.androrm.database.entities.update.SpellsMasterUpdate
+import jp.pgw.lab78.androrm.database.interfaces.plus
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.support.AndroidTestCsvExporter
 import org.junit.*
 import org.junit.Assert.*
 import org.junit.rules.TestName
 import org.junit.runner.RunWith
 import org.junit.runners.MethodSorters
+import java.time.LocalDateTime
 import kotlin.reflect.KClass
 
 /**
@@ -30,6 +38,9 @@ class AndrOrmDatabaseAndroidTest {
     companion object {
         /** ログ出力有効フラグ */
         private const val LOGGING_ENABLED_PROPERTY = "androrm.logging.enabled"
+
+        /** DML 系実行時カウント */
+        var actualCount = 0
 
         /**
          * ## androidTest 開始前処理
@@ -192,7 +203,7 @@ class AndrOrmDatabaseAndroidTest {
                 assertEquals(
                     "tableName=$tableName",
                     expectedCount,
-                    countRows(
+                    countInsertRows(
                         db = helper.readableDatabase,
                         tableName = tableName,
                     )
@@ -212,9 +223,31 @@ class AndrOrmDatabaseAndroidTest {
         val databaseHelper = createDatabaseHelper()
 
         databaseHelper.use { helper ->
-            clearAllTables(helper.writableDatabase)
-            insertSeedData(helper)
+            actualCount = updateData(helper)
         }
+    }
+
+    /**
+
+     * ## step04 初期データ件数確認
+     * ### SeedData 投入後の各テーブル件数を確認する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    @Test
+    fun step06_verifyUpdatedRowCounts() {
+        val databaseHelper = createDatabaseHelper()
+        var expectedCount = 0
+        databaseHelper.use { helper ->
+            AndroidTestSeedData.rowCountByTable.forEach { (tableName) ->
+                expectedCount += countUpdateRows(
+                    db = helper.readableDatabase,
+                    tableName = tableName,
+                )
+            }
+        }
+        Log.d("step06", "actualCount = $actualCount")
+        assertEquals(expectedCount, actualCount)
     }
 
     /**
@@ -373,14 +406,74 @@ class AndrOrmDatabaseAndroidTest {
         )
     }
 
-//    private fun updateData(
-//        databaseHelper: AndrOrmDatabaseHelper,
-//    ) {
-//        val updateCharacterStatus = Update(CharacterStatusUpdate::class).set {
-//            CharacterStatusUpdate::value eq (CharacterStatusUpdate::value + 10)
-//        }
-//    }
-//
+    private fun updateData(
+        databaseHelper: AndrOrmDatabaseHelper,
+    ): Int {
+        val charStatus = TableRef(CharacterStatusUpdate::class, "CS")
+        val updateStr =
+            Update(charStatus).set {
+                CharacterStatusUpdate::value becomes
+                        charStatus[CharacterStatusUpdate::value] + 10
+                CharacterStatusUpdate::updateMethod assign "updatedSeedData"
+                CharacterStatusUpdate::updateTime assign LocalDateTime.now().plusDays(1)
+            }
+                .where { charStatus[CharacterStatusUpdate::statusType] eq "STR" }
+        val updateInt =
+            Update(charStatus).set {
+                CharacterStatusUpdate::value becomes
+                        charStatus[CharacterStatusUpdate::value] + 5
+                CharacterStatusUpdate::updateMethod assign "updatedSeedData"
+                CharacterStatusUpdate::updateTime assign LocalDateTime.now().plusDays(1)
+            }
+                .where { charStatus[CharacterStatusUpdate::statusType] eq "INT" }
+        val setItemMEff = ItemMasterUpdateEffect(
+            mainEffect = "STR",
+            subEffect = "HP",
+            updateMethod = "updatedSeedData",
+            updateTime = LocalDateTime.now().plusDays(1)
+        )
+        val updateItemEffect =
+            Update(ItemMasterUpdateEffect::class)
+                .set(setItemMEff)
+                .where {
+                    ItemMasterUpdateEffect::mainEffect eq "MP"
+                    ItemMasterUpdateEffect::subEffect.isNull(Unit)
+                }
+        val setItemMEqu = ItemMasterUpdateEquip(
+            itemType = 3,
+            equipableSlot = 4,
+            updateMethod = "updatedSeedData",
+            updateTime = LocalDateTime.now().plusDays(1)
+        )
+        val updateItemEquip =
+            Update(ItemMasterUpdateEquip::class)
+                .set(setItemMEqu)
+                .where { ItemMasterUpdateEquip::itemType eq 6 }
+        val selectSpell = Select(SpellsMasterId::class)
+            .where {
+                SpellsMasterId::magicTypeId between 3 and 5
+                SpellsMasterId::subEffect isNull Unit
+            }
+        val updateSpells =
+            Update(SpellsMasterUpdate::class)
+                .set {
+                    SpellsMasterUpdate::mainEffect assign "nihil"
+                    SpellsMasterUpdate::subEffect assign "all status"
+                    SpellsMasterUpdate::updateMethod assign "updatedSeedData"
+                    SpellsMasterUpdate::updateTime assign LocalDateTime.now().plusDays(1)
+                }
+                .where { SpellsMasterUpdate::magicId inSelect selectSpell }
+        return databaseHelper.transaction {
+            var count = 0
+            count += databaseHelper.executeDml(updateStr)
+            count += databaseHelper.executeDml(updateInt)
+            count += databaseHelper.executeDml(updateItemEffect)
+            count += databaseHelper.executeDml(updateItemEquip)
+            count += databaseHelper.executeDml(updateSpells)
+            count
+        }
+    }
+
     /**
      * ## Insert 一括実行
      * ### InsertEntity のリストをまとめて投入する
@@ -459,12 +552,33 @@ class AndrOrmDatabaseAndroidTest {
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
-    private fun countRows(
+    private fun countInsertRows(
         db: SQLiteDatabase,
         tableName: String,
     ): Int =
         db.rawQuery(
             "select count(*) from ${quoteIdentifier(tableName)}",
+            emptyArray<String>(),
+        ).use { cursor ->
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        }.also { Log.d("COUNT", "${quoteIdentifier(tableName)} has records = $it") }
+
+    /**
+     * ## 件数取得
+     * ### 指定テーブルの更新件数を取得する
+     * @param db SQLiteDatabase
+     * @param tableName テーブル名
+     * @return 件数
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun countUpdateRows(
+        db: SQLiteDatabase,
+        tableName: String,
+    ): Int =
+        db.rawQuery(
+            "select count(*) from ${quoteIdentifier(tableName)} where CREATE_DATETIME <> UPDATE_DATETIME",
             emptyArray<String>(),
         ).use { cursor ->
             cursor.moveToFirst()

@@ -14,7 +14,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00030
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumn
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
@@ -117,7 +117,7 @@ open class AndrOrmDatabaseHelper(
         preparedColumnMappings = entities.associateWith { entity ->
             entity.getConstructorOrderedProperties()
                 .map { property ->
-                    val newColumn = property.getColumn()
+                    val newColumn = property.getColumnName()
                     val oldColumn =
                         property.findAnnotation<ColumnOldName>()?.name?.takeIf { it.isNotBlank() }
                             ?: newColumn
@@ -278,6 +278,31 @@ open class AndrOrmDatabaseHelper(
      */
     fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor =
         readableDatabase.rawQuery(query, bindValues.toSelectionArgs())
+
+    /**
+     * ## トランザクション実行
+     * ### ブロック内の DB 更新を 1 トランザクションとして実行する
+     * - executeSelectAsCursor を使用する場合は、Cursor は block 内で使用すること
+     * - block 内で発生した例外は握りつぶさないこと
+     * @param block トランザクション内で実行する処理
+     * @return ブロックの戻り値
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    fun <R> transaction(block: AndrOrmDatabaseHelper.() -> R): R {
+        val db = writableDatabase
+        // トランザクション開始
+        db.beginTransaction()
+        try {
+            val result = this.block()
+            // block の実行が全て成功したらトランザクション成功のフラグを立てる
+            db.setTransactionSuccessful()
+            return result
+        } finally {
+            // block の実行状況に応じて、commit / rollback が実行される
+            db.endTransaction()
+        }
+    }
 
     /**
      * ## SELECT 用バインド値変換

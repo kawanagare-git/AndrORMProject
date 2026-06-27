@@ -23,7 +23,7 @@ class DeleteTest {
         val values = delete.bindValues
         println("$actual / values=$values")
         assertEquals(
-            "delete from TEST_ALL_ENTITY where TEST_ALL_ENTITY_DELETE.ADDRESS like ?",
+            "delete from TEST_ALL_ENTITY where TEST_ALL_ENTITY.ADDRESS like ?",
             actual
         )
         assertEquals(listOf("長野県%"), values)
