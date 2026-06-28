@@ -3,7 +3,6 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.database.SupportFunction
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
@@ -13,12 +12,12 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.queryparts.JoinClauseDelegate
 import jp.pgw.lab78.androrm.database.queryparts.JoinType
+import jp.pgw.lab78.androrm.database.queryparts.SetClauseBuilder
 import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getDmlTargets
 import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
 
 /**
  * ## Update 文生成クラス
@@ -123,12 +122,18 @@ class Update<T : UpdateEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-25
      */
-    fun set(block: SetClauseBuilder.() -> Unit): Update<T> {
+    fun set(block: SetClauseBuilder<T>.() -> Unit): Update<T> {
         isBuild = false
         setAssignments.clear()
         setBindValues.clear()
+        // 値の保存
         val valueHolder = object : QueryWithBindValues() {}
-        val builder = SetClauseBuilder(valueHolder).apply(block)
+        val builder =
+            SetClauseBuilder(
+                targetEntityClass = targetTable.entityClass,
+                valueHolder = valueHolder,
+                valueFormatter = EntityManager::formatValue,
+            ).apply(block)
         setAssignments.addAll(builder.buildList())
         setBindValues.addAll(valueHolder.bindValues)
         return this
@@ -321,67 +326,6 @@ class Update<T : UpdateEntity>(
                 this.javaClass.simpleName,
                 "alias[$tableAlias:$tableName]"
             )
-        }
-    }
-
-    /**
-     * ## SET 句ビルダー
-     * ### Update.set DSL で使用する
-     * @param valueHolder バインド値条件生成
-     * @author Masahiro Inoue
-     * @since 2026-05-25
-     */
-    inner class SetClauseBuilder internal constructor(
-        private val valueHolder: QueryWithBindValues,
-    ) {
-        /** SET 句リスト */
-        private val assignments = mutableListOf<Pair<String, String>>()
-
-        /**
-         * ## becomes メソッド
-         * ### 左辺プロパティに右辺値を設定する
-         * ### 左辺は SQLite の仕様に合わせて alias を付けず、カラム名のみを出力する。
-         * @receiver エンティティのプロパティ
-         * @param value 設定する値
-         * @author Masahiro Inoue
-         * @since 2026-05-25
-         */
-        infix fun KProperty1<T, *>.becomes(value: Any?) {
-            assignments += targetTable.entityClass.getColumnName(this.name) to formatSetValue(value)
-        }
-
-        /**
-         * ## assign メソッド
-         * ### becomes の別名
-         * @receiver エンティティのプロパティ
-         * @param value 設定する値
-         * @author Masahiro Inoue
-         * @since 2026-05-25
-         */
-        infix fun KProperty1<T, *>.assign(value: Any?) {
-            this becomes value
-        }
-
-        /**
-         * ## SET 句リスト生成
-         * @author Masahiro Inoue
-         * @since 2026-05-25
-         */
-        fun buildList(): List<Pair<String, String>> = assignments
-
-        /**
-         * ## SET 値式生成
-         * ### ColumnRef なら alias.column、それ以外は bind 値として扱う
-         * @param value 設定する値
-         * @author Masahiro Inoue
-         * @since 2026-05-25
-         */
-        private fun formatSetValue(value: Any?): String {
-            if (value == null) {
-                valueHolder.addBindValue(null)
-                return "?"
-            }
-            return EntityManager.formatValue(valueHolder, value)
         }
     }
 }

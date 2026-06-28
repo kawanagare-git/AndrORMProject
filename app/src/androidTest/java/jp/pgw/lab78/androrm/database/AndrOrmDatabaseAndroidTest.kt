@@ -15,6 +15,7 @@ import jp.pgw.lab78.androrm.database.entities.update.CharacterStatusUpdate
 import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEffect
 import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEquip
 import jp.pgw.lab78.androrm.database.entities.update.SpellsMasterUpdate
+import jp.pgw.lab78.androrm.database.entities.upsert.CharacterPossessionsUpsert
 import jp.pgw.lab78.androrm.database.interfaces.plus
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.support.AndroidTestCsvExporter
@@ -221,15 +222,13 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step05_updatedSeedData() {
         val databaseHelper = createDatabaseHelper()
-
         databaseHelper.use { helper ->
             actualCount = updateData(helper)
         }
     }
 
     /**
-
-     * ## step04 初期データ件数確認
+     * ## step06 更新データ件数確認
      * ### SeedData 投入後の各テーブル件数を確認する
      * @author Masahiro Inoue
      * @since 2026-06-16
@@ -247,7 +246,22 @@ class AndrOrmDatabaseAndroidTest {
             }
         }
         Log.d("step06", "actualCount = $actualCount")
+        assertNotEquals(0, actualCount)
         assertEquals(expectedCount, actualCount)
+    }
+
+    /**
+     * ## step07 追加・更新
+     * ### SeedData 投入後の各テーブルに追加・更新
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    @Test
+    fun step07_upsertSeedData() {
+        val databaseHelper = createDatabaseHelper()
+        databaseHelper.use { helper ->
+            actualCount = upsertData(helper)
+        }
     }
 
     /**
@@ -472,6 +486,73 @@ class AndrOrmDatabaseAndroidTest {
             count += databaseHelper.executeDml(updateSpells)
             count
         }
+    }
+
+    private fun upsertData(
+        databaseHelper: AndrOrmDatabaseHelper,
+    ): Int {
+        val upsertSeedDataList = listOf<CharacterPossessionsUpsert>(
+            CharacterPossessionsUpsert(
+                characterPk = 77211,
+                itemPk = 11637,
+                itemStatus = "EQUIP",
+                createMethod = "upsertSeedData",
+                updateMethod = "upsertSeedData",
+                updateTime = LocalDateTime.now().minusDays(2)
+            ),
+            CharacterPossessionsUpsert(
+                characterPk = 77211,
+                itemPk = 11638,
+                itemStatus = "EQUIP",
+                createMethod = "upsertSeedData",
+                updateMethod = "upsertSeedData",
+                updateTime = LocalDateTime.now().minusDays(2)
+            ),
+            CharacterPossessionsUpsert(
+                characterPk = 77211,
+                itemPk = 11639,
+                itemStatus = "EQUIP",
+                createMethod = "upsertSeedData",
+                updateMethod = "upsertSeedData",
+                updateTime = LocalDateTime.now().minusDays(2)
+            ),
+            CharacterPossessionsUpsert(
+                characterPk = 77211,
+                itemPk = 11640,
+                itemStatus = "EQUIP",
+                createMethod = "upsertSeedData",
+                updateMethod = "upsertSeedData",
+                updateTime = LocalDateTime.now().minusDays(2)
+            ),
+            CharacterPossessionsUpsert(
+                characterPk = 77211,
+                itemPk = 11641,
+                itemStatus = "EQUIP",
+                createMethod = "upsertSeedData",
+                updateMethod = "upsertSeedData",
+                updateTime = LocalDateTime.now().minusDays(2)
+            ),
+        )
+        actualCount = 0
+        databaseHelper.transaction {
+            upsertSeedDataList.forEach { _ ->
+                val upsert =
+                    Upsert(CharacterPossessionsUpsert::class)
+                        .onConflict {
+                            key(CharacterPossessionsUpsert::characterPk)
+                            key(CharacterPossessionsUpsert::itemPk)
+                        }
+                        .set {
+                            CharacterPossessionsUpsert::itemStatus becomes "EQUIP"
+                            CharacterPossessionsUpsert::updateMethod assign "upsertSeedData"
+                            CharacterPossessionsUpsert::updateTime assign LocalDateTime.now()
+                                .minusMonths(1)
+                        }
+                        .addEntities(upsertSeedDataList)
+                actualCount = databaseHelper.executeDml(upsert)
+            }
+        }
+        return actualCount
     }
 
     /**

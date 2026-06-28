@@ -65,55 +65,71 @@ class Insert<T : InsertEntity>(
     private var entities: MutableList<T> = mutableListOf()
 
     /** エンティティを1件追加 */
-    fun addEntity(entity: T) {
-        isBuild = false
-        entities.add(entity)
+    fun addEntity(entity: T): Insert<T> {
+        addEntities(listOf(entity))
+        return this
     }
 
     /** エンティティを複数件追加 */
-    fun addEntities(entities: List<T>) {
-        isBuild = false
-        this.entities.addAll(entities)
+    fun addEntities(vararg entities: T): Insert<T> {
+        addEntities(entities.asList())
+        return this
     }
 
-    /**
-     * ## 条件生成メソッド
-     * ### 定義された条件から文字列を生成する
-     * @return 生成された文字列
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    override fun build(): String = build(entities).first
+    /** エンティティを複数件追加 */
+    fun addEntities(entities: List<T>): Insert<T> {
+        isBuild = false
+        this.entities.addAll(entities)
+        return this
+    }
 
     /**
      * ## Insert 文を生成します
      * ### プレースホルダ名形式の insert 文を生成します
-     * @param entities インサートするデータが格納されたエンティティクラスのリスト
-     * @return insert into テーブル名 (カラム定義) values (「:プレースホルダー」を展開) to list<Any>
+     * @return insert into テーブル名 (カラム定義) values (「?」を展開)
      * @author Masahiro Inoue
      * @since 2026-05-23
      */
     @TraceLog
-    fun build(entities: List<T>): Pair<String, List<Any?>> {
+    override fun build(): String {
         require(entities.isNotEmpty()) { AE00011 }
-        this.entities = entities.toMutableList()
+        rebuildQueryIfRequired()
         clearBindValues()
-        query = if (isBuild) {
-            query
-        } else {
-            isBuild = true
-            "insert into $tableName $columnDefine values${
-                placeholders(entities.size, columnList.size)
-            }"
+        addBindValues(createBindValues())
+        return query
+    }
+
+    /**
+     * ## Insert 文を生成します
+     * ### プレースホルダ名形式の insert 文を生成します
+     * ### 可能ならば、クエリ文字列を再利用します
+     * @return insert into テーブル名 (カラム定義) values (「?」を展開)
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun rebuildQueryIfRequired() {
+        if (isBuild) {
+            return
         }
-        val bindValues = entities.flatMap { entity ->
+        query = "insert into $tableName $columnDefine values${
+            placeholders(entities.size, columnList.size)
+        }"
+        isBuild = true
+    }
+
+    /**
+     * ## バインド変数の生成
+     * ### バインド変数をエンティティ一覧に登録された内容に従い生成する
+     * @return 生成されたバインド変数
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
+    private fun createBindValues(): List<Any?> =
+        entities.flatMap { entity ->
             columnList.map { (propertyName, _) ->
                 getPropertyValue(entity, propertyName)
             }
         }
-        addBindValues(bindValues)
-        return query to bindValues
-    }
 
     /**
      * ## プレースホルダー定義文字列

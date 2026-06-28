@@ -18,35 +18,31 @@ class UpsertTest {
         val updateDate = LocalDateTime.of(2026, 5, 27, 12, 1, 0)
         val insertDateTime = LocalDateTime.of(2026, 5, 27, 12, 2, 0)
 
-        val entityList = listOf(
-            TestAllEntityComprehensive(
-                id = 1,
-                name = "川流",
-                address = "愛知県豊田市",
-                birthday = birthday,
-                updateDate = updateDate,
-                insertDateTime = insertDateTime,
-            )
+        val entity = TestAllEntityComprehensive(
+            id = 1,
+            name = "川流",
+            address = "愛知県豊田市",
+            birthday = birthday,
+            updateDate = updateDate,
+            insertDateTime = insertDateTime,
         )
-
+        val updateData = LocalDateTime.now().plusMonths(1)
         val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict(TestAllEntityComprehensive::id)
-            .updateColumns(
-                TestAllEntityComprehensive::name,
-                TestAllEntityComprehensive::address,
-                TestAllEntityComprehensive::updateDate,
-            )
-
-        val (query, values) = upsert.build(entityList)
-
+            .onConflict { column(TestAllEntityComprehensive::id) }
+            .set {
+                TestAllEntityComprehensive::name assign excluded(TestAllEntityComprehensive::name)
+                TestAllEntityComprehensive::address assign excluded(TestAllEntityComprehensive::address)
+                TestAllEntityComprehensive::updateDate becomes updateData
+            }
+        val query = upsert.addEntity(entity).build()
+        val values = upsert.bindValues
         println("$query / values = $values")
-
         assertEquals(
             "insert into TEST_ALL_ENTITY " +
                     "(ID, NAME, ADDRESS, BIRTHDAY, UPDATE_DATE, INSERT_DATE_TIME) " +
                     "values(?, ?, ?, ?, ?, ?) " +
                     "on conflict(ID) do update set " +
-                    "NAME = excluded.NAME, ADDRESS = excluded.ADDRESS, UPDATE_DATE = excluded.UPDATE_DATE",
+                    "NAME = excluded.NAME, ADDRESS = excluded.ADDRESS, UPDATE_DATE = ?",
             query
         )
 
@@ -58,6 +54,7 @@ class UpsertTest {
                 birthday,
                 updateDate,
                 insertDateTime,
+                updateData
             ),
             values
         )
@@ -91,19 +88,17 @@ class UpsertTest {
                 insertDateTime = insertDateTime2,
             )
         )
-
+        val updateData = LocalDateTime.now().plusMonths(1)
         val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict(TestAllEntityComprehensive::id)
-            .updateColumns(
-                TestAllEntityComprehensive::name,
-                TestAllEntityComprehensive::address,
-                TestAllEntityComprehensive::updateDate,
-            )
-
-        val (query, values) = upsert.build(entityList)
-
+            .onConflict { column(TestAllEntityComprehensive::id) }
+            .set {
+                TestAllEntityComprehensive::name assign excluded(TestAllEntityComprehensive::name)
+                TestAllEntityComprehensive::address assign excluded(TestAllEntityComprehensive::address)
+                TestAllEntityComprehensive::updateDate becomes excluded(TestAllEntityComprehensive::updateDate)
+            }
+        val query = upsert.addEntities(entityList).build()
+        val values = upsert.bindValues
         println("$query / values = $values")
-
         assertEquals(
             "insert into TEST_ALL_ENTITY " +
                     "(ID, NAME, ADDRESS, BIRTHDAY, UPDATE_DATE, INSERT_DATE_TIME) " +
@@ -137,14 +132,11 @@ class UpsertTest {
         val createdAt = LocalDateTime.of(2026, 5, 27, 12, 1, 0)
 
         val upsert = Upsert(SalaryEntityUpsert::class)
-            .onConflict(
-                SalaryEntityUpsert::employeeId,
-                SalaryEntityUpsert::payMonth,
-            )
-            .updateColumns(
-                SalaryEntityUpsert::createdAt,
-            )
-
+            .onConflict {
+                column(SalaryEntityUpsert::employeeId)
+                column(SalaryEntityUpsert::payMonth)
+            }
+            .set { SalaryEntityUpsert::createdAt assign excluded(SalaryEntityUpsert::createdAt) }
         upsert.addEntity(
             SalaryEntityUpsert(
                 employeeId = "00010",
@@ -180,13 +172,11 @@ class UpsertTest {
     @Test
     fun testBuildEmptyList() {
         val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict(TestAllEntityComprehensive::id)
-            .updateColumns(TestAllEntityComprehensive::name)
-
+            .onConflict { column(TestAllEntityComprehensive::id) }
+            .set { TestAllEntityComprehensive::name becomes TestAllEntityComprehensive::name }
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            upsert.build(emptyList<TestAllEntityComprehensive>())
+            upsert.build()
         }
-
         assertEquals(AE00016, actual.message)
     }
 
@@ -208,12 +198,12 @@ class UpsertTest {
         )
 
         val upsert = Upsert(TestAllEntityComprehensive::class)
-            .updateColumns(TestAllEntityComprehensive::name)
+            .addEntities(entityList)
+            .set { TestAllEntityComprehensive::name assign "Test name" }
 
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            upsert.build(entityList)
+            upsert.build()
         }
-
         assertEquals(AE00017, actual.message)
     }
 
@@ -233,14 +223,11 @@ class UpsertTest {
                 insertDateTime = insertDateTime,
             )
         )
-
         val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict(TestAllEntityComprehensive::id)
-
+            .onConflict { column(TestAllEntityComprehensive::id) }.addEntities(entityList)
         val actual = assertThrows(IllegalArgumentException::class.java) {
-            upsert.build(entityList)
+            upsert.build()
         }
-
         assertEquals(AE00018, actual.message)
     }
 }
