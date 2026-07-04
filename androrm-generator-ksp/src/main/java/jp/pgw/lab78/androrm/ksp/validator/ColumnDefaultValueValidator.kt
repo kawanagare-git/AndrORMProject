@@ -27,6 +27,7 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
         private const val CURRENT_DATE_VALUE = "CURRENT_DATE"
         private const val CURRENT_TIME_VALUE = "CURRENT_TIME"
         private const val CURRENT_TIMESTAMP_VALUE = "CURRENT_TIMESTAMP"
+        private const val CURRENT_TIMESTAMP_ISO_VALUE = "CURRENT_TIMESTAMP_ISO"
 
         private const val TYPE_INT = "kotlin.Int"
         private const val TYPE_LONG = "kotlin.Long"
@@ -213,6 +214,12 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
         vararg literalValidator: DateTimeLiteralValidator,
     ): Boolean {
         if (context.value.equals(dateType, ignoreCase = true)) {
+            return true
+        }
+        if (
+            context.typeName == TYPE_LOCAL_DATE_TIME &&
+            context.value.equals(CURRENT_TIMESTAMP_ISO_VALUE, ignoreCase = true)
+        ) {
             return true
         }
         val literal = context.value.toSqlStringLiteralValue() ?: return false

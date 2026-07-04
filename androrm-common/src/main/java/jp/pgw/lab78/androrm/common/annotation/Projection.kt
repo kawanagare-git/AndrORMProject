@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.common.annotation
 
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 
 /**
  * ## AndrORM プロジェクションアノテーションクラス

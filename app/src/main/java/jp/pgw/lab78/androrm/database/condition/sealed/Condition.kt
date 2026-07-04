@@ -11,6 +11,7 @@ import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager.extractClassFromProperty
+import jp.pgw.lab78.androrm.database.utility.EntityManager.toColumnString
 import kotlin.reflect.KProperty1
 
 /**
@@ -254,16 +255,19 @@ sealed class Compare : Condition() {
  * @author Masahiro Inoue
  * @since 2026-05-12
  */
-private
-
-fun Any.toSqlConditionText(): String {
-    return when (this) {
+private fun Any.toSqlConditionText(): String =
+    when (this) {
         is Collection<*> -> this.joinToString(", ", "(", ")")
-        is KProperty1<*, *> -> this.toSqlConditionText()
+        { it?.toSqlConditionText() ?: "null" }
+
+        is KProperty1<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
+            (this as KProperty1<out Entity, *>).toColumnString()
+        }
+
         is ColumnRef<*, *> -> this.build()
         else -> this.toString()
     }
-}
 
 /**
  * ## 条件定義クラス

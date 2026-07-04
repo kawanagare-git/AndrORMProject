@@ -13,5 +13,6 @@ annotation class EntityPackageInfo(
     val insertPackage: String = "insert",
     val updatePackage: String = "update",
     val upsertPackage: String = "upsert",
+    val absertPackage: String = "absert",
     val deletePackage: String = "delete",
 )

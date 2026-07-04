@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -7,7 +8,6 @@ import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.*
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
@@ -26,7 +26,7 @@ import java.time.LocalDateTime
                 ColumnProjection("payMonth"),
                 ColumnProjection("createdAt")
             ],
-            commonInterface = [DMLInterfaceEnum.UPSERT]
+            commonInterface = [DMLInterfaceEnum.UPSERT, DMLInterfaceEnum.ABSERT]
         ),
         Projection(
             entityNameExtend = "Insert",

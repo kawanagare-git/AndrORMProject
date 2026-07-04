@@ -88,7 +88,6 @@ class UpsertTest {
                 insertDateTime = insertDateTime2,
             )
         )
-        val updateData = LocalDateTime.now().plusMonths(1)
         val upsert = Upsert(TestAllEntityComprehensive::class)
             .onConflict { column(TestAllEntityComprehensive::id) }
             .set {
@@ -229,5 +228,87 @@ class UpsertTest {
             upsert.build()
         }
         assertEquals(AE00018, actual.message)
+    }
+
+    @Test
+    fun testBuildWithWhereBuildsDoUpdateWhereClause() {
+        val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
+
+        val upsert = Upsert(SalaryEntityUpsert::class)
+            .addEntity(
+                SalaryEntityUpsert(
+                    employeeId = "00010",
+                    payMonth = "202607",
+                    createdAt = createdAt,
+                )
+            )
+            .onConflict {
+                column(SalaryEntityUpsert::employeeId)
+                column(SalaryEntityUpsert::payMonth)
+            }
+            .set {
+                SalaryEntityUpsert::createdAt assign
+                        excluded(SalaryEntityUpsert::createdAt)
+            }
+            .where {
+                condition("excluded.PAY_MONTH = ?", "202607")
+            }
+
+        val actualQuery = upsert.build()
+        val actualValues = upsert.bindValues
+
+        assertEquals(
+            "insert into SALARY " +
+                    "(EMPLOYEE_ID, PAY_MONTH, CREATE_DATE_TIME) " +
+                    "values(?, ?, ?) " +
+                    "on conflict(EMPLOYEE_ID, PAY_MONTH) do update set " +
+                    "CREATE_DATE_TIME = excluded.CREATE_DATE_TIME " +
+                    "where excluded.PAY_MONTH = ?",
+            actualQuery,
+        )
+
+        assertEquals(
+            listOf(
+                "00010",
+                "202607",
+                createdAt,
+                "202607",
+            ),
+            actualValues,
+        )
+    }
+
+    @Test
+    fun testOnConflictCalledTwiceReplacesConflictColumns() {
+        val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
+
+        val upsert = Upsert(SalaryEntityUpsert::class)
+            .addEntity(
+                SalaryEntityUpsert(
+                    employeeId = "00010",
+                    payMonth = "202607",
+                    createdAt = createdAt,
+                )
+            )
+            .onConflict {
+                column(SalaryEntityUpsert::employeeId)
+            }
+            .onConflict {
+                key(SalaryEntityUpsert::employeeId)
+                key(SalaryEntityUpsert::payMonth)
+            }
+            .set {
+                SalaryEntityUpsert::createdAt assign
+                        excluded(SalaryEntityUpsert::createdAt)
+            }
+
+        assertEquals(
+            "insert into SALARY " +
+                    "(EMPLOYEE_ID, PAY_MONTH, CREATE_DATE_TIME) " +
+                    "values(?, ?, ?) " +
+                    "on conflict(EMPLOYEE_ID, PAY_MONTH) do update set " +
+                    "CREATE_DATE_TIME = excluded.CREATE_DATE_TIME",
+            upsert.build(),
+        )
     }
 }

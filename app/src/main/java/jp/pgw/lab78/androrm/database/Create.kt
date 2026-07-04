@@ -1,5 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.CURRENT_TIMESTAMP_ISO_DEFAULT_EXPRESSION
+import jp.pgw.lab78.androrm.common.Constants.CURRENT_TIMESTAMP_ISO_VALUE
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.IndexType
 import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
@@ -289,9 +291,13 @@ class Create<T : TableDefinitionEntity>(
     private fun normalizeDefaultValue(
         defaultValue: String,
     ): String =
-        if (defaultValue.equals(NULL_STRING, ignoreCase = false)) {
-            NULL_STRING.uppercase()
-        } else {
-            defaultValue
+        when {
+            (defaultValue.equals(NULL_STRING, ignoreCase = false)) ->
+                NULL_STRING.uppercase()
+
+            (defaultValue.equals(CURRENT_TIMESTAMP_ISO_VALUE, ignoreCase = true)) ->
+                CURRENT_TIMESTAMP_ISO_DEFAULT_EXPRESSION
+
+            else -> defaultValue
         }
 }

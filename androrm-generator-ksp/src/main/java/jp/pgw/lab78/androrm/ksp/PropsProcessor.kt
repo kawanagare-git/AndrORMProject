@@ -4,15 +4,12 @@ import com.google.devtools.ksp.KspExperimental
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
-import com.google.devtools.ksp.symbol.*
+import com.google.devtools.ksp.symbol.KSAnnotated
+import com.google.devtools.ksp.symbol.KSClassDeclaration
+import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.TypeName
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
-import jp.pgw.lab78.androrm.common.annotation.Projection
-import jp.pgw.lab78.androrm.common.annotation.Projections
-import jp.pgw.lab78.androrm.common.database.annotation.Function
-import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.ksp.factory.ColumnPropertyFactory
@@ -45,59 +42,8 @@ class PropsProcessor(
     private val codeGenerator: CodeGenerator,
 ) : SymbolProcessor, LoggerLike by logger {
     companion object {
-        /** プロパティ名一覧出力先パッケージ */
-        private const val GENERATED_PACKAGE = "jp.pgw.lab78.androrm.ksp.generated"
-
-        /** プロパティ名一覧 Enum 名 */
-        private const val GENERATED_PROPERTIES = "AllClassProperties"
-
-        /** @EntityPackageInfo */
-        private val ENTITY_PACKAGE_INFO = EntityPackageInfo::class.simpleName!!
-
         /** @EntityPackageInfo */
         private val ENTITY_PACKAGE_INFO_FQN = EntityPackageInfo::class.qualifiedName!!
-
-        /** @Projection */
-        private val PROJECTION = Projection::class.simpleName!!
-
-        /** @Projection(FQN) */
-        private val PROJECTION_FQN = Projection::class.qualifiedName!!
-
-        /** @Projections */
-        private val PROJECTIONS = Projections::class.simpleName!!
-
-        /** @Projections(FQN) */
-        private val PROJECTIONS_FQN = Projections::class.qualifiedName!!
-
-        /** @Table */
-        private val TABLE = Table::class.simpleName!!
-
-        /** @Table(FQN) */
-        private val TABLE_FQN = Table::class.qualifiedName!!
-
-        /** @Column */
-        private val FUNCTION = Function::class.simpleName!!
-
-        /** @Column(FQN) */
-        private val FUNCTION_FQN = Function::class.qualifiedName!!
-
-        /** FunctionProjection の引数検査用正規表現 */
-        private val STRING_LITERAL_REGEX = "^'.*'$".toRegex()
-
-        /**
-         * ## パッケージとインターフェースのリレーションクラス
-         * ### 標準インターフェースと出力先パッケージを紐づける
-         * @param relation インターフェースと @EntityPackageInfo の変数の組み合わせ
-         * @author Masahiro Inoue
-         * @since 2025-08-01
-         */
-        enum class PackageInterfaceRelation(val relation: String) {
-            SELECT("selectPackage"),
-            INSERT("insertPackage"),
-            UPDATE("updatePackage"),
-            UPSERT("upsertPackage"),
-            DELETE("deletePackage"),
-        }
     }
 
     /** インポート収集ヘルパー */
@@ -274,85 +220,6 @@ class PropsProcessor(
             interfaces = interfaces
         )
         logTraceExiting(createClassName)
-    }
-
-    /**
-     * ## マーカーインターフェース抽出
-     * ### マーカーインターフェースのリストを生成
-     * @param definition メタデータ
-     * @return マーカーインターフェースのリスト
-     * @author Masahiro Inoue
-     * @since 2025-08-22
-     */
-    private fun collectInterfaces(definition: ProjectionDefinition): List<TypeName> {
-        logTraceEntered(definition)
-        // commonInterfaces と customInterfaces を結合して TypeName のリストを生成
-        val result = buildList<TypeName> {
-            definition.commonInterfaces.forEach { common ->
-                add(ClassName.bestGuess(common.interfaceFQN))
-            }
-            definition.customInterfaces
-                .filter { it.isNotBlank() }
-                .forEach { custom ->
-                    add(ClassName.bestGuess(custom))
-                }
-        }
-        logTraceExiting(result)
-        return result
-    }
-
-    /**
-     * ## 共通インターフェースの生成
-     * ### @Projection の commonInterface の値から
-     * ### 共通インターフェースの FQN を取得する
-     * @param commonInterface 共通インターフェースを文字列化した値
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private fun generateCommonInterface(commonInterface: String): ClassName {
-        logTraceEntered(commonInterface)
-        val result = ClassName.bestGuess(
-            (DMLInterfaceEnum.valueOf(
-                ClassName.bestGuess(commonInterface).simpleName
-            )).interfaceFQN
-        )
-        logTraceExiting(result)
-        return result
-    }
-
-    /**
-     * ## アノテーション引数抽出
-     * ### KSAnnotation から指定された名前の引数を抽出し、
-     * ### 指定された型にキャストして戻す
-     * @param T 抽出する引数の型
-     * @param name 抽出する引数の名前
-     * @return 抽出された引数の値 / 存在しない場合は null
-     * @author Masahiro Inoue
-     * @since 2025-09-05
-     */
-    inline fun <reified T> KSAnnotation.argumentOf(name: String): T? {
-        logTraceEntered(name)
-        val argValue = arguments.firstOrNull { it.name?.asString() == name }?.value ?: run {
-            // 引数が存在しない場合は null を戻す
-            logTraceExiting("null")
-            return null
-        }
-        // Enum の場合は KSType から Enum を取得
-        if (T::class.java.isEnum) {
-            val ksType = argValue as? KSType ?: run {
-                // 引数が存在しない場合は null を戻す
-                logTraceExiting("null")
-                return null
-            }
-            val enumName = ksType.declaration.simpleName.asString()
-
-            @Suppress("UNCHECKED_CAST") val result =
-                java.lang.Enum.valueOf(T::class.java as Class<out Enum<*>>, enumName) as T
-            logTraceExiting(result)
-            return result
-        }
-        logTraceExiting(argValue)
-        return argValue as? T
     }
 
     /**

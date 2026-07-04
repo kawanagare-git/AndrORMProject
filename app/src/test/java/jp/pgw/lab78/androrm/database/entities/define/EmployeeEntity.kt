@@ -1,11 +1,11 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum.*
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -22,7 +22,7 @@ import java.time.LocalDateTime
             entityNameExtend = "IdSelection",
             aliasExtend = "ID",
             properties = [ColumnProjection("employeeId")],
-            commonInterface = [DMLInterfaceEnum.SELECT]
+            commonInterface = [SELECT]
         ),
         Projection(
             entityNameExtend = "",
@@ -34,7 +34,23 @@ import java.time.LocalDateTime
                 ColumnProjection("gender"),
                 ColumnProjection("position"),
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.UPDATE]
+            commonInterface = [SELECT, UPDATE]
+        ),
+        Projection(
+            entityNameExtend = "",
+            properties = [
+                ColumnProjection("employeeId", hideFromSelect = false),
+                ColumnProjection("employeeSubId", hideFromSelect = true),
+                ColumnProjection("name"),
+                ColumnProjection("address"),
+                ColumnProjection("gender"),
+                ColumnProjection("position"),
+                ColumnProjection("createdAt"),
+                ColumnProjection("createdBy"),
+                ColumnProjection("updatedAt"),
+                ColumnProjection("updatedBy"),
+            ],
+            commonInterface = [ABSERT]
         ),
     ]
 )

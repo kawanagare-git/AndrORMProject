@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum.*
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
@@ -8,7 +9,6 @@ import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.COUNT
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
@@ -31,7 +31,7 @@ import java.time.LocalDateTime
             functions = [
                 FunctionProjection(function = COUNT, args = [], alias = "ALL_LINE")
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT, DMLInterfaceEnum.UPSERT]
+            commonInterface = [SELECT, UPSERT]
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -44,7 +44,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updatedAt"),
                 ColumnProjection("updatedBy")
             ],
-            commonInterface = [DMLInterfaceEnum.INSERT]
+            commonInterface = [INSERT, ABSERT]
         ),
     ]
 )

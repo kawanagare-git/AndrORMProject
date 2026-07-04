@@ -1,10 +1,10 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum.*
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.ComprehensiveEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -15,7 +15,7 @@ import java.time.LocalDateTime
             entityNameExtend = "IdOnly",
             aliasExtend = "ID",
             properties = [ColumnProjection("id")],
-            commonInterface = [DMLInterfaceEnum.SELECT]
+            commonInterface = [SELECT]
         ),
         Projection(
             entityNameExtend = "Comprehensive",
@@ -27,7 +27,17 @@ import java.time.LocalDateTime
                 ColumnProjection("updateDate"),
                 ColumnProjection("insertDateTime")
             ],
-            commonInterface = [DMLInterfaceEnum.INSERT, DMLInterfaceEnum.UPSERT]
+            commonInterface = [INSERT, UPSERT, ABSERT]
+        ),
+        Projection(
+            entityNameExtend = "Comprehensive",
+            properties = [
+                ColumnProjection("id"),
+                ColumnProjection("name"),
+                ColumnProjection("address"),
+                ColumnProjection("birthday"),
+            ],
+            commonInterface = [ABSERT]
         ),
         Projection(
             entityNameExtend = "Update",
@@ -36,7 +46,7 @@ import java.time.LocalDateTime
                 ColumnProjection("address"),
                 ColumnProjection("updateDate"),
             ],
-            commonInterface = [DMLInterfaceEnum.UPDATE]
+            commonInterface = [UPDATE]
         ),
         Projection(
             entityNameExtend = "Delete",
@@ -44,7 +54,7 @@ import java.time.LocalDateTime
                 ColumnProjection("id", hideFromSelect = true),
                 ColumnProjection("address", hideFromSelect = true),
             ],
-            commonInterface = [DMLInterfaceEnum.DELETE]
+            commonInterface = [DELETE]
         ),
     ]
 )

@@ -85,6 +85,12 @@ class ColumnDefaultValueValidatorTest {
                 false,
                 "CURRENT_TIMESTAMP"
             ),
+            arguments(
+                "LocalDateTime / CURRENT_TIMESTAMP_ISO",
+                TYPE_LOCAL_DATE_TIME,
+                false,
+                "CURRENT_TIMESTAMP_ISO"
+            ),
             arguments("LocalDateTime? / NULL", TYPE_LOCAL_DATE_TIME, true, "NULL"),
 
             arguments("ByteArray / defaultValue 未指定", TYPE_BYTE_ARRAY, false, ""),

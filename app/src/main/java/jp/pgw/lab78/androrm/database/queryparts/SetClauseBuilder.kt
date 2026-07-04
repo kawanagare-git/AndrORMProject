@@ -40,6 +40,8 @@ open class SetClauseBuilder<T : Entity> internal constructor(
     /**
      * ## assign メソッド
      * ### becomes の別名
+     * @author Masahiro Inoue
+     * @since 2026-06-27
      */
     infix fun KProperty1<T, *>.assign(value: Any?) {
         this becomes value
@@ -47,11 +49,15 @@ open class SetClauseBuilder<T : Entity> internal constructor(
 
     /**
      * ## SET 句リスト生成
+     * @author Masahiro Inoue
+     * @since 2026-06-27
      */
     fun buildList(): List<Pair<String, String>> = assignments
 
     /**
      * ## SET 値式生成
+     * @author Masahiro Inoue
+     * @since 2026-06-27
      */
     private fun formatSetValue(value: Any?): String {
         if (value == null) {
@@ -66,6 +72,8 @@ open class SetClauseBuilder<T : Entity> internal constructor(
 /**
  * ## Upsert 用 SET 句ビルダー
  * ### excluded 参照と既存行カラム参照を追加する
+ * @author Masahiro Inoue
+ * @since 2026-06-27
  */
 class UpsertSetClauseBuilder<T : UpsertEntity> internal constructor(
     targetEntityClass: KClass<out T>,
@@ -79,6 +87,8 @@ class UpsertSetClauseBuilder<T : UpsertEntity> internal constructor(
     /**
      * ## excluded カラム参照
      * ### insert しようとした値を参照する
+     * @author Masahiro Inoue
+     * @since 2026-06-27
      */
     fun excluded(property: KProperty1<T, *>): SqlExpression =
         ExcludedColumnExpression(targetEntityClass, property)
@@ -86,6 +96,8 @@ class UpsertSetClauseBuilder<T : UpsertEntity> internal constructor(
     /**
      * ## 既存行カラム参照
      * ### 衝突した既存行の値を参照する
+     * @author Masahiro Inoue
+     * @since 2026-06-27
      */
     fun column(property: KProperty1<T, *>): SqlExpression =
         UpsertTargetColumnExpression(targetEntityClass, property)
@@ -93,6 +105,8 @@ class UpsertSetClauseBuilder<T : UpsertEntity> internal constructor(
 
 /**
  * ## excluded カラム式
+ * @author Masahiro Inoue
+ * @since 2026-06-27
  */
 private data class ExcludedColumnExpression<T : Entity>(
     private val entityClass: KClass<out T>,
@@ -104,6 +118,8 @@ private data class ExcludedColumnExpression<T : Entity>(
 
 /**
  * ## Upsert 対象カラム式
+ * @author Masahiro Inoue
+ * @since 2026-06-27
  */
 private data class UpsertTargetColumnExpression<T : Entity>(
     private val entityClass: KClass<out T>,

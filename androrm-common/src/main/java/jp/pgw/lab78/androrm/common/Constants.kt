@@ -47,6 +47,13 @@ object Constants {
     /** migration 用新テーブル suffix */
     const val NEW_TABLE_SUFFIX = "_new"
 
+    /** LocalDateTime 対応用 */
+    const val CURRENT_TIMESTAMP_ISO_VALUE = "CURRENT_TIMESTAMP_ISO"
+
+    /** LocalDateTime 対応用 default 埋め込み文字列*/
+    const val CURRENT_TIMESTAMP_ISO_DEFAULT_EXPRESSION =
+        "(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))"
+
     /**
      * ## ログタグ
      * ### ログ出力時のタグを定義する列挙クラス
@@ -127,5 +134,4 @@ object Constants {
 
     /** offset 既定値*/
     const val DEFAULT_OFFSET_VALUE = 0
-
 }

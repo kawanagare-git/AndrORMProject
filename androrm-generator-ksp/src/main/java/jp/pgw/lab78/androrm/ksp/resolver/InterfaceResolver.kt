@@ -6,10 +6,10 @@ import com.google.devtools.ksp.symbol.KSFile
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
+import jp.pgw.lab78.androrm.common.EntityConstants.PackageInterfaceRelation
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
-import jp.pgw.lab78.androrm.ksp.PropsProcessor.Companion.PackageInterfaceRelation
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 

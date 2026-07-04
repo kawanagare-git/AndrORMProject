@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.ksp.projectoin
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 
 /**
  * ## プロジェクション定義クラス

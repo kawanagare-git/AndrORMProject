@@ -4,12 +4,12 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSType
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.UNKNOWN
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.ReturnHint
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.CUSTOM
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.shared.library.Utils.isNull

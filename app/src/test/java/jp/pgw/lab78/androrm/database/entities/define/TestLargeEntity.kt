@@ -1,12 +1,12 @@
 package jp.pgw.lab78.androrm.database.entities.define
 
+import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.*
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.SUM
-import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDate
 import java.time.LocalDateTime

@@ -8,9 +8,10 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getPropertyValue
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.UpsertEntity
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
+import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
-import jp.pgw.lab78.androrm.database.queryparts.UpsertSetClauseBuilder
+import jp.pgw.lab78.androrm.database.queryparts.*
 import jp.pgw.lab78.androrm.database.utility.EntityManager
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getDmlTargets
 import kotlin.reflect.KClass
@@ -26,7 +27,9 @@ import kotlin.reflect.KProperty1
  */
 class Upsert<T : UpsertEntity>(
     private val entityClass: KClass<out T>,
-) : QueryBuilderLike<T>, QueryWithBindValues() {
+) : QueryBuilderLike<T>, QueryWithBindValues(), OnConflictClause<T, Upsert<T>> {
+
+    val self = this
 
     /** テーブル名 */
     private val tableName = entityClass.getTableName()
@@ -52,14 +55,20 @@ class Upsert<T : UpsertEntity>(
     /** Upsert 対象 Entity 一覧 */
     private var entities: MutableList<T> = mutableListOf()
 
-    /** 衝突判定カラム */
-    private val conflictColumns: MutableList<String> = mutableListOf()
-
-    /** 衝突時に更新するカラム */
-    private val updateColumns: MutableList<String> = mutableListOf()
-
     /** ビルドフラグ */
     private var isBuild: Boolean = false
+
+    /** 衝突判定句委譲 */
+    private val conflictDelegate =
+        OnConflictClauseDelegate(owner = this, entityClass = entityClass) {
+            isBuild = false
+        }
+
+    /** WHERE 句生成委譲 */
+    private val whereDelegate =
+        WhereClauseDelegate<Upsert<T>>(owner = this, ownerName = this.javaClass.simpleName) {
+            isBuild = false
+        }
 
     /** クエリ格納 */
     private lateinit var query: String
@@ -72,7 +81,7 @@ class Upsert<T : UpsertEntity>(
      * @since 2026-05-24
      */
     fun addEntity(entity: T): Upsert<T> {
-        addEntities(listOf(entity))
+        addEntities(entity)
         return this
     }
 
@@ -104,23 +113,15 @@ class Upsert<T : UpsertEntity>(
     /**
      * ## 衝突判定カラム指定
      * ### ON CONFLICT に指定するカラムを設定する
-     * @param properties 衝突判定に使用するプロパティ
+     * @param block 衝突判定に使用するプロパティを列挙するブロック
      * @return 自身のインスタンス
      * @author Masahiro Inoue
-     * @since 2026-05-24
+     * @since 2026-07-02
      */
     @TraceLog
-    fun onConflict(
-        block: ConflictClauseBuilder.() -> Unit,
-    ): Upsert<T> {
-        isBuild = false
-        conflictColumns.clear()
-
-        val builder = ConflictClauseBuilder().apply(block)
-        conflictColumns.addAll(builder.buildList())
-
-        return this
-    }
+    override fun onConflict(
+        block: OnConflictClauseBuilder<T>.() -> Unit,
+    ): Upsert<T> = conflictDelegate.onConflict(block)
 
     /**
      * ## 更新カラム指定
@@ -151,6 +152,15 @@ class Upsert<T : UpsertEntity>(
     }
 
     /**
+     * ## where
+     * ### UPSERT の DO UPDATE 実行条件を指定する
+     * @param block 検索条件
+     * @return 自身のインスタンス
+     */
+    fun where(block: ConditionBuilder.() -> Unit): Upsert<T> =
+        whereDelegate.where(block)
+
+    /**
      * ## Upsert 文生成
      * ### addEntity / addEntities で追加済みの Entity を基に Upsert 文を生成する
      * @return 生成された Upsert 文
@@ -160,7 +170,7 @@ class Upsert<T : UpsertEntity>(
     @TraceLog
     override fun build(): String {
         require(entities.isNotEmpty()) { AE00016 }
-        require(conflictColumns.isNotEmpty()) { AE00017 }
+        require(conflictDelegate.hasColumns) { AE00017 }
         require(setAssignments.isNotEmpty()) { AE00018 }
         this.entities = entities.toMutableList()
         clearBindValues()
@@ -168,7 +178,7 @@ class Upsert<T : UpsertEntity>(
             rowCount = entities.size,
             columnCount = columnList.size,
         )
-        val conflictClause = conflictColumns.joinToString(", ", "on conflict(", ")")
+        val conflictClause = conflictDelegate.buildClause()
         val updateClause = setAssignments.joinToString(", ") { (columnName, expression) ->
             "$columnName = $expression"
         }
@@ -176,15 +186,16 @@ class Upsert<T : UpsertEntity>(
             query
         } else {
             isBuild = true
-            "insert into $tableName $columnDefine values$valuesClause " +
-                    "$conflictClause do update set $updateClause"
+            val whereClause = whereDelegate.buildClause()
+            ("insert into $tableName $columnDefine values$valuesClause " +
+                    "$conflictClause do update set $updateClause $whereClause").trimEnd()
         }
         val insertBindValues = entities.flatMap { entity ->
             columnList.map { (propertyName, _) ->
                 getPropertyValue(entity, propertyName)
             }
         }
-        val bindValues = insertBindValues + setBindValues
+        val bindValues = insertBindValues + setBindValues + whereDelegate.bindValues
         addBindValues(bindValues)
         return query
     }
@@ -230,42 +241,4 @@ class Upsert<T : UpsertEntity>(
                 EntityManager.formatValue(valueHolder, value)
             }
         }
-
-    /**
-     * ## 衝突条件の生成クラス
-     * @author Masahiro Inoue
-     * @since 2026-06-27
-     */
-    inner class ConflictClauseBuilder internal constructor() {
-        private val columns = mutableListOf<String>()
-
-        /**
-         * ## 衝突判定プロパティ指定
-         * ### 衝突判定に使用するプロパティを指定する
-         * @param property 衝突判定に使用するプロパティ
-         * @author Masahiro Inoue
-         * @since 2026-06-27
-         */
-        fun key(property: KProperty1<T, *>) {
-            column(property)
-        }
-
-        /**
-         * ## 衝突判定プロパティ指定
-         * ### 衝突判定に使用するプロパティを指定する
-         * @param property 衝突判定に使用するプロパティ
-         * @author Masahiro Inoue
-         * @since 2026-06-27
-         */
-        fun column(property: KProperty1<T, *>) {
-            columns += entityClass.getColumnName(property.name)
-        }
-
-        /**
-         * ## 衝突判定プロパティリスト取得
-         * @author Masahiro Inoue
-         * @since 2026-06-27
-         */
-        fun buildList(): List<String> = columns
-    }
 }
