@@ -7,7 +7,11 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import java.io.OutputStreamWriter
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.primaryConstructor
 
 /**
  * ## AndroidTest CSV 出力
@@ -163,6 +167,177 @@ object AndroidTestCsvExporter {
                         createCsvRecord(cursor)
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * ## SELECT Entity 結果 CSV 出力
+     * ### executeSelectAsEntityList の結果を CSV へ出力する
+     * @param context Context
+     * @param stepName 実行済みテストメソッド名
+     * @param resultName 出力ファイル名。拡張子なし
+     * @param rows SELECT 結果
+     * @return 出力先 Uri
+     * @author Masahiro Inoue
+     * @since 2026-07-05
+     */
+    fun exportSelectEntityResultToDownload(
+        context: Context,
+        stepName: String,
+        resultName: String,
+        rows: List<Map<String, SelectEntity?>>,
+    ): Uri {
+        val uri = createCsvUri(
+            context = context,
+            stepName = stepName,
+            tableName = resultName,
+        )
+
+        exportSelectEntityResultToCsv(
+            context = context,
+            rows = rows,
+            uri = uri,
+        )
+
+        return uri
+    }
+
+    /**
+     * ## SELECT Entity 結果 CSV 出力
+     * ### alias.propertyName 形式で CSV 化する
+     * @param context Context
+     * @param rows SELECT 結果
+     * @param uri CSV 出力先 Uri
+     * @author Masahiro Inoue
+     * @since 2026-07-05
+     */
+    private fun exportSelectEntityResultToCsv(
+        context: Context,
+        rows: List<Map<String, SelectEntity?>>,
+        uri: Uri,
+    ) {
+        val columns = createSelectEntityCsvColumns(rows)
+        val outputStream = context.contentResolver.openOutputStream(uri)
+            ?: error("Failed to open SELECT result CSV output stream.")
+
+        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
+            writer.appendLine(
+                columns.joinToString(",") { column ->
+                    escapeCsv(column.header)
+                }
+            )
+
+            rows.forEach { row ->
+                writer.appendLine(
+                    columns.joinToString(",") { column ->
+                        escapeCsv(
+                            column.valueToString(row[column.alias])
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    /**
+     * ## SELECT Entity CSV カラム定義生成
+     * ### result の alias と Entity プロパティから CSV カラム定義を生成する
+     * @param rows SELECT 結果
+     * @return CSV カラム定義
+     * @author Masahiro Inoue
+     * @since 2026-07-05
+     */
+    private fun createSelectEntityCsvColumns(
+        rows: List<Map<String, SelectEntity?>>,
+    ): List<SelectEntityCsvColumn> {
+        val aliases = rows
+            .flatMap { row -> row.keys }
+            .distinct()
+
+        return aliases.flatMap { alias ->
+            val sampleEntity = rows
+                .asSequence()
+                .mapNotNull { row -> row[alias] }
+                .firstOrNull()
+
+            if (sampleEntity == null) {
+                emptyList()
+            } else {
+                createSelectEntityCsvColumns(
+                    alias = alias,
+                    sampleEntity = sampleEntity,
+                )
+            }
+        }
+    }
+
+    /**
+     * ## SELECT Entity CSV カラム定義生成
+     * ### Entity の primary constructor 順に CSV カラムを生成する
+     * @param alias SELECT 結果 Map の alias
+     * @param sampleEntity サンプル Entity
+     * @return CSV カラム定義
+     * @author Masahiro Inoue
+     * @since 2026-07-05
+     */
+    private fun createSelectEntityCsvColumns(
+        alias: String,
+        sampleEntity: SelectEntity,
+    ): List<SelectEntityCsvColumn> {
+        val propertyMap = sampleEntity::class.memberProperties.associateBy { property ->
+            property.name
+        }
+
+        val propertyNames = sampleEntity::class.primaryConstructor
+            ?.parameters
+            ?.mapNotNull { parameter -> parameter.name }
+            ?: propertyMap.keys.sorted()
+
+        return propertyNames.mapNotNull { propertyName ->
+            val property = propertyMap[propertyName] ?: return@mapNotNull null
+
+            @Suppress("UNCHECKED_CAST")
+            val typedProperty = property as KProperty1<SelectEntity, *>
+
+            SelectEntityCsvColumn(
+                alias = alias,
+                propertyName = propertyName,
+                valueGetter = { entity ->
+                    entity?.let { typedProperty.get(it) }
+                },
+            )
+        }
+    }
+
+    /**
+     * ## SELECT Entity CSV カラム定義
+     * @param alias SELECT 結果 Map の alias
+     * @param propertyName Entity プロパティ名
+     * @param valueGetter 値取得処理
+     * @author Masahiro Inoue
+     * @since 2026-07-05
+     */
+    private data class SelectEntityCsvColumn(
+        val alias: String,
+        val propertyName: String,
+        val valueGetter: (SelectEntity?) -> Any?,
+    ) {
+        /** CSV ヘッダー */
+        val header: String = "$alias.$propertyName"
+
+        /**
+         * ## CSV 値文字列化
+         * @param entity 対象 Entity
+         * @return CSV 出力値
+         */
+        fun valueToString(entity: SelectEntity?): String {
+            val value = valueGetter(entity)
+
+            return when (value) {
+                null -> ""
+                is ByteArray -> value.toHexString()
+                else -> value.toString()
             }
         }
     }

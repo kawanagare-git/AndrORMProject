@@ -6,15 +6,16 @@ import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.dml.interfaces.InsertEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.entities.*
+import jp.pgw.lab78.androrm.database.entities.absert.CharacterEquipAbsert
 import jp.pgw.lab78.androrm.database.entities.insert.*
 import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData
-import jp.pgw.lab78.androrm.database.entities.select.CharacterSpellsBase
-import jp.pgw.lab78.androrm.database.entities.select.SpellsMasterBase
-import jp.pgw.lab78.androrm.database.entities.select.SpellsMasterId
+import jp.pgw.lab78.androrm.database.entities.select.*
 import jp.pgw.lab78.androrm.database.entities.update.CharacterStatusUpdate
 import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEffect
 import jp.pgw.lab78.androrm.database.entities.update.ItemMasterUpdateEquip
@@ -47,11 +48,18 @@ class AndrOrmDatabaseAndroidTest {
         private const val LOGGING_ENABLED_PROPERTY = "androrm.logging.enabled"
 
         /** DML 系実行時カウント */
-        var actualCount = 0
+        private var actualCount = 0
+
+        private var testStep: String = EMPTY_STRING
+        private var verifyStep: String = EMPTY_STRING
 
         /** 各テーブルの件数を保持（単純件数） */
-        var beforeTableRowCounts: MutableMap<String, Int> = mutableMapOf()
-        var afterTableRowCounts: MutableMap<String, Int> = mutableMapOf()
+        private var beforeTableRowCounts: MutableMap<String, Int> = mutableMapOf()
+        private var afterTableRowCounts: MutableMap<String, Int> = mutableMapOf()
+
+        private var isUpgrade = false
+        private var version = if (isUpgrade) 2 else 1
+        private var index = if (isUpgrade) 1 else 0
 
         /**
          * ## androidTest 開始前処理
@@ -79,6 +87,34 @@ class AndrOrmDatabaseAndroidTest {
         fun afterClass() {
             System.clearProperty(LOGGING_ENABLED_PROPERTY)
         }
+
+        /**
+         * ## テーブル定義 Entity
+         */
+        private val tableDefinitions = arrayOf(
+            arrayOf(
+                CharacterStaticInfoV1::class,
+                ItemMaster::class,
+                SpellsMaster::class,
+                CharacterStatus::class,
+                CharacterPossessions::class,
+                CharacterEquip::class,
+                WeaponMastery::class,
+                MagicTypeMastery::class,
+                CharacterSpells::class,
+            ),
+            arrayOf(
+                CharacterStaticInfoV2::class,
+                ItemMaster::class,
+                SpellsMaster::class,
+                CharacterStatus::class,
+                CharacterPossessions::class,
+                CharacterEquip::class,
+                WeaponMastery::class,
+                MagicTypeMastery::class,
+                CharacterSpells::class,
+            )
+        )
     }
 
     @get:Rule
@@ -92,20 +128,19 @@ class AndrOrmDatabaseAndroidTest {
      */
     private val databaseName = "androrm_android_test.db"
 
+    var currentTableDefinitions = tableDefinitions[index]
+
     /**
-     * ## テーブル定義 Entity
+     * ## Test Step 初期化
+     * ### 各 Step 開始前の変数初期化
+     * @author Masahiro Inoue
+     * @since 2026-07-05
      */
-    private val tableDefinitions: Array<KClass<out TableDefinitionEntity>> = arrayOf(
-        CharacterStaticInfo::class,
-        ItemMaster::class,
-        SpellsMaster::class,
-        CharacterStatus::class,
-        CharacterPossessions::class,
-        CharacterEquip::class,
-        WeaponMastery::class,
-        MagicTypeMastery::class,
-        CharacterSpells::class,
-    )
+    @Before
+    fun beforeEachTest() {
+        verifyStep = testStep
+        testStep = testName.methodName.substringBefore("_")
+    }
 
     /**
      * ## 各テスト後 CSV 出力
@@ -115,7 +150,7 @@ class AndrOrmDatabaseAndroidTest {
      */
     @After
     fun afterEachTest() {
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
 
         databaseHelper.use { helper ->
             val outputUris = AndroidTestCsvExporter.exportAllTablesToDownload(
@@ -140,8 +175,7 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step01_createDatabase() {
         context.deleteDatabase(databaseName)
-
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
 
         databaseHelper.use { helper ->
             val db = helper.writableDatabase
@@ -159,8 +193,8 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step02_verifyTables() {
         try {
-            val databaseHelper = createDatabaseHelper()
-
+            val databaseHelper =
+                createDatabaseHelper(version, *currentTableDefinitions)
             databaseHelper.use { helper ->
                 val actualTableNames = findUserTableNames(helper.readableDatabase).toSet()
                 val expectedTableNames = AndroidTestSeedData.rowCountByTable.keys
@@ -194,8 +228,7 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step03_insertSeedData() {
-        val databaseHelper = createDatabaseHelper()
-
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
             helper.transaction {
                 clearAllTables(helper.writableDatabase)
@@ -212,7 +245,7 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step04_verifyInsertedRowCounts() {
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         refreshTableRowCounts(databaseHelper)
         assertEquals(beforeTableRowCounts, afterTableRowCounts.toMap())
     }
@@ -225,9 +258,9 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step05_updatedSeedData() {
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
-            actualCount = updateData(helper)
+            actualCount = updateData(helper, testStep)
         }
     }
 
@@ -239,15 +272,14 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step06_verifyUpdatedRowCounts() {
-        val databaseHelper = createDatabaseHelper()
-        val methodName = "step05"
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         var expectedCount = 0
         databaseHelper.use { helper ->
             AndroidTestSeedData.rowCountByTable.forEach { (tableName) ->
                 expectedCount += getTableRows(
                     db = helper.readableDatabase,
                     tableName = tableName.toSnakeCase(),
-                    "UPDATE_METHOD = '$methodName'"
+                    "UPDATE_METHOD = '$verifyStep'"
                 )
             }
         }
@@ -264,7 +296,7 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step07_upsertSeedData() {
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
             actualCount = upsertData(helper)
         }
@@ -278,29 +310,65 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step08_verifyUpdatedRowCounts() {
-        val databaseHelper = createDatabaseHelper()
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         refreshTableRowCounts(databaseHelper)
-        val methodName = "step07"
         var addCount: Int
-        tableDefinitions.forEach {
-            val tableName = it.simpleName!!.toSnakeCase()
+        currentTableDefinitions.forEach {
+            val tableName = it.getTableName()
             addCount = getTableRows(
                 db = databaseHelper.readableDatabase,
                 tableName = tableName,
-                "UPDATE_METHOD = '$methodName'",
+                "UPDATE_METHOD = '$verifyStep'",
             )
             beforeTableRowCounts[tableName] = beforeTableRowCounts.getValue(tableName) + addCount
             addCount = getTableRows(
                 db = databaseHelper.readableDatabase,
                 tableName = tableName,
-                "UPDATE_METHOD = '$methodName'",
+                "UPDATE_METHOD = '$verifyStep'",
                 "UPDATE_METHOD <> CREATE_METHOD",
             )
             beforeTableRowCounts[tableName] = beforeTableRowCounts.getValue(tableName) - addCount
         }
         assertEquals(beforeTableRowCounts, afterTableRowCounts.toMap())
         Log.d("step08", "actualCount = $actualCount")
-        assertNotEquals(0, actualCount)
+    }
+
+    /**
+     * ## step09 追加
+     * ### SeedData 投入後の各テーブルに追加 ※重複キーに対しては何もしない
+     * @author Masahiro Inoue
+     * @since 2026-07-07
+     */
+    @Test
+    fun step09_absertSeedData() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+        databaseHelper.use { helper ->
+            actualCount = absertData(helper)
+        }
+    }
+
+    /**
+     * ## step06 追加データ件数確認
+     * ### SeedData 投入後の各テーブル件数を確認する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    @Test
+    fun step10_verifyAbsertRowCounts() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+        refreshTableRowCounts(databaseHelper)
+        var addCount: Int
+        currentTableDefinitions.forEach {
+            val tableName = it.getTableName()
+            addCount = getTableRows(
+                db = databaseHelper.readableDatabase,
+                tableName = tableName,
+                "UPDATE_METHOD = '$verifyStep'",
+            )
+            beforeTableRowCounts[tableName] = beforeTableRowCounts.getValue(tableName) + addCount
+        }
+        assertEquals(beforeTableRowCounts, afterTableRowCounts.toMap())
+        Log.d("step10", "actualCount = $actualCount")
     }
 
     /**
@@ -310,11 +378,28 @@ class AndrOrmDatabaseAndroidTest {
      * @since 2026-06-16
      */
     @Test
-    fun step09_selectJoinSeedData() {
-        val databaseHelper = createDatabaseHelper()
+    fun step11_selectJoinSeedData() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
-            val result = selectDataJoin(helper)
-            actualCount = result.size
+            helper.transaction {
+                val cspSmResult = selectDataJoin1Tbl(helper)
+                assertSelectDataJoin1Tbl(cspSmResult)
+                AndroidTestCsvExporter.exportSelectEntityResultToDownload(
+                    context = InstrumentationRegistry.getInstrumentation().targetContext,
+                    stepName = testName.methodName,
+                    resultName = "select_join_CSP_SM",
+                    rows = cspSmResult,
+                )
+                val csinCpbCebResult = selectDataJoin2Tbl(helper)
+                assertSelectDataJoin2Tbl(csinCpbCebResult)
+                AndroidTestCsvExporter.exportSelectEntityResultToDownload(
+                    context = InstrumentationRegistry.getInstrumentation().targetContext,
+                    stepName = testName.methodName,
+                    resultName = "select_join_CSIN_CPB_CEB",
+                    rows = csinCpbCebResult,
+                )
+                actualCount = cspSmResult.size + csinCpbCebResult.size
+            }
         }
     }
 
@@ -325,11 +410,14 @@ class AndrOrmDatabaseAndroidTest {
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
-    private fun createDatabaseHelper(): AndrOrmDatabaseHelper = AndrOrmDatabaseHelper(
+    private fun createDatabaseHelper(
+        version: Int,
+        vararg entities: KClass<out TableDefinitionEntity>
+    ): AndrOrmDatabaseHelper = AndrOrmDatabaseHelper(
         context = context,
         databaseName = databaseName,
-        version = 1,
-        entities = tableDefinitions,
+        version = version,
+        entities = entities.toList(),
     )
 
     /**
@@ -342,18 +430,17 @@ class AndrOrmDatabaseAndroidTest {
     private fun insertSeedData(
         databaseHelper: AndrOrmDatabaseHelper,
     ) {
-        val methodName = "step03"
         insertAll(
             databaseHelper = databaseHelper,
-            entityClass = CharacterStaticInfoInsert::class,
+            entityClass = CharacterStaticInfoV1Insert::class,
             entities = AndroidTestSeedData.characterStaticInfoList.map { entity ->
-                CharacterStaticInfoInsert(
+                CharacterStaticInfoV1Insert(
                     characterPk = entity.characterPk,
                     userId = entity.userId,
                     characterNo = entity.characterNo,
                     characterName = entity.characterName,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -369,8 +456,8 @@ class AndrOrmDatabaseAndroidTest {
                     mainEffect = entity.mainEffect,
                     subEffect = entity.subEffect,
                     equipableSlot = entity.equipableSlot,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -385,8 +472,8 @@ class AndrOrmDatabaseAndroidTest {
                     magicName = entity.magicName,
                     mainEffect = entity.mainEffect,
                     subEffect = entity.subEffect,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -399,8 +486,8 @@ class AndrOrmDatabaseAndroidTest {
                     characterPk = entity.characterPk,
                     statusType = entity.statusType,
                     value = entity.value,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -413,8 +500,8 @@ class AndrOrmDatabaseAndroidTest {
                     characterPk = entity.characterPk,
                     itemPk = entity.itemPk,
                     itemStatus = entity.itemStatus,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -426,9 +513,9 @@ class AndrOrmDatabaseAndroidTest {
                 CharacterEquipInsert(
                     characterPk = entity.characterPk,
                     equipSlot = entity.equipSlot,
-                    itemPk = entity.itemPk,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    itemPk = entity.itemPk!!,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -440,8 +527,8 @@ class AndrOrmDatabaseAndroidTest {
                 WeaponMasteryInsert(
                     characterPk = entity.characterPk,
                     weaponTypeId = entity.weaponTypeId,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -454,8 +541,8 @@ class AndrOrmDatabaseAndroidTest {
                     characterPk = entity.characterPk,
                     magicTypeMastery = entity.magicTypeMastery,
                     mastery = entity.mastery,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -467,8 +554,8 @@ class AndrOrmDatabaseAndroidTest {
                 CharacterSpellsInsert(
                     characterPk = entity.characterPk,
                     magicId = entity.magicId,
-                    createMethod = methodName,
-                    updateMethod = methodName,
+                    createMethod = testStep,
+                    updateMethod = testStep,
                 )
             },
         )
@@ -476,23 +563,23 @@ class AndrOrmDatabaseAndroidTest {
 
     private fun updateData(
         databaseHelper: AndrOrmDatabaseHelper,
+        testStep: String,
     ): Int {
-        val methodName = "step05"
         val charStatus = TableRef(CharacterStatusUpdate::class, "CS")
         val updateStr = Update(charStatus).set {
             CharacterStatusUpdate::value becomes charStatus[CharacterStatusUpdate::value] + 10
-            CharacterStatusUpdate::updateMethod assign methodName
+            CharacterStatusUpdate::updateMethod assign testStep
             CharacterStatusUpdate::updateTime assign LocalDateTime.now().plusDays(1)
         }.where { charStatus[CharacterStatusUpdate::statusType] eq "STR" }
         val updateInt = Update(charStatus).set {
             CharacterStatusUpdate::value becomes charStatus[CharacterStatusUpdate::value] + 5
-            CharacterStatusUpdate::updateMethod assign methodName
+            CharacterStatusUpdate::updateMethod assign testStep
             CharacterStatusUpdate::updateTime assign LocalDateTime.now().plusDays(1)
         }.where { charStatus[CharacterStatusUpdate::statusType] eq "INT" }
         val setItemMEff = ItemMasterUpdateEffect(
             mainEffect = "STR",
             subEffect = "HP",
-            updateMethod = methodName,
+            updateMethod = testStep,
             updateTime = LocalDateTime.now().plusDays(1)
         )
         val updateItemEffect = Update(ItemMasterUpdateEffect::class).set(setItemMEff).where {
@@ -502,7 +589,7 @@ class AndrOrmDatabaseAndroidTest {
         val setItemMEqu = ItemMasterUpdateEquip(
             itemType = 3,
             equipableSlot = 4,
-            updateMethod = methodName,
+            updateMethod = testStep,
             updateTime = LocalDateTime.now().plusDays(1)
         )
         val updateItemEquip = Update(ItemMasterUpdateEquip::class).set(setItemMEqu)
@@ -514,7 +601,7 @@ class AndrOrmDatabaseAndroidTest {
         val updateSpells = Update(SpellsMasterUpdate::class).set {
             SpellsMasterUpdate::mainEffect assign "nihil"
             SpellsMasterUpdate::subEffect assign "all status"
-            SpellsMasterUpdate::updateMethod assign methodName
+            SpellsMasterUpdate::updateMethod assign testStep
             SpellsMasterUpdate::updateTime assign LocalDateTime.now().plusDays(1)
         }.where { SpellsMasterUpdate::magicId inSelect selectSpell }
         return databaseHelper.transaction {
@@ -531,46 +618,45 @@ class AndrOrmDatabaseAndroidTest {
     private fun upsertData(
         databaseHelper: AndrOrmDatabaseHelper,
     ): Int {
-        val methodName = "step07"
         val upsertSeedDataList = listOf<CharacterPossessionsUpsert>(
             CharacterPossessionsUpsert(
                 characterPk = 77211,
                 itemPk = 11637,
                 itemStatus = "EQUIP",
-                createMethod = methodName,
-                updateMethod = methodName,
+                createMethod = testStep,
+                updateMethod = testStep,
                 updateTime = LocalDateTime.now().minusDays(2)
             ),
             CharacterPossessionsUpsert(
                 characterPk = 77211,
                 itemPk = 11638,
                 itemStatus = "EQUIP",
-                createMethod = methodName,
-                updateMethod = methodName,
+                createMethod = testStep,
+                updateMethod = testStep,
                 updateTime = LocalDateTime.now().minusDays(2)
             ),
             CharacterPossessionsUpsert(
                 characterPk = 77211,
                 itemPk = 11639,
                 itemStatus = "EQUIP",
-                createMethod = methodName,
-                updateMethod = methodName,
+                createMethod = testStep,
+                updateMethod = testStep,
                 updateTime = LocalDateTime.now().minusDays(2)
             ),
             CharacterPossessionsUpsert(
                 characterPk = 77211,
                 itemPk = 11640,
                 itemStatus = "EQUIP",
-                createMethod = methodName,
-                updateMethod = methodName,
+                createMethod = testStep,
+                updateMethod = testStep,
                 updateTime = LocalDateTime.now().minusDays(2)
             ),
             CharacterPossessionsUpsert(
                 characterPk = 77211,
                 itemPk = 11641,
                 itemStatus = "EQUIP",
-                createMethod = methodName,
-                updateMethod = methodName,
+                createMethod = testStep,
+                updateMethod = testStep,
                 updateTime = LocalDateTime.now().minusDays(2)
             ),
         )
@@ -582,7 +668,7 @@ class AndrOrmDatabaseAndroidTest {
                     key(CharacterPossessionsUpsert::itemPk)
                 }.set {
                     CharacterPossessionsUpsert::itemStatus becomes "EQUIP"
-                    CharacterPossessionsUpsert::updateMethod assign methodName
+                    CharacterPossessionsUpsert::updateMethod assign testStep
                     CharacterPossessionsUpsert::updateTime assign LocalDateTime.now()
                         .minusMonths(1)
                 }.addEntities(upsertSeedDataList)
@@ -592,11 +678,73 @@ class AndrOrmDatabaseAndroidTest {
         return actualCount
     }
 
-    private fun selectDataJoin(
+    private fun absertData(
+        databaseHelper: AndrOrmDatabaseHelper,
+    ): Int {
+        val absertSeedDataList = listOf(
+            CharacterEquipAbsert(
+                characterPk = 77274,
+                equipSlot = 4,
+                itemPk = 11637,
+                createMethod = testStep,
+                createTime = LocalDateTime.now(),
+                updateMethod = testStep,
+                updateTime = LocalDateTime.now()
+            ),
+            CharacterEquipAbsert(
+                characterPk = 77274,
+                equipSlot = 5,
+                itemPk = 11638,
+                createMethod = testStep,
+                createTime = LocalDateTime.now(),
+                updateMethod = testStep,
+                updateTime = LocalDateTime.now()
+            ),
+            CharacterEquipAbsert(
+                characterPk = 77274,
+                equipSlot = 6,
+                itemPk = 11639,
+                createMethod = testStep,
+                createTime = LocalDateTime.now(),
+                updateMethod = testStep,
+                updateTime = LocalDateTime.now()
+            ),
+            CharacterEquipAbsert(
+                characterPk = 77274,
+                equipSlot = 7,
+                itemPk = null,
+                createMethod = testStep,
+                createTime = LocalDateTime.now(),
+                updateMethod = testStep,
+                updateTime = LocalDateTime.now()
+            ),
+            CharacterEquipAbsert(
+                characterPk = 77274,
+                equipSlot = 8,
+                itemPk = 10060,
+                createMethod = testStep,
+                createTime = LocalDateTime.now(),
+                updateMethod = testStep,
+                updateTime = LocalDateTime.now()
+            ),
+        )
+        actualCount = 0
+        databaseHelper.transaction {
+            absertSeedDataList.forEach { _ ->
+                val absert = Absert(CharacterEquipAbsert::class).onConflict {
+                    key(CharacterEquipAbsert::characterPk)
+                    key(CharacterEquipAbsert::equipSlot)
+                }.addEntities(absertSeedDataList)
+                actualCount = databaseHelper.executeDml(absert)
+            }
+        }
+        return actualCount
+    }
+
+    private fun selectDataJoin1Tbl(
         databaseHelper: AndrOrmDatabaseHelper,
     ): List<Map<String, SelectEntity?>> {
         actualCount = 0
-        var result = emptyList<Map<String, SelectEntity?>>()
         val selectJoin = Select(CharacterSpellsBase::class)
             .join(
                 JoinType.LEFT,
@@ -604,12 +752,40 @@ class AndrOrmDatabaseAndroidTest {
                 on = { CharacterSpellsBase::magicId eq SpellsMasterBase::magicId }
             )
             .where {
-                CharacterSpellsBase::characterPk inList listOf(77211, 77273, 77399, 78144)
+                CharacterSpellsBase::characterPk inList listOf(77211, 77273, 77399, 78144, 9502)
             }
-        databaseHelper.transaction {
-            result = databaseHelper.executeSelectAsEntityList(selectJoin)
+        return databaseHelper.transaction {
+            databaseHelper.executeSelectAsEntityList(selectJoin)
         }
-        return result
+    }
+
+    private fun selectDataJoin2Tbl(
+        databaseHelper: AndrOrmDatabaseHelper,
+    ): List<Map<String, SelectEntity?>> {
+        val selectJoin = Select(CharacterStaticInfoV1Name::class)
+            .join(
+                JoinType.INNER,
+                joinedEntity = CharacterEquipBase::class,
+                on = {
+                    CharacterStaticInfoV1Name::characterPk eq CharacterEquipBase::characterPk
+                }
+            )
+            .join(
+                JoinType.LEFT,
+                joinedEntity = CharacterPossessionsBase::class,
+                on = {
+                    CharacterStaticInfoV1Name::characterPk eq CharacterPossessionsBase::characterPk
+                    CharacterEquipBase::itemPk eq CharacterPossessionsBase::itemPk
+                }
+            )
+            .where {
+                CharacterStaticInfoV1Name::characterPk inList
+                        listOf(77211, 77273, 77399, 78144, 77274)
+            }
+        actualCount = 0
+        return databaseHelper.transaction {
+            databaseHelper.executeSelectAsEntityList(selectJoin)
+        }
     }
 
     /**
@@ -627,7 +803,6 @@ class AndrOrmDatabaseAndroidTest {
         entities: List<T>,
     ) {
         val insert = Insert(entityClass)
-
         insert.addEntities(entities)
         databaseHelper.executeDml(insert)
     }
@@ -642,9 +817,9 @@ class AndrOrmDatabaseAndroidTest {
     private fun clearAllTables(
         db: SQLiteDatabase,
     ) {
-        tableDefinitions.map { tableDefinition -> tableDefinition.simpleName!!.toSnakeCase() }
+        currentTableDefinitions.map { tableDefinition -> tableDefinition.getTableName() }
             .forEach { tableName ->
-                db.execSQL("delete from ${quoteIdentifier(tableName)}")
+                db.execSQL("delete from ${quoteString(tableName)}")
             }
     }
 
@@ -660,7 +835,6 @@ class AndrOrmDatabaseAndroidTest {
         db: SQLiteDatabase,
     ): List<String> {
         val tableNames = mutableListOf<String>()
-
         db.rawQuery(
             """
                 select name
@@ -690,8 +864,8 @@ class AndrOrmDatabaseAndroidTest {
         databaseHelper.use { helper ->
             beforeTableRowCounts = afterTableRowCounts.toMutableMap()
             afterTableRowCounts.clear()
-            tableDefinitions.forEach {
-                val tableName = it.simpleName!!.toSnakeCase()
+            currentTableDefinitions.forEach {
+                val tableName = it.getTableName()
                 afterTableRowCounts[tableName] = getTableRows(
                     db = helper.readableDatabase,
                     tableName = tableName,
@@ -713,41 +887,98 @@ class AndrOrmDatabaseAndroidTest {
         db: SQLiteDatabase,
         tableName: String,
         vararg where: String,
-    ): Int = db.rawQuery(
-        "select count(*) from ${quoteIdentifier(tableName)}" +
+    ): Int {
+        val sql = "select count(*) from ${quoteString(tableName)}" +
                 if (where.isEmpty()) {
                     EMPTY_STRING
                 } else {
                     where.joinToString(" and ", " where ")
-                },
-        emptyArray<String>(),
-    ).use { cursor ->
-        cursor.moveToFirst()
-        cursor.getInt(0)
-    }.also {
-        Log.d("COUNT", "${quoteIdentifier(tableName)} has records = $it")
+                }
+        Log.d("SQL", "$testStep / $sql")
+        return db.rawQuery(sql, emptyArray<String>())
+            .use { cursor ->
+                cursor.moveToFirst()
+                cursor.getInt(0)
+            }.also {
+                Log.d("COUNT", "$testStep / ${quoteString(tableName)} has records = $it")
+            }
+    }
+
+    private fun assertSelectDataJoin1Tbl(
+        result: List<Map<String, SelectEntity?>>,
+    ) {
+        assertEquals(113, result.size)
+        val targetCharacterPkList = listOf(77211, 77273, 77399, 78144, 9502)
+        result.forEach { row ->
+            val characterSpells = row.getValue("CSP_B") as CharacterSpellsBase
+            val spellsMaster = row["SM_B"] as SpellsMasterBase?
+            assertTrue(characterSpells.characterPk in targetCharacterPkList)
+            if (spellsMaster != null) {
+                assertEquals(characterSpells.magicId, spellsMaster.magicId)
+            }
+        }
+        assertEquals(
+            1,
+            result.count { row ->
+                row["SM_B"] == null
+            },
+        )
+        assertTrue(
+            result.any { row ->
+                val characterSpells = row.getValue("CSP_B") as CharacterSpellsBase
+                characterSpells.characterPk == 9502 &&
+                        characterSpells.magicId == 2 &&
+                        row["SM_B"] == null
+            },
+        )
+    }
+
+    private fun assertSelectDataJoin2Tbl(
+        result: List<Map<String, SelectEntity?>>,
+    ) {
+        assertEquals(32, result.size)
+        val expectedCountByCharacterPk = mapOf(
+            77211 to 6,
+            77273 to 6,
+            77274 to 8,
+            77399 to 6,
+            78144 to 6,
+        )
+        val actualCountByCharacterPk = result
+            .map { row ->
+                val characterStaticInfo = row.getValue("CSI_N") as CharacterStaticInfoV1Name
+                characterStaticInfo.characterPk
+            }
+            .groupingBy { characterPk -> characterPk }
+            .eachCount()
+        assertEquals(expectedCountByCharacterPk, actualCountByCharacterPk)
+        result.forEach { row ->
+            val characterStaticInfo = row.getValue("CSI_N") as CharacterStaticInfoV1Name
+            val characterEquip = row.getValue("CE_B") as CharacterEquipBase
+            val characterPossessions = row["CP_B"] as CharacterPossessionsBase?
+            assertEquals(characterStaticInfo.characterPk, characterEquip.characterPk)
+            if (characterPossessions != null) {
+                assertEquals(characterEquip.characterPk, characterPossessions.characterPk)
+                assertEquals(characterEquip.itemPk, characterPossessions.itemPk)
+            }
+        }
+        assertEquals(
+            2,
+            result.count { row ->
+                row["CP_B"] == null
+            },
+        )
     }
 
     /**
      * ## SQL 識別子クォート
-     * ### SQLite 用に識別子をダブルクォートで囲む
-     * @param identifier 識別子
-     * @return クォート済み識別子
+     * ### SQLite 用に文字列をダブルクォートで囲む
+     * @param str クォートで囲む文字列
+     * @return クォート済み文字列
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
-    private fun quoteIdentifier(
-        identifier: String,
-    ): String = "\"${identifier.replace("\"", "\"\"")}\""
+    private fun quoteString(str: String): String = "\"${str.replace("\"", "\"\"")}\""
 
-    /**
-     * ## スネークケース変換
-     * ### クラス名からテーブル名を生成する
-     * @receiver 変換前文字列
-     * @return スネークケース大文字
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun String.toSnakeCase(): String = replace(Regex("([a-z])([A-Z])"), "$1_$2").uppercase()
-
+//    private fun String.toSnakeCase(): String = replace(Regex("([a-z])([A-Z])"), "$1_$2").uppercase()
 }

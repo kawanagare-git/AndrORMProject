@@ -21,10 +21,11 @@ import java.time.LocalDateTime
                 ColumnProjection("userId"),
                 ColumnProjection("characterNo"),
                 ColumnProjection("characterName"),
+                ColumnProjection("mainElement"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT],
+            commonInterface = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -34,6 +35,7 @@ import java.time.LocalDateTime
                 ColumnProjection("userId"),
                 ColumnProjection("characterNo"),
                 ColumnProjection("characterName"),
+                ColumnProjection("mainElement"),
             ],
             commonInterface = [SELECT],
         ),
@@ -55,15 +57,16 @@ import java.time.LocalDateTime
         ),
     ]
 )
-@Table
+@Table(name = "CHARACTER_STATIC_INFO", alias = "CSI")
 @Unique("CHAR_UNIQ", ["userId", "characterNo"])
-data class CharacterStaticInfo(
+data class CharacterStaticInfoV2(
     @PrimaryKey
     val characterPk: Int,
     val userId: String,
     val characterNo: Int,
     val characterName: String,
     val createMethod: String,
+    val mainElement: Int,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP_ISO")
     val createTime: LocalDateTime,
     val updateMethod: String,

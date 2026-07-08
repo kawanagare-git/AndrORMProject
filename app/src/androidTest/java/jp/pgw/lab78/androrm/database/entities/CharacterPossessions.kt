@@ -57,7 +57,7 @@ import java.time.LocalDateTime
         ),
     ]
 )
-@Table
+@Table(alias = "CP")
 @Index("ITEM_UNIQ", ["characterPk", "itemPk"])
 data class CharacterPossessions(
     @PrimaryKey

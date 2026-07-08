@@ -16,6 +16,7 @@ import kotlin.reflect.KClass
 
 /**
  * ## Absert 文生成クラス
+ * ### INSERT IF ABSENT の意
  * ### SQLite の INSERT ... ON CONFLICT ... DO NOTHING 文を生成します
  *
  * @param entityClass Absert 対象 Entity クラス

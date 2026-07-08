@@ -5,9 +5,9 @@ import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
 import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.Unique
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
@@ -18,8 +18,9 @@ import java.time.LocalDateTime
             aliasExtend = "DTA",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("equipSlot"),
-                ColumnProjection("itemPk"),
+                ColumnProjection("userId"),
+                ColumnProjection("characterNo"),
+                ColumnProjection("characterName"),
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
@@ -30,42 +31,20 @@ import java.time.LocalDateTime
             aliasExtend = "B",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("equipSlot"),
-                ColumnProjection("itemPk"),
+                ColumnProjection("userId"),
+                ColumnProjection("characterNo"),
+                ColumnProjection("characterName"),
             ],
             commonInterface = [SELECT],
         ),
         Projection(
-            entityNameExtend = "Slot",
-            aliasExtend = "S",
-            properties = [
-                ColumnProjection("characterPk", hideFromSelect = true),
-                ColumnProjection("equipSlot"),
-            ],
-            commonInterface = [SELECT],
-        ),
-        Projection(
-            entityNameExtend = "SlotItem",
-            aliasExtend = "SI",
-            properties = [
-                ColumnProjection("characterPk", hideFromSelect = true),
-                ColumnProjection("equipSlot"),
-                ColumnProjection("itemPk", hideFromSelect = true),
-            ],
-            commonInterface = [SELECT],
-        ),
-        Projection(
-            entityNameExtend = "Upsert",
-            aliasExtend = "UPS",
+            entityNameExtend = "Name",
+            aliasExtend = "N",
             properties = [
                 ColumnProjection("characterPk"),
-                ColumnProjection("equipSlot"),
-                ColumnProjection("itemPk"),
-                ColumnProjection("createMethod"),
-                ColumnProjection("updateMethod"),
-                ColumnProjection("updateTime"),
+                ColumnProjection("characterName"),
             ],
-            commonInterface = [UPSERT],
+            commonInterface = [SELECT],
         ),
         Projection(
             entityNameExtend = "Delete",
@@ -76,14 +55,14 @@ import java.time.LocalDateTime
         ),
     ]
 )
-@Table(alias = "CE")
-@Index("INDEX", ["characterPk", "itemPk"])
-data class CharacterEquip(
+@Table(name = "CHARACTER_STATIC_INFO", alias = "CSI")
+@Unique("CHAR_UNIQ", ["userId", "characterNo"])
+data class CharacterStaticInfoV1(
     @PrimaryKey
     val characterPk: Int,
-    @PrimaryKey
-    val equipSlot: Int,
-    val itemPk: Int?,
+    val userId: String,
+    val characterNo: Int,
+    val characterName: String,
     val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP_ISO")
     val createTime: LocalDateTime,

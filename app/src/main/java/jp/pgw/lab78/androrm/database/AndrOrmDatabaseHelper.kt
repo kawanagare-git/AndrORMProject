@@ -50,8 +50,15 @@ open class AndrOrmDatabaseHelper(
     context: Context,
     databaseName: String = "app.db",
     version: Int,
-    private vararg val entities: KClass<out TableDefinitionEntity>,
+    private val entities: List<KClass<out TableDefinitionEntity>>,
 ) : SQLiteOpenHelper(context, databaseName, null, version) {
+    constructor(
+        context: Context,
+        databaseName: String = "app.db",
+        version: Int,
+        vararg entities: KClass<out TableDefinitionEntity>,
+    ) : this(context, databaseName, version, entities.asList())
+
     /**
      * ## 標準カラムマッピング保持領域
      * ### onUpgrade 中に作成した標準カラムマッピングを resolveColumnMappings() から参照する

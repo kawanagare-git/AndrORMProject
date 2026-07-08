@@ -397,3 +397,21 @@ tasks.withType<Test>().configureEach {
         showStandardStreams = true
     }
 }
+// ==========================================================
+// UnitTest / AndroidTest 実行前に AndrORM detekt ルールを実行する
+// ==========================================================
+tasks.register("andrormDetektCheckBeforeTest") {
+    description = "Run AndrORM detekt rules before android/unit tests."
+    group = "verification"
+
+    dependsOn(
+        "detektAndroidTestOnly",
+    )
+}
+
+tasks.matching {
+    it.name == "testDebugUnitTest" ||
+            it.name == "connectedDebugAndroidTest"
+}.configureEach {
+    dependsOn("andrormDetektCheckBeforeTest")
+}

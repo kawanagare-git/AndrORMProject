@@ -66,21 +66,22 @@ object AndroidTestSeedData {
     }
 
     /** キャラクタ基本固定情報 */
-    val characterStaticInfoList: List<CharacterStaticInfo> = (1..USER_COUNT).flatMap { userIndex ->
-        (1..CHARACTER_COUNT).map { charIndex ->
-            val userId = "U%04d".format(userIndex)
-            CharacterStaticInfo(
-                characterPk = createPk(Keys.CHARACTER_PK, userId, charIndex),
-                userId = userId,
-                characterNo = charIndex,
-                characterName = "CHAR%04d-%01d".format(userIndex, charIndex),
-                createMethod = CREATE_METHOD,
-                createTime = LocalDateTime.now(),
-                updateMethod = UPDATE_METHOD,
-                updateTime = LocalDateTime.now(),
-            )
+    val characterStaticInfoList: List<CharacterStaticInfoV1> =
+        (1..USER_COUNT).flatMap { userIndex ->
+            (1..CHARACTER_COUNT).map { charIndex ->
+                val userId = "U%04d".format(userIndex)
+                CharacterStaticInfoV1(
+                    characterPk = createPk(Keys.CHARACTER_PK, userId, charIndex),
+                    userId = userId,
+                    characterNo = charIndex,
+                    characterName = "CHAR%04d-%01d".format(userIndex, charIndex),
+                    createMethod = CREATE_METHOD,
+                    createTime = LocalDateTime.now(),
+                    updateMethod = UPDATE_METHOD,
+                    updateTime = LocalDateTime.now(),
+                )
+            }
         }
-    }
 
     /** アイテムマスタ */
     val itemMasterList: List<ItemMaster> = (1..MASTER_COUNT).map { index ->

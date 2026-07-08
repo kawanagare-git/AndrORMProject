@@ -19,6 +19,7 @@ import kotlin.reflect.KProperty1
 
 /**
  * ## Upsert 文生成クラス
+ * ### INSERT OR UPDATE の意
  * ### SQLite の INSERT ... ON CONFLICT ... DO UPDATE 文を生成します
  *
  * @param entityClass Upsert 対象 Entity クラス
