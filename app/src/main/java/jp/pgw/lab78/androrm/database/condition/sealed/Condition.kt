@@ -7,6 +7,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
+import jp.pgw.lab78.androrm.database.condition.interfaces.SelectBody
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator.*
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
@@ -159,7 +160,7 @@ sealed class Compare : Condition() {
      * @since 2025-10-03
      */
     class Exists<T : SelectEntity>(
-        private val subQuery: Select<T>,
+        private val subQuery: SelectBody<T, *>,
     ) : Condition() {
 
         /**
@@ -262,7 +263,7 @@ private fun Any.toSqlConditionText(): String =
 
         is KProperty1<*, *> -> {
             @Suppress("UNCHECKED_CAST")
-            (this as KProperty1<out Entity, *>).toColumnString()
+            (this as KProperty1<out Entity, *>).toColumnString(true)
         }
 
         is ColumnRef<*, *> -> this.build()

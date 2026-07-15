@@ -47,9 +47,34 @@ import java.time.LocalDateTime
             commonInterface = [SELECT],
         ),
         Projection(
+            entityNameExtend = "UpdateAudit",
+            aliasExtend = "UPD_AUDIT",
+            properties = [
+                ColumnProjection("characterPk"),
+                ColumnProjection("updateMethod"),
+                ColumnProjection("updateTime"),
+            ],
+            commonInterface = [UPDATE],
+        ),
+        Projection(
+            entityNameExtend = "Upsert",
+            aliasExtend = "UPS",
+            properties = [
+                ColumnProjection("characterPk"),
+                ColumnProjection("userId"),
+                ColumnProjection("characterNo"),
+                ColumnProjection("characterName"),
+                ColumnProjection("createMethod"),
+                ColumnProjection("updateMethod"),
+                ColumnProjection("updateTime"),
+            ],
+            commonInterface = [UPSERT],
+        ),
+        Projection(
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("characterPk"),
+                ColumnProjection("updateMethod"),
             ],
             commonInterface = [DELETE],
         ),

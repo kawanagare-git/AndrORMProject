@@ -12,6 +12,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
  *
  * @param owner where 呼び出し後に返す所有クラス
  * @param ownerName 所有クラス名
+ * @param enableAlias エイリアス有効 規定値：有効
  * @param onChanged WHERE 条件変更時の処理
  * @author Masahiro Inoue
  * @since 2026-05-24
@@ -19,6 +20,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 class WhereClauseDelegate<O>(
     private val owner: O,
     private val ownerName: String,
+    private var enableAlias: Boolean = true,
     private val onChanged: () -> Unit = {},
 ) {
     /** WHERE 条件リスト */
@@ -57,7 +59,7 @@ class WhereClauseDelegate<O>(
         onChanged()
 
         val valueHolder = object : QueryWithBindValues() {}
-        val builder = ConditionBuilder(valueHolder).apply(block)
+        val builder = ConditionBuilder(valueHolder, enableAlias).apply(block)
 
         whereConditions += builder.buildList()
         whereBindValues.addAll(valueHolder.bindValues)

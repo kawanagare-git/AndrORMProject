@@ -4,6 +4,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
 import jp.pgw.lab78.androrm.common.Constants.ModuleLabel.KSP
+import jp.pgw.lab78.androrm.common.logging.LogLevel
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
@@ -25,6 +26,7 @@ import java.nio.file.Path
  */
 class CompositeLogger(
     private val logger: KSPLogger,
+    private val consoleLogLevel: LogLevel = LogLevel.WARN,
     private val fullFilePath: Path
 ) : LoggerLike {
     /**
@@ -35,8 +37,13 @@ class CompositeLogger(
      * @author Masahiro Inoue
      * @since 2026-03-10
      */
-    constructor(logger: KSPLogger, moduleDir: String, vararg subDirectories: String) : this(
-        logger,
+    constructor(
+        logger: KSPLogger,
+        consoleLogLevel: LogLevel,
+        moduleDir: String,
+        vararg subDirectories: String
+    ) : this(
+        logger, consoleLogLevel,
         Path.of(moduleDir, *subDirectories, KSP.logFilename)
             .also { logger.warn("output path = ${it.toAbsolutePath()}") }
     )

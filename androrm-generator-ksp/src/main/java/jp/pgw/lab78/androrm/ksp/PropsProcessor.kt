@@ -34,7 +34,6 @@ import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
  * ### プロパティ一覧、データクラス、インターフェース一覧を作成
  * ### PropsProcessorProvider#create(SymbolProcessorEnvironment) から呼び出される
  * @param codeGenerator コード生成時に出力機能を提供
- * @param logger ビルド中の経過、警告、エラー等の情報を出力する環境を提供
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

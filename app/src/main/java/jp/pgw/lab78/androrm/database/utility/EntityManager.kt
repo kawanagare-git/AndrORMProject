@@ -413,10 +413,14 @@ object EntityManager {
      * @since 2025-08-01
      */
     @Suppress("UNCHECKED_CAST")
-    fun formatValue(valueHolder: QueryWithBindValues, value: Any): String =
+    fun formatValue(
+        valueHolder: QueryWithBindValues,
+        value: Any,
+        enableAlias: Boolean = true
+    ): String =
         when (value) {
             is KProperty1<*, *> -> {
-                (value as KProperty1<out Entity, *>).toColumnString()
+                (value as KProperty1<out Entity, *>).toColumnString(enableAlias)
             }
 
             is ColumnRef<*, *> -> {
@@ -441,8 +445,13 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2026-06-27
      */
-    fun KProperty1<out Entity, *>.toColumnString(): String {
+    fun KProperty1<out Entity, *>.toColumnString(enableAlias: Boolean): String {
         val entityClass = this.extractClassFromProperty()
-        return "${entityClass.getTableAlias()}.${entityClass.getColumnName(this.name)}"
+        val tableIdentify = if (enableAlias) {
+            entityClass.getTableAlias()
+        } else {
+            entityClass.getTableName()
+        }
+        return "${tableIdentify}.${entityClass.getColumnName(this.name)}"
     }
 }

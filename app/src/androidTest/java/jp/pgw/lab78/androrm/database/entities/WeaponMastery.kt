@@ -35,6 +35,16 @@ import java.time.LocalDateTime
             commonInterface = [SELECT],
         ),
         Projection(
+            entityNameExtend = "UpdateAudit",
+            aliasExtend = "UPD_AUDIT",
+            properties = [
+                ColumnProjection("characterPk"),
+                ColumnProjection("updateMethod"),
+                ColumnProjection("updateTime"),
+            ],
+            commonInterface = [UPDATE],
+        ),
+        Projection(
             entityNameExtend = "Upsert",
             aliasExtend = "UPS",
             properties = [
@@ -51,6 +61,7 @@ import java.time.LocalDateTime
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("characterPk"),
+                ColumnProjection("updateMethod"),
             ],
             commonInterface = [DELETE],
         ),

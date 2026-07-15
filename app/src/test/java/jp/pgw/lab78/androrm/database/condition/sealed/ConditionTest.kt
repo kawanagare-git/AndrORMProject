@@ -33,7 +33,7 @@ class ConditionTest {
         expected: String,
     ) {
         val condition = Compare.Value(
-            lhsProperty = EmployeeEntity::employeeId.toColumnString(),
+            lhsProperty = EmployeeEntity::employeeId.toColumnString(true),
             operator = operator,
             value = "?",
         )
@@ -55,7 +55,7 @@ class ConditionTest {
             valueList += "?"
         }
         val condition = Compare.Value(
-            lhsProperty = EmployeeEntity::employeeId.toColumnString(),
+            lhsProperty = EmployeeEntity::employeeId.toColumnString(true),
             operator = operator,
             value = valueList,
         )
@@ -74,7 +74,7 @@ class ConditionTest {
     @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is null'")
     fun isNull_shouldBuildExpectedSql(propertyString: String, expected: String) {
         val property = changeProperty(propertyString)
-        val condition = Compare.IsNull(lhsProperty = property.toColumnString())
+        val condition = Compare.IsNull(lhsProperty = property.toColumnString(true))
         assertEquals(expected, condition.build())
     }
 
@@ -84,7 +84,7 @@ class ConditionTest {
         propertyString: String, expected: String
     ) {
         val property = changeProperty(propertyString)
-        val condition = Compare.IsNotNull(lhsProperty = property.toColumnString())
+        val condition = Compare.IsNotNull(lhsProperty = property.toColumnString(true))
         assertEquals(expected, condition.build())
     }
 

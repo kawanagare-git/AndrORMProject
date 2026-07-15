@@ -18,7 +18,7 @@ class Delete<T : DeleteEntity>(
     /** ログ出力移譲 */
     private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
-    /** テーブル名：クラス名をスネークケース（大文字）に変換 */
+    /** テーブル名：クラス名をテーブル名（大文字）に変換 */
     val tableName = entityClass.getTableName()
 
     /** ビルドフラグ */
@@ -26,7 +26,11 @@ class Delete<T : DeleteEntity>(
 
     /** WHERE 句生成委譲 */
     private val whereDelegate =
-        WhereClauseDelegate<Delete<T>>(owner = this, ownerName = this.javaClass.simpleName) {
+        WhereClauseDelegate<Delete<T>>(
+            owner = this,
+            ownerName = this.javaClass.simpleName,
+            enableAlias = false
+        ) {
             isBuild = false
         }
 

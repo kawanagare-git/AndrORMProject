@@ -3,41 +3,25 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.DEFAULT_LIMIT_VALUE
 import jp.pgw.lab78.androrm.common.Constants.DEFAULT_OFFSET_VALUE
-import jp.pgw.lab78.androrm.common.Constants.LogicalOperator.AND
 import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00003
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00004
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00005
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00006
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
-import jp.pgw.lab78.androrm.common.logging.LogScope.APP
 import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
-import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
-import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
-import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
-import jp.pgw.lab78.androrm.database.condition.sealed.Condition
-import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
+import jp.pgw.lab78.androrm.database.condition.base.BaseSelect
 import jp.pgw.lab78.androrm.database.condition.sealed.Order
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
-import jp.pgw.lab78.androrm.database.queryparts.JoinClauseDelegate
+import jp.pgw.lab78.androrm.database.meta.SelectClause
 import jp.pgw.lab78.androrm.database.queryparts.JoinType
-import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import jp.pgw.lab78.androrm.database.reference.TableRef
-import jp.pgw.lab78.androrm.database.validation.DuplicateMethodCallValidator
-import jp.pgw.lab78.androrm.database.validation.QueryMethodCall
-import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.EnumMap
-import java.util.logging.Level.WARNING
-import java.util.logging.Logger
 import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
 
 /**
  * ## Select 文生成クラス
@@ -50,7 +34,7 @@ import kotlin.reflect.full.memberProperties
 class Select<T : SelectEntity>(
     private val fromTable: TableRef<out T>,
     private val isDistinct: Boolean = false,
-) : QueryWithBindValues(), QueryStructureLike {
+) : BaseSelect<T, Select<T>>() {
     /**
      * ## コンストラクタ
      * @param fromEntity エンティティクラス
@@ -82,75 +66,17 @@ class Select<T : SelectEntity>(
             "select ${columnList.joinToString(PRIMARY_DELIMITER)} from $tableName"
     }
 
-    /** WHERE 句生成委譲 */
-    private val whereDelegate =
-        WhereClauseDelegate<Select<T>>(owner = this, ownerName = this.javaClass.simpleName) {
-            isBuild = false
-        }
-
-    /** JOIN 句生成委譲 */
-    private val joinDelegate =
-        JoinClauseDelegate<Select<T>, SelectEntity>(
-            owner = this,
-            onChanged = {
-                isBuild = false
-            },
-            onTableJoined = { joinedTable ->
-                val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedTable.entityClass)
-
-                validateEntityMeta(joinedEntityMeta)
-                registerTableAlias(joinedEntityMeta.tableName, joinedTable.alias)
-                appendSelectableColumns(joinedEntityMeta, joinedTable.alias)
-
-                usedEntityClasses += joinedTable
-            },
-        )
-
-    /** Select クラスで使用するエンティティクラスのリスト */
-    val usedEntityClasses = mutableListOf<TableRef<out SelectEntity>>()
-
-    /** OUTER JOIN により Entity 自体が null になり得るテーブル参照 */
-    private val nullableByJoinTables = mutableSetOf<TableRef<out SelectEntity>>()
-
-    /** ログ出力移譲 */
-    private val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
-
-    /** Entity メタ情報生成 */
-    private val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
+    /** select 文の土台 */
+    private val selectStatement = "select ${if (isDistinct) "distinct " else ""}%s "
 
     /** 主 Entity の正規化済みメタ情報 */
-    private val mainEntityMeta = runtimeEntityMetaFactory.create(fromTable.entityClass)
-
-    /** テーブル名 */
-    private val mainTableName = mainEntityMeta.tableName
-
-    /** テーブルエイリアス */
-    private val mainTableAlias = fromTable.alias
-
-    /** クエリの構文を管理するマップ */
-    private val queryStructureMap = enumMapOf<SelectClause, MutableList<String>>()
+    override val mainEntityMeta = runtimeEntityMetaFactory.create(fromTable.entityClass)
 
     /** 抽出カラムリスト */
     private val selectColumnList = mutableListOf<String>()
 
-    /** 関数結果検索条件リスト */
-    private val havingConditions = mutableListOf<Condition>()
-
-    /** グループ倍自動生成用リスト */
-    private val groupByColumns = mutableListOf<GroupByColumn>()
-
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
-
-    /** HAVING 句用バインド値リスト */
-    private val havingBindValues: MutableList<Any?> = mutableListOf()
-
-    /** 使用済みテーブルエイリアス */
-    private val usedTableAliases = mutableSetOf<String>()
-
-    /** 重複メソッド呼び出し検証インスタンス */
-    private val duplicateMethodCallValidator =
-        DuplicateMethodCallValidator<SelectClause>("Select")
 
     /** 最大読み出し行数 */
     private var limitValue: Int? = null
@@ -158,34 +84,8 @@ class Select<T : SelectEntity>(
     /** 読み出し開始行 */
     private var offsetValue: Int? = null
 
-    /** ビルドフラグ */
-    private var isBuild: Boolean = false
-
-    /** クエリ格納 */
-    private lateinit var query: String
-
     /**
-     * ## select 文を構成要素列挙クラス
-     * ### セレクト文を構成する要素を列挙子として構成する
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    private enum class SelectClause(
-        val sql: String,
-        override val methodName: String,
-    ) : QueryMethodCall {
-        SELECT("select", ""),
-        JOIN("join", ""),
-        WHERE("where", "where"),
-        GROUP("group by", ""),
-        HAVING("having", "having"),
-        ORDER("order by", "order"),
-        LIMIT("limit", "limit"),
-        OFFSET("offset", "offset"),
-    }
-
-    /**
-     * ## コンストラクタ
+     * ## イニシャライザ
      * ### 一番単純な select 文を生成します
      * @author Masahiro Inoue
      * @since 2025-08-01
@@ -194,6 +94,8 @@ class Select<T : SelectEntity>(
         @InfoLog
         @TraceLog
         fun initialize() {
+            val mainTableName = mainEntityMeta.tableName
+            val mainTableAlias = fromTable.alias
             // 主 Entity のメタ情報を検証
             validateEntityMeta(mainEntityMeta)
             // 主テーブルの SELECT 対象列を追加
@@ -206,6 +108,16 @@ class Select<T : SelectEntity>(
             registerTableAlias(mainTableName, mainTableAlias)
         }
         initialize()
+    }
+
+    override fun onTableJoined(
+        joinedTable: TableRef<out SelectEntity>,
+    ) {
+        val joinedEntityMeta = runtimeEntityMetaFactory.create(joinedTable.entityClass)
+        validateEntityMeta(joinedEntityMeta)
+        registerTableAlias(joinedEntityMeta.tableName, joinedTable.alias)
+        appendSelectableColumns(joinedEntityMeta, joinedTable.alias)
+        usedEntityClasses.add(joinedTable)
     }
 
     /**
@@ -236,34 +148,6 @@ class Select<T : SelectEntity>(
     /**
      * ## join メソッド
      * ### テーブル結合を指定する
-     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
-     * @param joinedTable 結合するエンティティクラス（副クラス）
-     * @param on 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    @InfoLog
-    @TraceLog
-    fun join(
-        joinType: JoinType,
-        joinedTable: TableRef<out SelectEntity>,
-        on: ConditionBuilder.() -> Unit,
-    ): Select<T> {
-        val result = joinDelegate.join(
-            joinType = joinType,
-            joinedTable = joinedTable,
-            on = on,
-        )
-        if (joinType.nullableByJoin) {
-            nullableByJoinTables += joinedTable
-        }
-        return result
-    }
-
-    /**
-     * ## join メソッド
-     * ### テーブル結合を指定する
      * @param joinType 結合方法（LEFT CROSS等）を指定
      * @param joinedEntity 結合するエンティティクラス（副クラス）
      * @return 自身のインスタンス(this)
@@ -283,50 +167,6 @@ class Select<T : SelectEntity>(
         )
 
     /**
-     * ## join メソッド
-     * ### テーブル結合を指定する
-     * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
-     * @param joinedTable 結合するエンティティクラス（副クラス）
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2026-05-12
-     */
-    @InfoLog
-    fun join(
-        joinType: JoinType,
-        joinedTable: TableRef<out SelectEntity>,
-    ): JoinCondition =
-        JoinCondition(
-            joinType = joinType,
-            joinedTable = joinedTable,
-        )
-
-    /**
-     * ## JoinCondition クラス
-     * ### join メソッド内で使用する結合条件クラス
-     * @param joinType 結合方法
-     * @param joinedTable 結合するエンティティクラス
-     * @author Masahiro Inoue
-     * @since 2026-01-11
-     */
-    inner class JoinCondition(
-        private val joinType: JoinType,
-        private val joinedTable: TableRef<out SelectEntity>,
-    ) {
-
-        /** ## on メソッド
-         * ### テーブル結合条件を指定する
-         * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-         * @return 自身のインスタンス(this)
-         * @author Masahiro Inoue
-         * @since 2026-01-11
-         */
-        @InfoLog
-        fun on(block: ConditionBuilder.() -> Unit): Select<T> =
-            this@Select.join(joinType, joinedTable, block)
-    }
-
-    /**
      * ## where メソッド
      * ### テーブル検索条件を指定する
      * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
@@ -335,84 +175,8 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     @InfoLog
-    fun where(block: ConditionBuilder.() -> Unit): Select<T> = whereDelegate.where(block)
-
-    /**
-     * ## having メソッド
-     * ### 集計結果検索条件を指定する
-     * @param block 条件を構築するための DSL ブロック。`HavingBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
-     * @author Masahiro Inoue
-     * @since 2025-08-01
-     */
-    @InfoLog
-    fun having(block: HavingConditionBuilder.() -> Unit): Select<T> {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.HAVING)
-        isBuild = false
-        val valueHolder = object : QueryWithBindValues() {}
-        val builder = HavingConditionBuilder(valueHolder).apply(block)
-        havingConditions += builder.buildList()
-        // バインド変数の設定
-        havingBindValues.addAll(valueHolder.bindValues)
-        // HAVING 句が指定されると自動的に GROUP BY 句を生成する
-        // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
-        if (groupByColumns.isEmpty()) {
-            detectGroupColumns().forEach { column ->
-                groupByColumns += GroupByColumn(column)
-            }
-        }
-        return this
-    }
-
-    /**
-     * ## OUTER JOIN null 対象判定
-     * ### LEFT JOIN の結合先 Entity など、Entity 自体が null になり得るかを判定する
-     * @param tableRef 判定対象テーブル参照
-     * @return Entity 自体が null になり得る場合 true
-     * @author Masahiro Inoue
-     * @since 2026-06-11
-     */
-    internal fun isNullableByJoin(tableRef: TableRef<out SelectEntity>): Boolean =
-        tableRef in nullableByJoinTables
-
-    /**
-     * ## テーブルエイリアス登録
-     * ### 同一 Select 内で同じ alias が再利用されないよう検証する
-     * @param tableName テーブル名
-     * @param tableAlias テーブルエイリアス
-     */
-    @InfoLog
-    private fun registerTableAlias(
-        tableName: String,
-        tableAlias: String,
-    ) {
-        require(usedTableAliases.add(tableAlias)) {
-            AE00003.format(tableAlias, tableName)
-        }
-    }
-
-    /**
-     * ## グループ化カラム検出関数
-     * ### SELECT 句に指定されたカラムのうち、関数列以外のカラムを抽出する
-     * @return 関数列以外のカラムリスト
-     * @author Masahiro Inoue
-     * @since 2025-10-19
-     */
-    @InfoLog
-    private fun detectGroupColumns() =
-        usedEntityClasses.flatMap { tableRef ->
-            val entityMeta = runtimeEntityMetaFactory.create(tableRef.entityClass)
-            val propertyMap = tableRef.entityClass.memberProperties.associateBy { it.name }
-            entityMeta.properties
-                .asSequence()
-                .filterNot { it.isFunction }
-                .filterNot { it.hideFromSelect }
-                .map { propertyMeta ->
-                    propertyMap[propertyMeta.propertyName]
-                        ?: error("Property not found: ${propertyMeta.propertyName}")
-                }
-                .toList()
-        }
+    override fun where(block: ConditionBuilder.() -> Unit): Select<T> =
+        self.also { whereDelegate.where(block) }
 
     /**
      * ## order メソッド
@@ -423,13 +187,13 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     @InfoLog
-    fun order(by: OrderDsl.() -> Unit): Select<T> {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.ORDER)
-        isBuild = false
-        val builder = OrderDsl().apply(by)
-        orderColumns += builder.orders
-        return this
-    }
+    fun order(by: OrderDsl.() -> Unit): Select<T> =
+        self.also {
+            duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.ORDER)
+            isBuild = false
+            val builder = OrderDsl().apply(by)
+            orderColumns += builder.orders
+        }
 
     /**
      * ## limit メソッド
@@ -440,13 +204,14 @@ class Select<T : SelectEntity>(
      * @since 2026-05-14
      */
     @InfoLog
-    fun limit(limitValue: Int = DEFAULT_LIMIT_VALUE): LimitClause {
-        duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
-        require(limitValue >= 0) { AE00004 }
-        isBuild = false
-        this.limitValue = limitValue
-        return LimitClause()
-    }
+    fun limit(limitValue: Int = DEFAULT_LIMIT_VALUE): LimitClause =
+        LimitClause().also {
+            duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.LIMIT)
+            require(limitValue >= 0) { AE00004 }
+            isBuild = false
+            this.limitValue = limitValue
+            return LimitClause()
+        }
 
     /**
      * ## LIMIT 句指定後の操作
@@ -465,13 +230,14 @@ class Select<T : SelectEntity>(
          * @since 2026-05-14
          */
         @InfoLog
-        fun offset(offsetValue: Int = DEFAULT_OFFSET_VALUE): Select<T> {
-            duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
-            require(offsetValue >= 0) { AE00005 }
-            isBuild = false
-            this@Select.offsetValue = offsetValue
-            return this@Select
-        }
+        fun offset(offsetValue: Int = DEFAULT_OFFSET_VALUE): Select<T> =
+            this@Select.also {
+                duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.OFFSET)
+                require(offsetValue >= 0) { AE00005 }
+                isBuild = false
+                this@Select.offsetValue = offsetValue
+                return this@Select
+            }
 
         /**
          * ## SQL 生成
@@ -481,9 +247,7 @@ class Select<T : SelectEntity>(
          * @since 2026-05-14
          */
         @InfoLog
-        fun build(): String {
-            return this@Select.build()
-        }
+        fun build(): String = this@Select.build()
 
         /**
          * ## バインド値
@@ -502,35 +266,10 @@ class Select<T : SelectEntity>(
      * @author Masahiro Inoue
      * @since 2026-04-28
      */
-    protected override fun additionalBindValues(): List<Any?> = buildList {
-        addAll(joinDelegate.bindValues)
-        addAll(whereDelegate.bindValues)
-        addAll(havingBindValues)
+    override fun additionalBindValues(): List<Any?> = buildList {
+        addAll(super.additionalBindValues())
         limitValue?.let { value -> add(value) }
         offsetValue?.let { value -> add(value) }
-    }
-
-    /**
-     * ## EntityMeta 検証
-     * ### 共通 Validator の結果を runtime 例外に変換する
-     * @param entityMeta 検証対象 Entity メタ情報
-     * @throws IllegalArgumentException 検証エラーがある場合にスローされる例外
-     * @author Masahiro Inoue
-     * @since 2026-04-28
-     */
-    @InfoLog
-    private fun validateEntityMeta(entityMeta: EntityMeta) {
-        val validationResult = EntityMetaValidator().validate(entityMeta)
-        // 警告があればログに出力
-        validationResult.warnings.forEach { warningMessage ->
-            logger.log(WARNING, warningMessage)
-        }
-        // エラーがあれば例外をスロー
-        if (validationResult.hasErrors) {
-            throw IllegalArgumentException(
-                validationResult.errors.joinToString(System.lineSeparator())
-            )
-        }
     }
 
     /**
@@ -588,35 +327,6 @@ class Select<T : SelectEntity>(
     }
 
     /**
-     * ## 関数引数解決
-     * ### 関数引数がプロパティ名ならカラム参照へ変換し
-     * ### それ以外（文字列リテラル等）はそのまま返す
-     * @param entityMeta 対象 Entity のメタ情報
-     * @param tableAlias 連番が付与されたテーブルエイリアス
-     * @param arg 関数引数として指定された文字列
-     * @return 解決された関数引数（カラム参照または元の文字列）
-     * @author Masahiro Inoue
-     * @since 2026-04-28
-     */
-    @InfoLog
-    private fun resolveFunctionArgument(
-        entityMeta: EntityMeta,
-        tableAlias: String,
-        arg: String
-    ): String {
-        // 引数がプロパティ名に一致するか確認し、一致する場合はテーブルエイリアスとカラム名を組み合わせた参照に変換する
-        val propertyMeta = entityMeta.properties.firstOrNull { it.propertyName == arg }
-        // 一致するプロパティがない場合は引数をそのまま返す（文字列リテラルや数値リテラルなど）
-        return if (propertyMeta.isNull()) {
-            // 引数をそのまま返す
-            arg
-        } else {
-            // プロパティ名に一致する場合、テーブルエイリアスとカラム名を組み合わせた参照に変換して返す
-            "$tableAlias.${propertyMeta?.columnName}"
-        }
-    }
-
-    /**
      * ## SELECT 文文字列生成関数
      * ### 最終的な Select 文を生成する
      * @return  生成された SQL 文字列
@@ -627,49 +337,22 @@ class Select<T : SelectEntity>(
     override fun build(): String {
         if (!isBuild) {
             isBuild = true
-            val selectClause = buildString {
-                append("select ")
-                if (isDistinct) append("distinct ")
-                append(selectColumnList.joinToString(", ") { it })
-            }
-
-            /**
-             * ## 構成要素追加
-             * ## ローカル関数
-             * ### 引数に指定された内容をクエリ構成に追加する
-             * @param clauseId クエリの「句」
-             * @param separator 区切り文字列
-             * @param element 追加する要素
-             */
-            fun addClauseIfNotEmpty(
-                clauseId: SelectClause,
-                separator: CharSequence,
-                element: List<QueryStructureLike>
-            ) {
-                if (element.isNotEmpty()) {
-                    val clause = element.joinToString(separator) { it.build() }
-                    queryStructureMap[clauseId] = mutableListOf("${clauseId.sql} $clause")
+            val baseStatement = selectStatement.format(selectColumnList.joinToString(", "))
+            buildInClauseDefinitionOrder({
+                addClauseIfNotEmpty(SelectClause.ORDER, ARGUMENT_DELIMITER, orderColumns.toList())
+                limitValue?.let {
+                    queryStructureMap[SelectClause.LIMIT] =
+                        mutableListOf("${SelectClause.LIMIT.sql} ?")
                 }
-            }
-
-            if (joinDelegate.clauses.isNotEmpty()) {
-                queryStructureMap[SelectClause.JOIN] = joinDelegate.clauses.toMutableList()
-            }
-            addClauseIfNotEmpty(SelectClause.WHERE, AND.query, whereDelegate.conditions)
-            addClauseIfNotEmpty(SelectClause.HAVING, AND.query, havingConditions.toList())
-            addClauseIfNotEmpty(SelectClause.GROUP, ARGUMENT_DELIMITER, groupByColumns.toList())
-            addClauseIfNotEmpty(SelectClause.ORDER, ARGUMENT_DELIMITER, orderColumns.toList())
-            limitValue?.let {
-                queryStructureMap[SelectClause.LIMIT] = mutableListOf("${SelectClause.LIMIT.sql} ?")
-            }
-            offsetValue?.let {
-                queryStructureMap[SelectClause.OFFSET] =
-                    mutableListOf("${SelectClause.OFFSET.sql} ?")
-            }
+                offsetValue?.let {
+                    queryStructureMap[SelectClause.OFFSET] =
+                        mutableListOf("${SelectClause.OFFSET.sql} ?")
+                }
+            })
             val otherClauses = SelectClause.entries
                 .joinToString(" ") { queryStructureMap[it]?.joinToString(" ") ?: " " }
             // select 文を生成
-            query = "$selectClause $otherClauses".replace(MULTI_SPACE_REGEX, " ").trim()
+            query = "$baseStatement $otherClauses".replace(MULTI_SPACE_REGEX, " ").trim()
         }
         return query
     }

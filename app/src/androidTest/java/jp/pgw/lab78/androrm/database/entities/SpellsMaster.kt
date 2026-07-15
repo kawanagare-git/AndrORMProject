@@ -62,9 +62,25 @@ import java.time.LocalDateTime
             commonInterface = [UPDATE],
         ),
         Projection(
+            entityNameExtend = "Upsert",
+            aliasExtend = "UPSERT",
+            properties = [
+                ColumnProjection("magicId"),
+                ColumnProjection("magicTypeId"),
+                ColumnProjection("magicName"),
+                ColumnProjection("mainEffect"),
+                ColumnProjection("subEffect"),
+                ColumnProjection("createMethod"),
+                ColumnProjection("updateMethod"),
+                ColumnProjection("updateTime"),
+            ],
+            commonInterface = [UPSERT],
+        ),
+        Projection(
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("magicId"),
+                ColumnProjection("updateMethod"),
             ],
             commonInterface = [DELETE],
         ),

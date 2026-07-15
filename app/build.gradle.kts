@@ -323,14 +323,27 @@ val weaveDebugAspectJ by tasks.registering {
                 classpath = aspectjTools
                 mainClass.set("org.aspectj.tools.ajc.Main")
 
-                args(
-                    "-showWeaveInfo",
+                val showWeaveInfo = project.providers
+                    .gradleProperty("androrm.aspectj.showWeaveInfo")
+                    .map { value -> value.toBoolean() }
+                    .orElse(false)
+                    .get()
+
+                val ajcArgs = mutableListOf<String>()
+
+                if (showWeaveInfo) {
+                    ajcArgs += "-showWeaveInfo"
+                }
+
+                ajcArgs += listOf(
                     "-inpath", inputDir.absolutePath,
                     "-aspectpath", aspectPath,
                     "-d", outputDir.absolutePath,
                     "-classpath", fullClasspath,
-                    "-bootclasspath", bootClasspath
+                    "-bootclasspath", bootClasspath,
                 )
+
+                args(ajcArgs)
             }
 
             // AJC 完了後にだけ、元の class directory を置き換える
@@ -389,8 +402,8 @@ tasks.withType<Test>().configureEach {
 
     testLogging {
         events(
-            TestLogEvent.PASSED,
-            TestLogEvent.SKIPPED,
+//            TestLogEvent.PASSED,
+//            TestLogEvent.SKIPPED,
             TestLogEvent.FAILED
         )
         exceptionFormat = TestExceptionFormat.FULL
@@ -414,4 +427,8 @@ tasks.matching {
             it.name == "connectedDebugAndroidTest"
 }.configureEach {
     dependsOn("andrormDetektCheckBeforeTest")
+}
+ksp {
+    arg("androrm.moduleDir", project.projectDir.absolutePath)
+    arg("androrm.ksp.consoleLogLevel", "WARN")
 }

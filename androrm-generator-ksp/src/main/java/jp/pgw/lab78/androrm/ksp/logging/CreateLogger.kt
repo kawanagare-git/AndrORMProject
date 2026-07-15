@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.ksp.logging
 
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.logging.LogLevel
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 
 object CreateLogger {
@@ -25,8 +26,13 @@ object CreateLogger {
      * @since 2026-04-17
      */
     fun initialize(environment: SymbolProcessorEnvironment) {
+        val consoleLogLevel = environment.options["androrm.ksp.consoleLogLevel"]
+            ?.uppercase()
+            ?.let { levelName -> LogLevel.valueOf(levelName) }
+            ?: LogLevel.WARN
         _logger = CompositeLogger(
             environment.logger,
+            consoleLogLevel,
             environment.options["androrm.moduleDir"] ?: EMPTY_STRING,
             LOG_ROOT,
             LOG_DIRECTORY

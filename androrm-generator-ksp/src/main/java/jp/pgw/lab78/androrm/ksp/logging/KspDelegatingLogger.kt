@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.ksp.logging
 import com.google.devtools.ksp.processing.KSPLogger
 import jp.pgw.lab78.androrm.common.Constants.ARGUMENT_DELIMITER
 import jp.pgw.lab78.androrm.common.Constants.LogPhase.*
+import jp.pgw.lab78.androrm.common.logging.LogLevel
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateDebugMessage
 import jp.pgw.lab78.androrm.ksp.logging.DefaultLogMessageGenerator.generateErrorMessage
@@ -20,7 +21,10 @@ import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
  * @author Masahiro Inoue
  * @since 2026-02-27
  */
-class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
+class KspDelegatingLogger(
+    private val logger: KSPLogger,
+    private val consoleLogLevel: LogLevel = LogLevel.WARN,
+) : LoggerLike {
     /**
      * ## インフォメーションログ出力メソッド
      * ### エラー発生時のログ出力用の簡易メソッド
@@ -100,10 +104,12 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @since 2026-03-31
      */
     override fun logDebug(debugMessage: String, vararg details: Any) {
-        logger.warn(debugMessage.ifEmpty {
-            "${generateDebugMessage(debugMessage, getMethodName())}: " +
-                    concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
-        })
+        if (consoleLogLevel.isLoggable(LogLevel.DEBUG)) {
+            logger.warn(debugMessage.ifEmpty {
+                "${generateDebugMessage(debugMessage, getMethodName())}: " +
+                        concat(details.toList(), ARGUMENT_DELIMITER).toSingleLineLogString()
+            })
+        }
     }
 
     /**
@@ -114,28 +120,30 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @since 2026-02-27
      */
     override fun logTraceEntered(vararg details: Any) {
-        logger.warn(
-            when {
-                details.size == 1 && details[0] is String -> {
-                    details[0].toString()
-                }
+        if (consoleLogLevel.isLoggable(LogLevel.DEBUG)) {
+            logger.warn(
+                when {
+                    details.size == 1 && details[0] is String -> {
+                        details[0].toString()
+                    }
 
-                else -> {
-                    "${generateTraceMessage(getMethodName())}: ${ENTERED.tag} " +
-                            if (details.isEmpty()) {
-                                ""
-                            } else {
-                                val detailsSub = details.toList().subList(1, details.size - 1)
-                                ": ${
-                                    concat(
-                                        detailsSub,
-                                        ARGUMENT_DELIMITER
-                                    ).toSingleLineLogString()
-                                }"
-                            }
+                    else -> {
+                        "${generateTraceMessage(getMethodName())}: ${ENTERED.tag} " +
+                                if (details.isEmpty()) {
+                                    ""
+                                } else {
+                                    val detailsSub = details.toList().subList(1, details.size - 1)
+                                    ": ${
+                                        concat(
+                                            detailsSub,
+                                            ARGUMENT_DELIMITER
+                                        ).toSingleLineLogString()
+                                    }"
+                                }
+                    }
                 }
-            }
-        )
+            )
+        }
     }
 
     /**
@@ -146,14 +154,16 @@ class KspDelegatingLogger(private val logger: KSPLogger) : LoggerLike {
      * @since 2026-02-27
      */
     override fun logTraceExiting(result: Any?) {
-        logger.warn(
-            if (result is String) {
-                result
-            } else {
-                "${generateTraceMessage(getMethodName())}: ${EXITING.tag}" +
-                        (result?.let { res -> ": ${res.toSingleLineLogString()}" } ?: "")
-            }
-        )
+        if (consoleLogLevel.isLoggable(LogLevel.DEBUG)) {
+            logger.warn(
+                if (result is String) {
+                    result
+                } else {
+                    "${generateTraceMessage(getMethodName())}: ${EXITING.tag}" +
+                            (result?.let { res -> ": ${res.toSingleLineLogString()}" } ?: "")
+                }
+            )
+        }
     }
 
     /**

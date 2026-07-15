@@ -12,8 +12,11 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
  * @since 2025-08-01
  */
 @ConditionDslMarker
-class ConditionBuilder(private val valueHolder: QueryWithBindValues) :
-    BaseConditionBuilder<ConditionBuilder>(valueHolder) {
+class ConditionBuilder(
+    private val valueHolder: QueryWithBindValues,
+    private val enableAlias: Boolean = true
+) :
+    BaseConditionBuilder<ConditionBuilder>(valueHolder, enableAlias) {
     /** Self インスタンス生成関数（自クラスを生成する） */
-    override fun createSelf() = ConditionBuilder(valueHolder)
+    override fun createSelf() = ConditionBuilder(valueHolder, enableAlias)
 }
