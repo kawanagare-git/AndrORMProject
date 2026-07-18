@@ -4,11 +4,7 @@ import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum.*
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
-import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
-import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
-import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.database.annotation.Unique
+import jp.pgw.lab78.androrm.common.database.annotation.*
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
@@ -59,16 +55,16 @@ import java.time.LocalDateTime
     ]
 )
 @Table(name = "CHARACTER_STATIC_INFO", alias = "CSI")
-@Unique("CHAR_UNIQ", ["userId", "characterNo"])
+@Unique(properties = ["userId", "characterNo"])
 data class CharacterStaticInfoV2(
     @PrimaryKey
     val characterPk: Int,
     val userId: String,
     val characterNo: Int,
     val characterName: String,
-    val createMethod: String,
     @MigrationDefault("1")
     val mainElement: Int,
+    val createMethod: String,
     @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP_ISO")
     val createTime: LocalDateTime,
     val updateMethod: String,

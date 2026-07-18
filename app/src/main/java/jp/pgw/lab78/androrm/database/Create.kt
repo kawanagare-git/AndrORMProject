@@ -48,9 +48,6 @@ class Create<T : TableDefinitionEntity>(
     private val columnProperties: List<KProperty1<out T, *>> =
         entityClass.getConstructorOrderedProperties()
 
-    /** インデックス名格納領域 */
-    private val usedIndexNames = mutableSetOf<String>()
-
     /** Boolean DEFAULT コメント */
     private val booleanDefaultComments: Map<String, String> = mapOf(
         "0" to "/* 0:false / 1:true */",
@@ -84,28 +81,31 @@ class Create<T : TableDefinitionEntity>(
     /**
      * ## INDEX 作成クエリ生成
      * ### @Index / @Unique から CREATE INDEX 文を生成する
+     * @param indexVersion INDEX バージョン
+     * @param usedIndexNames データベース内で使用済みのINDEX名
      * @return CREATE INDEX / CREATE UNIQUE INDEX 文のリスト
      * @author Masahiro Inoue
      * @since 2026-05-30
      */
-    fun buildIndexQueries(indexVersion: Int): List<String> {
+    fun buildIndexQueries(
+        indexVersion: Int,
+        usedIndexNames: MutableSet<String> = mutableSetOf(),
+    ): List<String> {
         // @Index より create index 文を生成する
         val indexQueries = entityClass.findAnnotations<Index>()
-            .mapIndexed { index, annotation ->
+            .map { annotation ->
                 // @Index の properties が空配列なら例外
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
-                val indexName = "${
-                    annotation.name.takeIf { it.isNotBlank() }
-                    // インデックス名の生成
+                val indexName = annotation.name.takeIf { it.isNotBlank() }
+                    ?.let { specifiedName -> "$specifiedName$indexVersion" }
                         ?: buildDefaultIndexName(
                             prefix = "IDX",
-                            serialNumber = index + 1,
                             properties = annotation.properties,
+                        indexVersion = indexVersion,
                         )
-                }$indexVersion"
                 // インデックス名の登録
-                registerIndexName(indexName)
+                registerIndexName(indexName, usedIndexNames)
                 // create index 文の生成
                 buildIndexQuery(
                     indexName = indexName,
@@ -115,21 +115,19 @@ class Create<T : TableDefinitionEntity>(
             }
         // @Unique より create index 文を生成する
         val uniqueIndexQueries = entityClass.findAnnotations<Unique>()
-            .mapIndexed { index, annotation ->
+            .map { annotation ->
                 // @Index の properties が空配列なら例外
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
-                val indexName = "${
-                    annotation.name.takeIf { it.isNotBlank() }
-                    // インデックス名の生成
+                val indexName = annotation.name.takeIf { it.isNotBlank() }
+                    ?.let { specifiedName -> "$specifiedName$indexVersion" }
                         ?: buildDefaultIndexName(
-                            prefix = "UQ",
-                            serialNumber = index + 1,
+                        prefix = "UNIQ",
                             properties = annotation.properties,
+                        indexVersion = indexVersion,
                         )
-                }$indexVersion"
                 // インデックス名の登録
-                registerIndexName(indexName)
+                registerIndexName(indexName, usedIndexNames)
                 // create index 文の生成
                 buildIndexQuery(
                     indexName = indexName,
@@ -157,7 +155,7 @@ class Create<T : TableDefinitionEntity>(
         indexType: IndexType = IndexType.UNIQUE,
     ): String {
         val columnNames = properties.map { propertyName -> resolveColumnName(propertyName) }
-        return "create ${indexType.query}index if not exists $indexName " +
+        return "create ${indexType.query}index $indexName " +
                 "on $tableName (${columnNames.joinToString(", ")})"
     }
 
@@ -166,21 +164,26 @@ class Create<T : TableDefinitionEntity>(
      * ### annotation の name が未指定相当の場合に INDEX 名を生成する
      *
      * @param prefix INDEX 名 prefix
-     * @param serialNumber 連番
      * @param properties INDEX 対象プロパティ名
+     * @param indexVersion INDEX バージョン
      * @return 生成した INDEX 名
      * @author Masahiro Inoue
      * @since 2026-05-30
      */
     private fun buildDefaultIndexName(
         prefix: String,
-        serialNumber: Int,
         properties: Array<String>,
+        indexVersion: Int,
     ): String {
         val columnPart = properties.joinToString("_") { propertyName ->
             resolveColumnName(propertyName)
         }
-        return listOf(prefix, tableName, serialNumber, columnPart).joinToString("_")
+        return listOf(
+            prefix,
+            entityClass.getTableName(),
+            columnPart,
+            indexVersion,
+        ).joinToString("_")
     }
 
     /**
@@ -271,15 +274,16 @@ class Create<T : TableDefinitionEntity>(
     /**
      * ## インデクス名の登録
      * ### アノテーションから取得したインデクスを登録する
-     *
+     * @param indexName 登録対象のINDEX名
+     * @param usedIndexNames データベース内で使用済みのINDEX名
      */
     private fun registerIndexName(
         indexName: String,
+        usedIndexNames: MutableSet<String>,
     ) {
         val normalizedIndexName = indexName.uppercase()
         require(usedIndexNames.add(normalizedIndexName)) {
             MessageConstants.AE00020.format(indexName)
         }
     }
-
-        }
+}

@@ -25,7 +25,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT],
+            commonInterface = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",

@@ -59,15 +59,40 @@ class CreateTest {
 
         assertEquals(
             listOf(
-                "create index if not exists IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED2 " +
+                "create index IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED2 " +
                         "on TEST_LARGE_ENTITY (ACTIVE, CREATED_AT)",
-                "create unique index if not exists UQ_TEST_CODE2 " +
+                "create unique index UQ_TEST_CODE2 " +
                         "on TEST_LARGE_ENTITY (CODE)",
-                "create unique index if not exists UQ_TEST_PERSONAL_INFO2 " +
+                "create unique index UQ_TEST_PERSONAL_INFO2 " +
                         "on TEST_LARGE_ENTITY (NAME, FURIGANA, GENDER, BIRTHDAY, PLACE_OF_BIRTH)",
             ),
             actual,
         )
+    }
+
+    @Test
+    fun testBuildIndexQueries_emptyNames_buildNamesFromAnnotationProperties() {
+        val actual = Create(TestDefaultIndexNameEntity::class).buildIndexQueries(7)
+
+        assertEquals(
+            listOf(
+                "create index IDX_TEST_DEFAULT_INDEX_NAME_ENTITY_NAME_CODE_7 " +
+                        "on TEST_DEFAULT_INDEX_NAME_ENTITY (NAME, CODE)",
+                "create unique index UNIQ_TEST_DEFAULT_INDEX_NAME_ENTITY_CODE_7 " +
+                        "on TEST_DEFAULT_INDEX_NAME_ENTITY (CODE)",
+            ),
+            actual,
+        )
+    }
+
+    @Test
+    fun testBuildIndexQueries_calledTwice_returnsSameQueries() {
+        val create = Create(TestDefaultIndexNameEntity::class)
+        val first = create.buildIndexQueries(7)
+
+        val second = create.buildIndexQueries(7)
+
+        assertEquals(first, second)
     }
 
     @Test
@@ -207,6 +232,21 @@ class CreateTest {
         properties = ["code"],
     )
     private data class TestDuplicateIndexNameIgnoreCaseEntity(
+        @Column(name = "CODE")
+        val code: String,
+
+        @Column(name = "NAME")
+        val name: String,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_DEFAULT_INDEX_NAME_ENTITY", alias = "TDIN")
+    @Index(
+        properties = ["name", "code"],
+    )
+    @Unique(
+        properties = ["code"],
+    )
+    private data class TestDefaultIndexNameEntity(
         @Column(name = "CODE")
         val code: String,
 

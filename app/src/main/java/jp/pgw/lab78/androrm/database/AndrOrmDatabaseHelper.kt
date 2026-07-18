@@ -14,6 +14,12 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00030
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00031
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00032
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00033
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00034
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00035
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00036
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
@@ -32,6 +38,7 @@ import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrdered
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
 import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
+import java.io.Closeable
 import java.util.concurrent.FutureTask
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
@@ -60,6 +67,16 @@ open class AndrOrmDatabaseHelper(
     version: Int,
     private val entities: List<KClass<out TableDefinitionEntity>>,
 ) : SQLiteOpenHelper(context, databaseName, null, version) {
+    /**
+     * ## AndrORM データベースヘルパー生成
+     * ### 可変長引数で指定された Entity を使用してデータベースヘルパーを生成する
+     * @param context Android システムのコンテキスト
+     * @param databaseName データベース名
+     * @param version データベースのバージョン
+     * @param entities 生成・移行対象テーブルを定義する Entity
+     * @author Masahiro Inoue
+     * @since 2025-08-08
+     */
     constructor(
         context: Context,
         databaseName: String = "app.db",
@@ -69,9 +86,59 @@ open class AndrOrmDatabaseHelper(
 
     /**
      * ## 標準カラムマッピング保持領域
-     * ### onUpgrade 中に作成した標準カラムマッピングを resolveColumnMappings() から参照する
+     * ### onUpgrade 中に作成した「旧カラム名 to 新カラム名」の対応を保持する
+     * ### resolveColumnMappings() の指定を反映した後、実際のデータ転送用マッピングの生成に使用する
      */
     private lateinit var preparedColumnMappings: MutableMap<KClass<out TableDefinitionEntity>, List<Pair<String, String>>>
+
+    /**
+     * ## SAVEPOINT 実行結果
+     * ### SAVEPOINT 内の処理結果、成否、および失敗原因を保持する
+     * @param T SAVEPOINT 内で実行する処理の戻り値型
+     * @property result 処理成功時の戻り値。処理失敗時は null
+     * @property isSuccess 処理が成功した場合は true
+     * @property failure 処理失敗時に発生した例外。処理成功時は null
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    data class SavepointResult<T>(
+        val result: T,
+        val isSuccess: Boolean = false,
+        val failure: Exception?
+    )
+
+    /**
+     * ## SAVEPOINT 作成失敗例外
+     * ### SAVEPOINT 文を実行できなかった場合に送出する
+     * @param message エラーメッセージ
+     * @param cause SAVEPOINT 文の実行時に発生した例外
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    class NotCreatedSavepointException(message: String, cause: Throwable) :
+        RuntimeException(message, cause)
+
+    /**
+     * ## SAVEPOINT ロールバック失敗例外
+     * ### ROLLBACK TO SAVEPOINT 文を実行できなかった場合に送出する
+     * @param message エラーメッセージ
+     * @param cause ROLLBACK TO SAVEPOINT 文の実行時に発生した例外
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    class FailureRollbackException(message: String, cause: Throwable) :
+        RuntimeException(message, cause)
+
+    /**
+     * ## SAVEPOINT 解放失敗例外
+     * ### RELEASE SAVEPOINT 文を実行できなかった場合に送出する
+     * @param message エラーメッセージ
+     * @param cause RELEASE SAVEPOINT 文の実行時に発生した例外
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    class FailureReleaseException(message: String, cause: Throwable) :
+        RuntimeException(message, cause)
 
     /**
      * ## データベース生成
@@ -82,9 +149,10 @@ open class AndrOrmDatabaseHelper(
      * @since 2025-08-08
      */
     override fun onCreate(db: SQLiteDatabase) {
+        val usedIndexNames = mutableSetOf<String>()
         val createTableList = entities.map { entity ->
             val create = Create(entity)
-            create.build() to create.buildIndexQueries(0)
+            create.build() to create.buildIndexQueries(0, usedIndexNames)
         }
         // テーブル作成
         createTableList.forEach { (createTableQuery, createIndexQueries) ->
@@ -115,9 +183,10 @@ open class AndrOrmDatabaseHelper(
 
     /**
      * ## DB 移行処理
-     * ### 標準では同名カラムの値を引き継ぐ
+     * ### 新テーブルを生成し、旧テーブルから移行可能なカラムの値を転送してテーブルを置き換える
+     * ### 旧テーブルに存在しない非nullableカラムは MigrationDefault の値で補完し、nullableカラムは転送対象外とする
      * @param db SQLite データベース
-     * @param newVersion 適用後データベースバージョン
+     * @param newVersion 適用後データベースバージョン。新規インデックスの適用判定に使用する
      * @author Masahiro Inoue
      * @since 2026-05-30
      */
@@ -151,9 +220,10 @@ open class AndrOrmDatabaseHelper(
             )
         }
         // 新テーブルの create 文生成
+        val usedIndexNames = mutableSetOf<String>()
         val createNewTableList = tableNames.map { (key, tableNamePair) ->
             val create = Create(key, tableNamePair.second)
-            create.build() to create.buildIndexQueries(newVersion)
+            create.build() to create.buildIndexQueries(newVersion, usedIndexNames)
         }
         // データ転送用クエリ生成
         val insertSelectQueryList = entities.map { entity ->
@@ -183,99 +253,6 @@ open class AndrOrmDatabaseHelper(
         executeQuery(db, createNewTableList.flatMap { it.second })
         executeQuery(db, dropOldTableQueryList)
         executeQuery(db, renameTableQueryList)
-    }
-
-    /**
-     * ## 移行用カラムマッピング解決
-     * ### 旧テーブルに存在しないnullableカラムは転送対象外とし、MigrationDefault指定列は検証済み値で補完する
-     * @param db SQLite データベース
-     * @param entity 移行先 Entity
-     * @param tableName 移行元テーブル名
-     * @param columnMappings 旧カラムまたは式と新カラムの対応
-     * @return データ転送に使用するカラムマッピング
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun resolveTransferColumnMappings(
-        db: SQLiteDatabase,
-        entity: KClass<out TableDefinitionEntity>,
-        tableName: String,
-        columnMappings: List<Pair<String, String>>,
-    ): List<Pair<String, String>> {
-        val oldColumnNames = findTableColumnNames(
-            db = db,
-            tableName = tableName,
-            fallback = columnMappings.map { mapping -> mapping.first }.toSet(),
-        ).map { columnName -> columnName.uppercase() }.toSet()
-        val propertyByColumnName = entity.getConstructorOrderedProperties()
-            .associateBy { property -> property.getColumnName().uppercase() }
-
-        return columnMappings.mapNotNull { (oldColumn, newColumn) ->
-            if (oldColumn.uppercase() in oldColumnNames) {
-                return@mapNotNull oldColumn to newColumn
-            }
-
-            val property = propertyByColumnName[newColumn.uppercase()]
-                ?: error("移行先カラムに対応するプロパティがありません: $newColumn")
-            resolveMigrationDefaultSql(entity, property)?.let { sqlValue ->
-                sqlValue to newColumn
-            }
-        }
-    }
-
-    /**
-     * ## テーブルカラム名取得
-     * ### 移行元テーブルを空検索して実カラム名を取得する
-     * @param db SQLite データベース
-     * @param tableName テーブル名
-     * @param fallback Cursor を返さないテスト用 DB の代替カラム名
-     * @return テーブルのカラム名
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun findTableColumnNames(
-        db: SQLiteDatabase,
-        tableName: String,
-        fallback: Set<String>,
-    ): Set<String> {
-        val cursor = db.rawQuery("select * from $tableName limit 0", emptyArray<String>())
-            ?: return fallback
-        return cursor.use { it.columnNames.toSet() }
-    }
-
-    /**
-     * ## マイグレーション既定値SQL解決
-     * ### MigrationDefaultを型別に検証し、SQLiteへ渡せるSQL値へ正規化する
-     * @param entity 対象 Entity
-     * @param property 旧テーブルに存在しないプロパティ
-     * @return SQLリテラルまたは式。MigrationDefault未指定のnullableプロパティはnull
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun resolveMigrationDefaultSql(
-        entity: KClass<out TableDefinitionEntity>,
-        property: KProperty1<out TableDefinitionEntity, *>,
-    ): String? {
-        val migrationDefault = property.findAnnotation<MigrationDefault>()
-        if (migrationDefault == null) {
-            if (property.returnType.isMarkedNullable) return null
-            error(
-                "Entity '${entity.qualifiedName}' のプロパティ '${property.name}' は、" +
-                        "非nullableカラム追加時に @MigrationDefault が必要です。"
-            )
-        }
-        val typeName = (property.returnType.classifier as? KClass<*>)?.qualifiedName.orEmpty()
-        val isValid = SqlDefaultValueValidator.isValid(
-            type = SqlDefaultValueType.fromQualifiedName(typeName),
-            nullable = property.returnType.isMarkedNullable,
-            value = migrationDefault.value,
-            allowBlank = false,
-        )
-        require(isValid) {
-            "Entity '${entity.qualifiedName}' のプロパティ '${property.name}' に指定された " +
-                    "@MigrationDefault('${migrationDefault.value}') は型 '$typeName' に対して不正です。"
-        }
-        return SqlDefaultValueValidator.normalize(migrationDefault.value)
     }
 
     /**
@@ -422,6 +399,278 @@ open class AndrOrmDatabaseHelper(
     }
 
     /**
+     * ## SAVEPOINT 実行
+     * ### SAVEPOINT を作成して block を実行し、失敗時は当該 SAVEPOINT までロールバックする
+     * ### 成功・失敗のどちらの場合も SAVEPOINT を解放し、block 内の例外は failure として返す
+     * @param marker SAVEPOINT 名。nullまたは空文字の場合は一意な名前を自動生成する
+     * @param block SAVEPOINT 内で実行する処理
+     * @return block の実行結果、成否、および失敗原因
+     * @throws NotCreatedSavepointException SAVEPOINT の作成に失敗した場合
+     * @throws FailureRollbackException block 失敗後のロールバックに失敗した場合
+     * @throws FailureReleaseException SAVEPOINT の解放に失敗した場合
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    fun <T> savepoint(
+        marker: Any? = null,
+        block: () -> T,
+    ): SavepointResult<T?> {
+        val savepointName = createSavepointName(marker)
+
+        return Savepoint(
+            database = writableDatabase,
+            name = savepointName,
+        ).use { savepoint ->
+            try {
+                val result = block()
+                SavepointResult(result, true, null)
+            } catch (e: Exception) {
+                savepoint.rollback()
+                SavepointResult(null, false, e)
+            }
+        }
+    }
+
+    /**
+     * ## SAVEPOINT 管理
+     * ### SAVEPOINT の作成、ロールバック、および解放を状態に従って管理する
+     * @param database SQL を実行する SQLite データベース
+     * @param name SAVEPOINT 名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private class Savepoint(
+        private val database: SQLiteDatabase,
+        private val name: String,
+    ) : Closeable {
+        /** SAVEPOINT の現在の状態 */
+        private var state = State.ACTIVE
+
+        /**
+         * ## イニシャライザ
+         * ### SAVEPOINT を作成する
+         * @throws NotCreatedSavepointException SAVEPOINT の作成に失敗した場合
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
+        init {
+            try {
+                database.execSQL("SAVEPOINT $name")
+            } catch (e: Exception) {
+                throw NotCreatedSavepointException(
+                    AE00034.format(name),
+                    e,
+                )
+            }
+        }
+
+        /**
+         * ## SAVEPOINTまでロールバック
+         * ### SAVEPOINT 作成後の変更を取り消し、状態をロールバック済みに更新する
+         * @throws FailureRollbackException SAVEPOINT へのロールバックに失敗した場合
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
+        fun rollback() {
+            /*
+             * SQL実行前にBROKENへ変更する。
+             * ROLLBACKに失敗した場合、close()でRELEASEしない。
+             */
+            state = State.BROKEN
+            try {
+                database.execSQL("ROLLBACK TO SAVEPOINT $name")
+                state = State.ROLLED_BACK
+            } catch (e: Exception) {
+                throw FailureRollbackException(
+                    AE00035.format(name),
+                    e,
+                )
+            }
+        }
+
+        /**
+         * ## SAVEPOINTを解放
+         * ### 現在の状態に応じて SAVEPOINT の解放処理を実行する
+         * @throws FailureReleaseException SAVEPOINT の解放に失敗した場合
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
+        override fun close() {
+            state.execute(this)
+        }
+
+        /**
+         * ## SAVEPOINT解放処理
+         * ### RELEASE SAVEPOINT を実行して状態を解放済みに更新する
+         * @throws FailureReleaseException SAVEPOINT の解放に失敗した場合
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
+        private fun release() {
+            /*
+             * RELEASEに失敗した場合も、再度RELEASEしないように
+             * SQL実行前にBROKENへ変更する。
+             */
+            state = State.BROKEN
+            try {
+                database.execSQL("RELEASE SAVEPOINT $name")
+                state = State.RELEASED
+            } catch (e: Exception) {
+                throw FailureReleaseException(
+                    AE00036.format(name),
+                    e,
+                )
+            }
+        }
+
+        /**
+         * ## SAVEPOINTの状態
+         * @param executor 状態に応じて実行する SAVEPOINT 操作
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
+        private enum class State(private val executor: Savepoint.() -> Unit) {
+            /** 作成済み */
+            ACTIVE({ release() }),
+
+            /** ROLLBACK TO実行済み */
+            ROLLED_BACK({ release() }),
+
+            /** SQL実行に失敗し、状態を保証できない */
+            BROKEN({ }),
+
+            /** RELEASE実行済み */
+            RELEASED({ }),
+            ;
+
+            /**
+             * ## 状態に対応した処理を実行
+             * @param savepoint 操作対象の SAVEPOINT
+             * @author Masahiro Inoue
+             * @since 2026-07-18
+             */
+            fun execute(savepoint: Savepoint) {
+                executor.invoke(savepoint)
+            }
+        }
+    }
+
+    /** 自動生成する SAVEPOINT 名の連番 */
+    private var savepointSequence = 0L
+
+    /**
+     * ## SAVEPOINT 名生成
+     * ### marker が指定されている場合は前後空白を除去して使用し、未指定の場合は連番から生成する
+     * @param marker SAVEPOINT 名の生成元
+     * @return SQL に使用する SAVEPOINT 名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun createSavepointName(marker: Any?): String {
+        val specifiedName = marker?.toString()?.trim()
+
+        if (specifiedName.isNullOrEmpty()) {
+            savepointSequence++
+            return "androrm_savepoint_$savepointSequence"
+        }
+
+        return specifiedName
+    }
+
+    /**
+     * ## 移行用カラムマッピング解決
+     * ### 旧テーブルに存在しないnullableカラムは転送対象外とし、MigrationDefault指定列は検証済み値で補完する
+     * @param db SQLite データベース
+     * @param entity 移行先 Entity
+     * @param tableName 移行元テーブル名
+     * @param columnMappings 旧カラムまたは式と新カラムの対応
+     * @return データ転送に使用するカラムマッピング
+     * @throws IllegalStateException 移行先カラムに対応するプロパティが存在しない場合、または非nullable追加カラムに MigrationDefault がない場合
+     * @throws IllegalArgumentException MigrationDefault の値が対象プロパティの型に対して不正な場合
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun resolveTransferColumnMappings(
+        db: SQLiteDatabase,
+        entity: KClass<out TableDefinitionEntity>,
+        tableName: String,
+        columnMappings: List<Pair<String, String>>,
+    ): List<Pair<String, String>> {
+        val oldColumnNames = findTableColumnNames(
+            db = db,
+            tableName = tableName,
+            fallback = columnMappings.map { mapping -> mapping.first }.toSet(),
+        ).map { columnName -> columnName.uppercase() }.toSet()
+        val propertyByColumnName = entity.getConstructorOrderedProperties()
+            .associateBy { property -> property.getColumnName().uppercase() }
+
+        return columnMappings.mapNotNull { (oldColumn, newColumn) ->
+            if (oldColumn.uppercase() in oldColumnNames) {
+                return@mapNotNull oldColumn to newColumn
+            }
+
+            val property = propertyByColumnName[newColumn.uppercase()]
+                ?: error(AE00031.format(newColumn))
+            resolveMigrationDefaultSql(entity, property)?.let { sqlValue ->
+                sqlValue to newColumn
+            }
+        }
+    }
+
+    /**
+     * ## テーブルカラム名取得
+     * ### 移行元テーブルを空検索して実カラム名を取得する
+     * @param db SQLite データベース
+     * @param tableName テーブル名
+     * @param fallback Cursor を返さないテスト用 DB の代替カラム名
+     * @return テーブルのカラム名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun findTableColumnNames(
+        db: SQLiteDatabase,
+        tableName: String,
+        fallback: Set<String>,
+    ): Set<String> {
+        val cursor = db.rawQuery("select * from $tableName limit 0", emptyArray<String>())
+            ?: return fallback
+        return cursor.use { it.columnNames.toSet() }
+    }
+
+    /**
+     * ## マイグレーション既定値SQL解決
+     * ### MigrationDefaultを型別に検証し、SQLiteへ渡せるSQL値へ正規化する
+     * @param entity 対象 Entity
+     * @param property 旧テーブルに存在しないプロパティ
+     * @return SQLリテラルまたは式。MigrationDefault未指定のnullableプロパティはnull
+     * @throws IllegalStateException 非nullableプロパティに MigrationDefault が指定されていない場合
+     * @throws IllegalArgumentException MigrationDefault の値が対象プロパティの型に対して不正な場合
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun resolveMigrationDefaultSql(
+        entity: KClass<out TableDefinitionEntity>,
+        property: KProperty1<out TableDefinitionEntity, *>,
+    ): String? {
+        val migrationDefault = property.findAnnotation<MigrationDefault>()
+        if (migrationDefault == null) {
+            if (property.returnType.isMarkedNullable) return null
+            error(AE00032.format(entity.qualifiedName, property.name))
+        }
+        val typeName = (property.returnType.classifier as? KClass<*>)?.qualifiedName.orEmpty()
+        val isValid = SqlDefaultValueValidator.isValid(
+            type = SqlDefaultValueType.fromQualifiedName(typeName),
+            nullable = property.returnType.isMarkedNullable,
+            value = migrationDefault.value,
+            allowBlank = false,
+        )
+        require(isValid) {
+            AE00033.format(entity.qualifiedName, property.name, migrationDefault.value, typeName)
+        }
+        return SqlDefaultValueValidator.normalize(migrationDefault.value)
+    }
+
+    /**
      * ## SELECT 用バインド値変換
      * ### rawQuery の selectionArgs に渡すため、値を String 配列へ変換する
      * @receiver バインド値リスト
@@ -456,7 +705,10 @@ open class AndrOrmDatabaseHelper(
         val columnTargets: List<SelectColumnTarget>,
         val nullableByJoin: Boolean,
     ) {
+        /** SELECT 結果 Map で Entity を識別するテーブルエイリアス */
         val alias: String = tableRef.alias
+
+        /** 復元する Entity のクラス */
         val entityClass: KClass<out SelectEntity> = tableRef.entityClass
     }
 
@@ -579,7 +831,7 @@ open class AndrOrmDatabaseHelper(
         val result = mutableListOf<Map<String, Any?>>()
         // カラム名の取得
         val columnNames = this.columnNames
-        // カーソルの次行読みk出し
+        // カーソルの次行読み出し
         while (this.moveToNext()) {
             val row = linkedMapOf<String, Any?>()
             // カラム名を基に値の取得
@@ -656,8 +908,8 @@ open class AndrOrmDatabaseHelper(
      * ## SQLリスト実行
      * ### 生成済みSQLを順番に実行する
      *
-     * @param db SQLiteDatabase
-     * @param queries 実行対象クエリ郡
+     * @param db SQL を実行する SQLite データベース
+     * @param queries 実行対象クエリ群
      * @author Masahiro Inoue
      * @since 2026-06-05
      */

@@ -8,7 +8,9 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00020
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
@@ -37,6 +39,22 @@ import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity as EmployeeT
 class AndrOrmDatabaseHelperTest {
 
     @Test
+    fun testOnCreate_duplicateIndexNamesAcrossEntities_throwsBeforeExecutingDdl() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val helper = TestAndrOrmDatabaseHelper(
+            TestDuplicateIndexFirstEntity::class,
+            TestDuplicateIndexSecondEntity::class,
+        )
+
+        val actual = assertThrows<IllegalArgumentException> {
+            helper.onCreate(db)
+        }
+
+        assertEquals(AE00020.format("shared_index0"), actual.message)
+        Mockito.verifyNoInteractions(db)
+    }
+
+    @Test
     fun testOnCreate_withDefineEntity_executeCreateTableAndIndexQueries() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val helper = TestAndrOrmDatabaseHelper(
@@ -54,11 +72,11 @@ class AndrOrmDatabaseHelperTest {
                         "SCORE REAL, BALANCE INTEGER, ACTIVE INTEGER, REGISTERED_AT DATETIME, " +
                         "LAST_LOGIN_AT DATETIME, MEMO TEXT, CREATED_AT DATETIME, UPDATED_AT DATETIME, " +
                         "primary key (ID))",
-                "create index if not exists IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED0 " +
+                "create index IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED0 " +
                         "on TEST_LARGE_ENTITY (ACTIVE, CREATED_AT)",
-                "create unique index if not exists UQ_TEST_CODE0 " +
+                "create unique index UQ_TEST_CODE0 " +
                         "on TEST_LARGE_ENTITY (CODE)",
-                "create unique index if not exists UQ_TEST_PERSONAL_INFO0 " +
+                "create unique index UQ_TEST_PERSONAL_INFO0 " +
                         "on TEST_LARGE_ENTITY (NAME, FURIGANA, GENDER, BIRTHDAY, PLACE_OF_BIRTH)",
             ),
             captureExecutedSql(db, 4),
@@ -991,6 +1009,20 @@ class AndrOrmDatabaseHelperTest {
 
     @Table(name = "TEST_UNKNOWN_ENTITY", alias = "TUE")
     private data class TestUnknownEntity(
+        @Column(name = "ID")
+        val id: Long,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_DUPLICATE_INDEX_FIRST", alias = "TDIF")
+    @Index(name = "SHARED_INDEX", properties = ["id"])
+    private data class TestDuplicateIndexFirstEntity(
+        @Column(name = "ID")
+        val id: Long,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_DUPLICATE_INDEX_SECOND", alias = "TDIS")
+    @Index(name = "shared_index", properties = ["id"])
+    private data class TestDuplicateIndexSecondEntity(
         @Column(name = "ID")
         val id: Long,
     ) : TableDefinitionEntity

@@ -246,6 +246,64 @@ object MessageConstants {
     const val AE00030 =
         "Null value is not supported for non-null property. type=%s"
 
+    /**
+     * ## AE00031
+     * ### DB 移行先カラムに対応する Entity プロパティが存在しない場合
+     *
+     * 第1引数: 移行先カラム名
+     */
+    const val AE00031 =
+        "移行先カラムに対応するプロパティがありません: %s"
+
+    /**
+     * ## AE00032
+     * ### DB 移行で追加する非nullableカラムに MigrationDefault が指定されていない場合
+     *
+     * 第1引数: 対象 Entity の完全修飾名
+     * 第2引数: 対象プロパティ名
+     */
+    const val AE00032 =
+        "Entity '%s' のプロパティ '%s' は、非nullableカラム追加時に @MigrationDefault が必要です。"
+
+    /**
+     * ## AE00033
+     * ### MigrationDefault の指定値が対象プロパティの型に対して不正な場合
+     *
+     * 第1引数: 対象 Entity の完全修飾名
+     * 第2引数: 対象プロパティ名
+     * 第3引数: MigrationDefault の指定値
+     * 第4引数: 対象プロパティの型
+     */
+    const val AE00033 =
+        "Entity '%s' のプロパティ '%s' に指定された @MigrationDefault('%s') は型 '%s' に対して不正です。"
+
+    /**
+     * ## AE00034
+     * ### SAVEPOINT の作成に失敗した場合
+     *
+     * 第1引数: SAVEPOINT 名
+     */
+    const val AE00034 =
+        "セーブポイントの作成に失敗しました。name=%s"
+
+    /**
+     * ## AE00035
+     * ### SAVEPOINT へのロールバックに失敗した場合
+     *
+     * 第1引数: SAVEPOINT 名
+     */
+    const val AE00035 =
+        "セーブポイントへのロールバックに失敗しました。name=%s"
+
+    /**
+     * ## AE00036
+     * ### SAVEPOINT の解放に失敗した場合
+     *
+     * 第1引数: SAVEPOINT 名
+     */
+    const val AE00036 =
+        "セーブポイントの解放に失敗しました。name=%s"
+
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
      * 現時点の app/src/main には Warning 用メッセージは見当たらない。

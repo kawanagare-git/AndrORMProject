@@ -22,7 +22,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT],
+            commonInterface = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -66,7 +66,7 @@ import java.time.LocalDateTime
     ]
 )
 @Table(alias = "CSP")
-@Index("CHAR_UNIQ", ["characterPk", "magicId"])
+@Index(properties = ["characterPk", "magicId"])
 data class CharacterSpells(
     @PrimaryKey
     val characterPk: Int,

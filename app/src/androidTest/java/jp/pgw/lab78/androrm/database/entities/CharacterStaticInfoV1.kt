@@ -81,7 +81,7 @@ import java.time.LocalDateTime
     ]
 )
 @Table(name = "CHARACTER_STATIC_INFO", alias = "CSI")
-@Unique("CHAR_UNIQ", ["userId", "characterNo"])
+@Unique(properties = ["userId", "characterNo"])
 data class CharacterStaticInfoV1(
     @PrimaryKey
     val characterPk: Int,

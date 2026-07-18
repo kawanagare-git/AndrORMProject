@@ -22,7 +22,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT],
+            commonInterface = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -68,7 +68,7 @@ import java.time.LocalDateTime
     ]
 )
 @Table
-@Index("CHAR_UNIQ", ["weaponTypeId", "characterPk"])
+@Index(properties = ["weaponTypeId", "characterPk"])
 data class WeaponMastery(
     @PrimaryKey
     val characterPk: Int,

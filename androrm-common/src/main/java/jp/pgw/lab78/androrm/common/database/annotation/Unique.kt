@@ -4,6 +4,6 @@ package jp.pgw.lab78.androrm.common.database.annotation
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class Unique(
-    val name: String = "UNIQUE0",
+    val name: String = "",
     val properties: Array<String>,
 )

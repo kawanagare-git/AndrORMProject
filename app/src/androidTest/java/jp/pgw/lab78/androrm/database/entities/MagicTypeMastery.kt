@@ -23,7 +23,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT],
+            commonInterface = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -69,7 +69,7 @@ import java.time.LocalDateTime
     ]
 )
 @Table
-@Index("CHAR_UNIQ", ["characterPk"])
+@Index(properties = ["characterPk"])
 data class MagicTypeMastery(
     @PrimaryKey
     val characterPk: Int,
