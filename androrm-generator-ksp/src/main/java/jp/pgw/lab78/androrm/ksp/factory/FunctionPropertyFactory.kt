@@ -19,8 +19,8 @@ import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 
 /**
  * ## Function プロパティファクトリークラス
- * ### KSPropertyDeclaration から @Function アノテーションを生成するためのクラス
- * ### @Function アノテーションの引数（function、args、alias、raw、hideFromSelect）を抽出し、適切な値を設定して AnnotationSpec を生成する
+ * ### FunctionProjection から @Function アノテーション付きプロパティを生成するためのクラス
+ * ### 関数定義と元プロパティ情報から戻り値型を解決し、GeneratedProperty を生成する
  * @author Masahiro Inoue
  * @since 2026-04-21
  */
@@ -28,11 +28,10 @@ class FunctionPropertyFactory : LoggerLike by logger {
 
     /**
      * ## @Function リスト生成メソッド
-     * ### KSPropertyDeclaration から @Function を生成するためのメソッド
-     * ### @Function の引数（function、args、alias、raw、hideFromSelect）を抽出し、適切な値を設定して AnnotationSpec を生成する
+     * ### FunctionProjection のリストから @Function アノテーション付きプロパティを生成する
      * @param functions 関数プロジェクションのリスト
      * @param propsByName プロパティ名をキー、KSPropertyDeclaration を値とするマップ
-     * @return 生成されたプロパティの PropertySpec のリスト
+     * @return 生成されたプロパティと SELECT 非表示情報を保持する GeneratedProperty のリスト
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
@@ -129,7 +128,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
      * ### 引数がプロパティ名に一致しない場合、リテラルとして解釈し、型を推論するためのメソッド
      * ### 引数が真偽値、文字列リテラル、整数リテラル、浮動小数点リテラルのいずれかに一致するかをチェックし、対応する型を返すロジックを実装する
      * @param literal 対象のリテラル文字列
-     * @return 推論された型を表す TypeName オブジェクト。リテラルがどの型にも一致しない場合は null を返す。
+     * @return 推論された型の完全修飾名。リテラルがどの型にも一致しない場合は null
      * @author Masahiro Inoue
      * @since 2026-04-21
      */

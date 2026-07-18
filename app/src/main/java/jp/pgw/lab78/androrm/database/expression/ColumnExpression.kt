@@ -8,6 +8,9 @@ import jp.pgw.lab78.androrm.database.reference.ColumnRef
 /**
  * ## カラム式
  * ### ColumnRef を SQL 式として扱うためのラッパー
+ *
+ * ### 仕様
+ * #### 保持する `ColumnRef` をそのまま SQL へ変換し、バインド値は追加しない。
  * @param columnRef カラム参照
  * @author Masahiro Inoue
  * @since 2026-06-19

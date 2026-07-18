@@ -1,10 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.common.Constants.CURRENT_TIMESTAMP_ISO_DEFAULT_EXPRESSION
-import jp.pgw.lab78.androrm.common.Constants.CURRENT_TIMESTAMP_ISO_VALUE
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.IndexType
-import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
@@ -14,6 +11,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Unique
+import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
@@ -27,6 +25,10 @@ import kotlin.reflect.full.memberProperties
 /**
  * ## Create 文生成クラス
  * ### TableDefinitionEntity を基に CREATE TABLE 文を生成する
+ *
+ * ### 仕様
+ * #### コンストラクタのプロパティ順にカラム定義を生成し、型、既定値、主キー、テーブル名の上書きを反映する。
+ * #### Index／Unique アノテーションから別途インデックス作成文を生成し、重複するインデックス名を許可しない。
  *
  * @param entityClass テーブル定義 Entity クラス
  * @param tableNameOverride 生成対象テーブル名を上書きする場合に指定する
@@ -221,7 +223,7 @@ class Create<T : TableDefinitionEntity>(
             if (defaultValue.isBlank()) {
                 EMPTY_STRING
             } else {
-                "default ${normalizeDefaultValue(defaultValue)}"
+                "default ${SqlDefaultValueValidator.normalize(defaultValue)}"
             }
         val booleanComment =
             if (property.returnType.classifier == Boolean::class) {
@@ -280,24 +282,4 @@ class Create<T : TableDefinitionEntity>(
         }
     }
 
-    /**
-     * ## DEFAULT 値正規化
-     * ### SQL 上の NULL は大文字に正規化する
-     * @param defaultValue @Column(defaultValue) の値
-     * @return CREATE 文へ出力する DEFAULT 値
-     * @author Masahiro Inoue
-     * @since 2026-06-13
-     */
-    private fun normalizeDefaultValue(
-        defaultValue: String,
-    ): String =
-        when {
-            (defaultValue.equals(NULL_STRING, ignoreCase = false)) ->
-                NULL_STRING.uppercase()
-
-            (defaultValue.equals(CURRENT_TIMESTAMP_ISO_VALUE, ignoreCase = true)) ->
-                CURRENT_TIMESTAMP_ISO_DEFAULT_EXPRESSION
-
-            else -> defaultValue
         }
-}

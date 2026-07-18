@@ -28,6 +28,10 @@ interface OnConflictClause<T : Entity, O> {
  * ## ON CONFLICT 句委譲クラス
  * ### 衝突判定カラムを管理する
  *
+ * ### 仕様
+ * #### DSL で指定された Entity プロパティをカラム名へ変換し、ON CONFLICT 句の指定順を保持する。
+ * #### 再指定時は以前のカラムを置き換え、所有オブジェクトへ変更を通知する。
+ *
  * @param owner onConflict 呼び出し後に返す所有クラス
  * @param entityClass 対象 Entity クラス
  * @param onChanged ON CONFLICT 条件変更時の処理
@@ -79,6 +83,9 @@ class OnConflictClauseDelegate<O, T : Entity>(
 /**
  * ## ON CONFLICT 句ビルダー
  * ### 衝突判定に使用するプロパティを指定する
+ *
+ * ### 仕様
+ * #### `key` と `column` で指定されたプロパティを対象 Entity のカラム名へ変換し、指定順の一覧として返す。
  *
  * @param entityClass 対象 Entity クラス
  * @author Masahiro Inoue

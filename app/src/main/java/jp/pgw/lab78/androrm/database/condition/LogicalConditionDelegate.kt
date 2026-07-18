@@ -10,8 +10,12 @@ import kotlin.reflect.KProperty
 /**
  * ## 論理条件生成移譲クラス
  * ### LogicalConditionSupport の実装クラス
- * ### 「join」・「where」・「having by」の
+ * ### 「join」・「where」・「having」の
  * ### 論理積・論理和の外観を整えるための実装
+ *
+ * ### 仕様
+ * #### 所有ビルダーと同型の子ビルダーを生成し、子条件を括弧付きの AND／OR グループとして親の条件一覧へ追加する。
+ * #### 子条件が空の場合は論理条件を追加しない。
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

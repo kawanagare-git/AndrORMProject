@@ -5,7 +5,7 @@ import org.junit.jupiter.params.converter.SimpleArgumentConverter
 
 /**
  * ## Any List 変換コンバータ
- * ### "A|1|true|<null>" を listOf("A", 1, true, null) に変換する
+ * ### "A:1:true:<null>" を listOf("A", 1, true, null) に変換する
  * @author Masahiro Inoue
  * @since 2026-05-20
  */

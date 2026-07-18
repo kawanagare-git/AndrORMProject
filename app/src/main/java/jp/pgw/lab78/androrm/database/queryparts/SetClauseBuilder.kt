@@ -11,6 +11,10 @@ import kotlin.reflect.KProperty1
 /**
  * ## SET 句ビルダー
  * ### Update / Upsert の SET 句を構築する
+ *
+ * ### 仕様
+ * #### 型付きプロパティへの代入をカラム名と SQL 式の組として指定順に保持する。
+ * #### 通常値と null はプレースホルダー化し、`SqlExpression` は式自身に SQL 生成と値の追加を委ねる。
  * @param targetEntityClass
  * @param valueHolder
  * @param valueFormatter
@@ -72,6 +76,9 @@ open class SetClauseBuilder<T : Entity> internal constructor(
 /**
  * ## Upsert 用 SET 句ビルダー
  * ### excluded 参照と既存行カラム参照を追加する
+ *
+ * ### 仕様
+ * #### 通常の SET 代入に加え、衝突行の `excluded` 値と対象テーブルの現在値を SQL 式として参照できる。
  * @author Masahiro Inoue
  * @since 2026-06-27
  */

@@ -62,8 +62,8 @@ class FunctionPropertyFactoryTest {
 
     /**
      * private fun checkFunctionArgs(
-     *     properties: Set<String>,
-     *     functionProjection: FunctionProjection
+     *     functionProjection: FunctionProjection,
+     *     properties: Collection<String>
      * )
      *
      * を reflection で呼び出す。

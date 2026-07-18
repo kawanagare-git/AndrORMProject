@@ -17,6 +17,10 @@ import kotlin.reflect.KClass
 /**
  * ## Insert 文生成クラス
  * ### insert 句を構成する要素を基に insert 文を生成します
+ *
+ * ### 仕様
+ * #### 1件以上の Entity から複数行 INSERT 文を生成し、対象カラムは Entity の DML 対象定義順で固定する。
+ * #### バインド値は Entity の追加順、各 Entity の対象カラム順で保持し、内容変更後は SQL を再構築する。
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
@@ -85,8 +89,8 @@ class Insert<T : InsertEntity>(
 
     /**
      * ## Insert 文を生成します
-     * ### プレースホルダ名形式の insert 文を生成します
-     * @return insert into テーブル名 (カラム定義) values (「?」を展開)
+     * ### 登録された Entity に対応する複数行 INSERT 文を、位置指定プレースホルダー「?」を使用して生成します
+     * @return Entity の件数分の VALUES 句を持つ INSERT 文
      * @author Masahiro Inoue
      * @since 2026-05-23
      */
@@ -100,10 +104,8 @@ class Insert<T : InsertEntity>(
     }
 
     /**
-     * ## Insert 文を生成します
-     * ### プレースホルダ名形式の insert 文を生成します
-     * ### 可能ならば、クエリ文字列を再利用します
-     * @return insert into テーブル名 (カラム定義) values (「?」を展開)
+     * ## Insert 文を必要に応じて再構築します
+     * ### Entity が追加されていない場合は、構築済みのクエリ文字列を再利用します
      * @author Masahiro Inoue
      * @since 2026-06-27
      */

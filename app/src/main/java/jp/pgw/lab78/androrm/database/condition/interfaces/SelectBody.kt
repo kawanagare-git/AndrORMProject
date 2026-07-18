@@ -40,8 +40,8 @@ interface SelectBody<T : SelectEntity, R : SelectBody<T, R>> : QueryStructureLik
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
      * @param joinedTable 結合するエンティティクラス（副クラス）
      * @author Masahiro Inoue
+     * @return 結合条件を指定するためのモデル
      * @since 2026-07-10
-     * @since 2026-05-12
      */
     @InfoLog
     fun join(
@@ -63,7 +63,7 @@ interface SelectBody<T : SelectEntity, R : SelectBody<T, R>> : QueryStructureLik
     /**
      * ## having メソッド
      * ### 集計結果検索条件を指定する
-     * @param block 条件を構築するための DSL ブロック。`HavingBuilder` の拡張ラムダとして記述。
+     * @param block 条件を構築するための DSL ブロック。`HavingConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
      * @since 2026-07-10

@@ -22,6 +22,11 @@ import kotlin.reflect.KClass
 /**
  * ## Update 文生成クラス
  * ### update 文を生成します
+ *
+ * ### 仕様
+ * #### Entity または SET DSL から更新値を構築し、FROM、JOIN、WHERE を組み合わせた SQLite UPDATE 文を生成する。
+ * #### バインド値は SET、JOIN、WHERE の順で保持し、テーブル別名の重複と句の重複指定を検証する。
+ * #### WHERE のない更新は `updateAll` による明示的な許可を必要とする。
  * @param targetTable 更新対象テーブル参照
  * @author Masahiro Inoue
  * @since 2026-05-25
@@ -240,7 +245,10 @@ class Update<T : UpdateEntity>(
         whereDelegate.where(block)
 
     /**
-     * ## 全件更新を明示的に許可する
+     * ## WHERE 条件指定の検証
+     * ### WHERE 条件が指定済みであることを検証する
+     * @return 自身のインスタンス
+     * @throws IllegalArgumentException WHERE 条件が指定されていない場合
      * @author Masahiro Inoue
      * @since 2026-05-25
      */

@@ -7,6 +7,9 @@ import kotlin.reflect.KProperty1
 /**
  * ## テーブル参照
  * ### SQL 上のテーブルエイリアスを再定義する
+ *
+ * ### 仕様
+ * #### Entity 型と SQL 上の別名を一組で保持し、指定プロパティを同じテーブルに属する `ColumnRef` へ変換する。
  * @param entityClass 再定義対象のエンティティ
  * @param alias 再定義するテーブルエイリアス
  * @author Masahiro Inoue

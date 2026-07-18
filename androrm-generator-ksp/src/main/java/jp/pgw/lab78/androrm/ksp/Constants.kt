@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.ksp
 
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 
 /**
@@ -54,6 +55,15 @@ object Constants {
 
     /** @Column の変数名定義（defaultValue） */
     const val COLUMN_DEFAULT_VALUE = "default"
+
+    /** @MigrationDefault */
+    val MIGRATION_DEFAULT = MigrationDefault::class.simpleName!!
+
+    /** @MigrationDefault(FQN) */
+    val MIGRATION_DEFAULT_FQN = MigrationDefault::class.qualifiedName!!
+
+    /** @MigrationDefault の変数名定義（value） */
+    const val MIGRATION_DEFAULT_VALUE = "value"
 
     /** @Function のエイリアス定義がない場合のフォールバック値 */
     const val FP_ALIAS_FALLBACK = "FUNCTION"

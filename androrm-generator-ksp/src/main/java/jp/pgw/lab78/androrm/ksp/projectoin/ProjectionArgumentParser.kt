@@ -73,7 +73,7 @@ class ProjectionArgumentParser() : LoggerLike by logger {
      * ### 引数の構造に応じて、プロパティ、関数、共通インターフェース、カスタムインターフェースを適切に処理します。
      * @param annotation パース対象の @Projection アノテーション
      * @return パース結果の ProjectionDefinition オブジェクト
-     * @throws IllegalArgumentException パースに失敗した場合（例：必須引数の欠如、型不一致など）
+     * @throws IllegalArgumentException 列挙型の引数値が定義済みの定数と一致しない場合
      * @author Masahiro Inoue
      * @since 2026-04-17
      */
@@ -181,7 +181,7 @@ class ProjectionArgumentParser() : LoggerLike by logger {
      * ### 特に、T が Enum 型の場合は、KSType から Enum 名を抽出して適切に変換します。
      * @param name 抽出する引数の名前
      * @return 引数の値を型 T として返す。引数が見つからない場合や型が一致しない場合は null を返す。
-     * @throws ClassCastException 引数の値が型 T にキャストできない場合
+     * @throws IllegalArgumentException 列挙型の引数値が定義済みの定数と一致しない場合
      * @author Masahiro Inoue
      * @since 2026-04-17
      */

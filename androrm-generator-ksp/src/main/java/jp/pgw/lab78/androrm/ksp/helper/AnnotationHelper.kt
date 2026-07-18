@@ -18,10 +18,10 @@ import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
  */
 class AnnotationHelper() : LoggerLike by logger {
     /**
-     * ## アノテーションの値取得
-     * ### アノテーションのメンバーから値を取得する
+     * ## アノテーション単純名表現取得
+     * ### アノテーションと引数の完全修飾名を単純名へ変換した文字列表現を取得する
      * @param annotationSpec アノテーションスペック
-     * @return メンバーの値（存在しない場合は null）
+     * @return 単純名へ変換したアノテーション文字列
      * @author Masahiro Inoue
      * @since 2026-02-26
      */

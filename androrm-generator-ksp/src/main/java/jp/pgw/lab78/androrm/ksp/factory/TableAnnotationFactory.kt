@@ -83,7 +83,7 @@ class TableAnnotationFactory(
      * ### @Table アノテーションからテーブルエイリアスを生成するためのメソッド
      * @param tableAnnotation 対象の @Table アノテーション
      * @param extendAlias エイリアスの拡張部分（省略可能）
-     * @return 生成されたテーブルエイリアス（null の場合もある）
+     * @return 生成されたテーブルエイリアス。エイリアスと拡張部分がともに空の場合は空文字列
      * @author Masahiro Inoue
      * @since 2026-04-18
      */
@@ -108,7 +108,7 @@ class TableAnnotationFactory(
      * ### 最終的なテーブルエイリアスを生成するためのメソッド
      * @param aliasFromAnnotation アノテーションから取得したエイリアス（null の場合もある）
      * @param extendAlias 引数で渡されたエイリアスの拡張部分（省略可能）
-     * @return 生成されたテーブルエイリアス（null の場合もある）
+     * @return 生成されたテーブルエイリアス。エイリアスと拡張部分がともに空の場合は空文字列
      * @author Masahiro Inoue
      * @since 2026-04-18
      */

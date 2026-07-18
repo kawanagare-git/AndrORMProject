@@ -35,6 +35,11 @@ import kotlin.reflect.full.memberProperties
 /**
  * ## Select クラス基盤
  * ### 通常の Select だけではなく サブクエリでも使用できるようにするための基準クラス
+ *
+ * ### 仕様
+ * #### SELECT 系クエリで共有する JOIN、WHERE、HAVING、GROUP BY、バインド値、使用テーブル別名を管理する。
+ * #### 句を SQL の定義順で構築し、同一別名の重複、Entity メタ情報、同じ句の重複指定を検証する。
+ * #### 自己型 `R` を返すことで通常 SELECT と EXISTS サブクエリの DSL 操作を共通化する。
  * @author Masahiro Inoue
  * @since 2026-07-10
  */
@@ -132,7 +137,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
      * @param joinedTable 結合するエンティティクラス（副クラス）
      * @param on 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
+     * @return 結合条件を指定するための中間オブジェクト
      * @author Masahiro Inoue
      * @since 2026-07-10
      */
@@ -184,7 +189,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
         /** ## on メソッド
          * ### テーブル結合条件を指定する
          * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-         * @return 自身のインスタンス(this)
+         * @return 結合元の検索クエリ
          * @author Masahiro Inoue
          * @since 2026-07-10
          */
@@ -208,7 +213,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
     /**
      * ## having メソッド
      * ### 集計結果検索条件を指定する
-     * @param block 条件を構築するための DSL ブロック。`HavingBuilder` の拡張ラムダとして記述。
+     * @param block 条件を構築するための DSL ブロック。`HavingConditionBuilder` の拡張ラムダとして記述。
      * @return 自身のインスタンス(this)
      * @author Masahiro Inoue
      * @since 2026-07-10

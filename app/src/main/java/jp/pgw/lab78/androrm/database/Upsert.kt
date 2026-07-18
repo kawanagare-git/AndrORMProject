@@ -22,6 +22,10 @@ import kotlin.reflect.KProperty1
  * ### INSERT OR UPDATE の意
  * ### SQLite の INSERT ... ON CONFLICT ... DO UPDATE 文を生成します
  *
+ * ### 仕様
+ * #### Entity 群を一括挿入し、指定カラムの衝突時には SET DSL の代入式で既存行を更新する。
+ * #### 更新対象を WHERE で絞り込み、バインド値は INSERT、SET、WHERE の順で保持する。
+ *
  * @param entityClass Upsert 対象 Entity クラス
  * @author Masahiro Inoue
  * @since 2026-05-24

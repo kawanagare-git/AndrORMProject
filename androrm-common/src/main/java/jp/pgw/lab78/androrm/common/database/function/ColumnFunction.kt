@@ -307,9 +307,9 @@ enum class ColumnFunction(
      * ## 型の広い方を決定するメソッド
      * ### 2 つの型を比較し、より広い方の型を返すためのメソッド
      * ### 型の広さの順序を定義し、引数の型に基づいて適切な型を返すロジックを実装する
-     * @param type1 比較対象の最初の型を表す TypeName オブジェクト
-     * @param type2 比較対象の2番目の型を表す TypeName オブジェクト
-     * @return 2 つの型のうち、より広い方の型を表す TypeName オブジェクト
+     * @param type1 比較対象の最初の型を表す完全修飾名
+     * @param type2 比較対象の2番目の型を表す完全修飾名
+     * @return 2 つの型のうち、より広い方の型を表す完全修飾名
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
@@ -340,8 +340,8 @@ enum class ColumnFunction(
      * ## sum 関数の戻り値の型を解決するメソッド
      * ### sum 関数の引数の型に基づいて、sum 関数の戻り値の型を決定するためのメソッド
      * ### 引数がすべて INT または LONG の場合は LONG を返し、引数のいずれかが DOUBLE または FLOAT の場合は DOUBLE を返し、そうでない場合は ANY を返すロジックを実装する
-     * @param argTypes sum 関数の引数の型を表す TypeName オブジェクトのリスト
-     * @return sum 関数の戻り値の型を表す TypeName オブジェクト
+     * @param argTypes sum 関数の引数の型を表す完全修飾名のリスト
+     * @return sum 関数の戻り値の型を表す完全修飾名
      * @author Masahiro Inoue
      * @since 2026-04-21
      */

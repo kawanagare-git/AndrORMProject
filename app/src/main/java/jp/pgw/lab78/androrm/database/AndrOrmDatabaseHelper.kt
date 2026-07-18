@@ -17,6 +17,9 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00030
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
+import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
+import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueType
+import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
@@ -32,6 +35,7 @@ import jp.pgw.lab78.shared.library.Utils.isNull
 import java.util.concurrent.FutureTask
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
+import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
@@ -39,6 +43,10 @@ import kotlin.reflect.full.primaryConstructor
 /**
  * ## AndrORM データベースヘルパークラス
  * ### AndrORM とデータベースの接続。各クエリの実行
+ *
+ * ### 仕様
+ * #### 登録された Entity からテーブルを作成し、バージョン更新時は旧テーブルから新テーブルへ互換カラムを移行する。
+ * #### DML、Entity／Map／Cursor 形式の SELECT、トランザクション実行を提供し、プレースホルダー順に値をバインドする。
  * @param context android システムのコンテキスト
  * @param databaseName データベース名
  * @param version データベースのバージョン
@@ -133,6 +141,15 @@ open class AndrOrmDatabaseHelper(
         }.toMutableMap()
         // 新旧テーブルカラムのマッピングを更新
         customColumnMappingsUpdate()
+        // 旧テーブルに存在しないカラムを null 許容性・MigrationDefault に従って解決
+        val transferColumnMappings = entities.associateWith { entity ->
+            resolveTransferColumnMappings(
+                db = db,
+                entity = entity,
+                tableName = tableNames.getValue(entity).first,
+                columnMappings = preparedColumnMappings.getValue(entity),
+            )
+        }
         // 新テーブルの create 文生成
         val createNewTableList = tableNames.map { (key, tableNamePair) ->
             val create = Create(key, tableNamePair.second)
@@ -142,10 +159,10 @@ open class AndrOrmDatabaseHelper(
         val insertSelectQueryList = entities.map { entity ->
             Insert.intoTableColumns(
                 tableNames.getValue(entity).second,
-                preparedColumnMappings.getValue(entity).map { it.second },
+                transferColumnMappings.getValue(entity).map { it.second },
                 Select.tableColumns(
                     tableNames.getValue(entity).first,
-                    preparedColumnMappings.getValue(entity).map { it.first })
+                    transferColumnMappings.getValue(entity).map { it.first })
             )
         }
         // drop 文生成
@@ -166,6 +183,99 @@ open class AndrOrmDatabaseHelper(
         executeQuery(db, createNewTableList.flatMap { it.second })
         executeQuery(db, dropOldTableQueryList)
         executeQuery(db, renameTableQueryList)
+    }
+
+    /**
+     * ## 移行用カラムマッピング解決
+     * ### 旧テーブルに存在しないnullableカラムは転送対象外とし、MigrationDefault指定列は検証済み値で補完する
+     * @param db SQLite データベース
+     * @param entity 移行先 Entity
+     * @param tableName 移行元テーブル名
+     * @param columnMappings 旧カラムまたは式と新カラムの対応
+     * @return データ転送に使用するカラムマッピング
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun resolveTransferColumnMappings(
+        db: SQLiteDatabase,
+        entity: KClass<out TableDefinitionEntity>,
+        tableName: String,
+        columnMappings: List<Pair<String, String>>,
+    ): List<Pair<String, String>> {
+        val oldColumnNames = findTableColumnNames(
+            db = db,
+            tableName = tableName,
+            fallback = columnMappings.map { mapping -> mapping.first }.toSet(),
+        ).map { columnName -> columnName.uppercase() }.toSet()
+        val propertyByColumnName = entity.getConstructorOrderedProperties()
+            .associateBy { property -> property.getColumnName().uppercase() }
+
+        return columnMappings.mapNotNull { (oldColumn, newColumn) ->
+            if (oldColumn.uppercase() in oldColumnNames) {
+                return@mapNotNull oldColumn to newColumn
+            }
+
+            val property = propertyByColumnName[newColumn.uppercase()]
+                ?: error("移行先カラムに対応するプロパティがありません: $newColumn")
+            resolveMigrationDefaultSql(entity, property)?.let { sqlValue ->
+                sqlValue to newColumn
+            }
+        }
+    }
+
+    /**
+     * ## テーブルカラム名取得
+     * ### 移行元テーブルを空検索して実カラム名を取得する
+     * @param db SQLite データベース
+     * @param tableName テーブル名
+     * @param fallback Cursor を返さないテスト用 DB の代替カラム名
+     * @return テーブルのカラム名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun findTableColumnNames(
+        db: SQLiteDatabase,
+        tableName: String,
+        fallback: Set<String>,
+    ): Set<String> {
+        val cursor = db.rawQuery("select * from $tableName limit 0", emptyArray<String>())
+            ?: return fallback
+        return cursor.use { it.columnNames.toSet() }
+    }
+
+    /**
+     * ## マイグレーション既定値SQL解決
+     * ### MigrationDefaultを型別に検証し、SQLiteへ渡せるSQL値へ正規化する
+     * @param entity 対象 Entity
+     * @param property 旧テーブルに存在しないプロパティ
+     * @return SQLリテラルまたは式。MigrationDefault未指定のnullableプロパティはnull
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun resolveMigrationDefaultSql(
+        entity: KClass<out TableDefinitionEntity>,
+        property: KProperty1<out TableDefinitionEntity, *>,
+    ): String? {
+        val migrationDefault = property.findAnnotation<MigrationDefault>()
+        if (migrationDefault == null) {
+            if (property.returnType.isMarkedNullable) return null
+            error(
+                "Entity '${entity.qualifiedName}' のプロパティ '${property.name}' は、" +
+                        "非nullableカラム追加時に @MigrationDefault が必要です。"
+            )
+        }
+        val typeName = (property.returnType.classifier as? KClass<*>)?.qualifiedName.orEmpty()
+        val isValid = SqlDefaultValueValidator.isValid(
+            type = SqlDefaultValueType.fromQualifiedName(typeName),
+            nullable = property.returnType.isMarkedNullable,
+            value = migrationDefault.value,
+            allowBlank = false,
+        )
+        require(isValid) {
+            "Entity '${entity.qualifiedName}' のプロパティ '${property.name}' に指定された " +
+                    "@MigrationDefault('${migrationDefault.value}') は型 '$typeName' に対して不正です。"
+        }
+        return SqlDefaultValueValidator.normalize(migrationDefault.value)
     }
 
     /**

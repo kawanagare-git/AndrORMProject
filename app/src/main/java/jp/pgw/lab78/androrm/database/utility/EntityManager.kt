@@ -246,7 +246,7 @@ object EntityManager {
      * @param alias テーブルエイリアス
      * @param columnAlias カラムエイリアス
      * @param property プロパティ
-     * @return プロパティ
+     * @return 以前登録されていたプロパティのカラム名。未登録の場合は引数のプロパティのカラム名
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -439,8 +439,9 @@ object EntityManager {
 
     /**
      * ## プロパティ→カラム変換
-     * ### KProperty1<out Entity, *> を「テーブルエイリアス.カラム名」形式の文字列に変換する
+     * ### KProperty1<out Entity, *> を「テーブル識別子.カラム名」形式の文字列に変換する
      * @receiver 変換対象の KProperty1<out Entity, *>
+     * @param enableAlias true の場合はテーブルエイリアス、false の場合はテーブル名を識別子に使用する
      * @return 変換された文字列
      * @author Masahiro Inoue
      * @since 2026-06-27

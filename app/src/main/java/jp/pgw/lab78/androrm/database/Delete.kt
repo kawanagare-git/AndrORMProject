@@ -12,6 +12,12 @@ import jp.pgw.lab78.androrm.database.queryparts.WhereClauseDelegate
 import java.util.logging.Logger
 import kotlin.reflect.KClass
 
+/**
+ * ## Delete 文生成クラス
+ * ### 仕様
+ * #### Entity のテーブルに対する DELETE 文を生成し、`where` で指定した条件値をバインド値として保持する。
+ * #### 全件削除は `deleteAll` による明示的な許可を必要とし、条件未指定の誤操作を防止する。
+ */
 class Delete<T : DeleteEntity>(
     private val entityClass: KClass<out T>
 ) : QueryBuilderLike<T>, QueryWithBindValues() {

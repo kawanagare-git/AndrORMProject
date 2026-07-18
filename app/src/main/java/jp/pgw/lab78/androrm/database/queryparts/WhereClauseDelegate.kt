@@ -10,6 +10,10 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
  * ## WHERE 句生成委譲クラス
  * ### Select / Delete などで共通利用する WHERE 条件を管理する
  *
+ * ### 仕様
+ * #### DSL で構築した条件とバインド値を保持し、条件が存在する場合だけ WHERE 句を生成する。
+ * #### 条件の指定時には所有オブジェクトへ変更を通知する。
+ *
  * @param owner where 呼び出し後に返す所有クラス
  * @param ownerName 所有クラス名
  * @param enableAlias エイリアス有効 規定値：有効

@@ -33,7 +33,7 @@ class ColumnPropertyFactory : LoggerLike by logger {
      * ### @Column の引数（name、alias、hideFromSelect）を抽出し、適切な値を設定して AnnotationSpec を生成する
      * @param prop 対象プロパティの宣言
      * @param hideFromSelect プロパティが SELECT から隠されるべきかどうかを示すフラグ（デフォルトは false）
-     * @return 生成されたプロパティの PropertySpec オブジェクト
+     * @return 生成されたプロパティと SELECT 非表示情報を保持する GeneratedProperty オブジェクト
      * @author Masahiro Inoue
      * @since 2026-04-21
      */

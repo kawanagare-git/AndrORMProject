@@ -16,10 +16,11 @@ class AndrOrmDetektMessages {
                     "does not match any of the entities specified in Select()'s FROM or JOIN clauses."
 
         /**
-         * ## 警告ログメッセージ生成メソッド
-         * ### 指定されたメッセージを基に、警告ログメッセージを生成する。
-         * @param msg ログメッセージ
-         * @return 生成された警告ログメッセージ
+         * ## デバッグログメッセージ生成メソッド
+         * ### 処理対象の関数名と抽出テキストからデバッグログメッセージを生成する。
+         * @param name 処理対象の関数名
+         * @param textExtraction 抽出したソーステキスト
+         * @return 生成されたデバッグログメッセージ
          * @author Masahiro Inoue
          * @since 2025-12-27
          */

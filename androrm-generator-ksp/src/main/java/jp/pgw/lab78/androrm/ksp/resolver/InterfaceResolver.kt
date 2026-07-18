@@ -16,7 +16,7 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 /**
  * ## インターフェース解決クラス
  * ### @EntityPackageInfo アノテーションと commonInterface を基に、出力先 package 名を解決する
- * ### commonInterface の文字列から FQN を解決する
+ * ### commonInterface の列挙値から FQN を解決する
  * ### commonInterface / customInterface から、実装対象の interface 一覧を構築する
  * @author Masahiro Inoue
  * @since 2026-04-21
@@ -40,7 +40,7 @@ class InterfaceResolver() : LoggerLike by logger {
      * ### 出力先 package 名を解決する
      * @param classDeclaration 対象クラスの宣言
      * @param symbols KSP のシンボルのシーケンスル
-     * @param commonInterface @Projection アノテーションの commonInterface 引数の文字列
+     * @param commonInterface @Projection アノテーションの commonInterface 引数。未指定の場合は null
      * @return 出力先 package 名
      * @author Masahiro Inoue
      * @since 2026-04-21
@@ -97,8 +97,8 @@ class InterfaceResolver() : LoggerLike by logger {
 
     /**
      * ## 共通インターフェース解決
-     * ### commonInterface の文字列から FQN を解決する
-     * @param commonInterface @Projection アノテーションの commonInterface 引数の文字列
+     * ### commonInterface の列挙値から FQN を解決する
+     * @param commonInterface @Projection アノテーションの commonInterface 引数
      * @return commonInterface に対応するインターフェースの ClassName オブジェクト
      * @author Masahiro Inoue
      * @since 2026-04-21

@@ -26,6 +26,7 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionExtractor
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionValidator
 import jp.pgw.lab78.androrm.ksp.resolver.InterfaceResolver
 import jp.pgw.lab78.androrm.ksp.validator.ColumnDefaultValueValidator
+import jp.pgw.lab78.androrm.ksp.validator.MigrationDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
 
 /**
@@ -84,6 +85,9 @@ class PropsProcessor(
     /** @Column defaultValue 妥当性検証 */
     private val columnDefaultValueValidator = ColumnDefaultValueValidator()
 
+    /** @MigrationDefault value 妥当性検証 */
+    private val migrationDefaultValueValidator = MigrationDefaultValueValidator()
+
     /** data class 生成 */
     private val dataClassWriter = DataClassWriter(
         codeGenerator = codeGenerator,
@@ -125,6 +129,9 @@ class PropsProcessor(
         val allProjectionClasses = projectionExtractor.findProjectionClasses(resolver)
         // 全プロジェクションクラスを捜査
         allProjectionClasses.forEach { classDecl ->
+            if (!migrationDefaultValueValidator.validate(classDecl)) {
+                return@forEach
+            }
             val annotations = projectionExtractor.extractFromClass(classDecl)
             // 全アノテーションを捜査
             for (annotation in annotations) {

@@ -26,6 +26,11 @@ import kotlin.reflect.KClass
 /**
  * ## Select 文生成クラス
  * ### select 句を構成する要素を基に select 文を生成します
+ *
+ * ### 仕様
+ * #### Entity メタ情報から選択カラムと FROM 句を構成し、JOIN、WHERE、HAVING、ORDER、LIMIT、OFFSET を定義順で連結する。
+ * #### JOIN による nullable 化とテーブル別名を追跡し、条件値は句の出現順でバインド値として公開する。
+ * #### 同一インスタンスでは一度だけ指定可能な句があり、条件変更後は生成済み SQL を再構築する。
  * @param fromTable テーブル参照情報
  * @param isDistinct select 文で distinct を指定する場合は true
  * @author Masahiro Inoue
@@ -126,7 +131,7 @@ class Select<T : SelectEntity>(
      * @param joinType 結合方法（LEFT RIGHT CROSS等）を指定
      * @param joinedEntity 結合するエンティティクラス（副クラス）
      * @param on 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
+     * @return 結合条件を指定するための中間オブジェクト
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -150,7 +155,7 @@ class Select<T : SelectEntity>(
      * ### テーブル結合を指定する
      * @param joinType 結合方法（LEFT CROSS等）を指定
      * @param joinedEntity 結合するエンティティクラス（副クラス）
-     * @return 自身のインスタンス(this)
+     * @return OFFSET の指定または SQL の生成を行うための中間オブジェクト
      * @author Masahiro Inoue
      * @since 2026-01-11
      */
@@ -180,9 +185,9 @@ class Select<T : SelectEntity>(
 
     /**
      * ## order メソッド
-     * ### 集計結果検索条件を指定する
-     * @param by 並び替え DSL ブロック。`OrderBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
+     * ### SELECT 結果の並び順を指定する
+     * @param by 並び替え DSL ブロック。`OrderDsl` の拡張ラムダとして記述。
+     * @return OFFSET の指定または SQL の生成を行うための中間オブジェクト
      * @author Masahiro Inoue
      * @since 2025-08-01
      */

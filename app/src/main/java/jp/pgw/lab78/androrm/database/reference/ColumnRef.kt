@@ -8,6 +8,9 @@ import kotlin.reflect.KProperty1
 /**
  * ## カラム参照
  * ### SQL 上の alias.column を表す
+ *
+ * ### 仕様
+ * #### テーブル参照と型付きプロパティを保持し、SQL ではテーブル別名付きのカラム名として構築する。
  * @param tableRef カラム参照を生成するテーブル参照
  * @param property カラム参照を生成するプロパティ
  * @author Masahiro Inoue

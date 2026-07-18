@@ -15,7 +15,7 @@ interface JoinConditionModel {
     /** ## on メソッド
      * ### テーブル結合条件を指定する
      * @param block 条件を構築するための DSL ブロック。`ConditionBuilder` の拡張ラムダとして記述。
-     * @return 自身のインスタンス(this)
+     * @return 結合元の検索クエリ
      * @author Masahiro Inoue
      * @since 2026-07-10
      */

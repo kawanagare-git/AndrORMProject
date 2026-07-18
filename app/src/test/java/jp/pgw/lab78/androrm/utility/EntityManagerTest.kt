@@ -21,7 +21,7 @@ class EntityManagerTest {
     @CsvFileSource(resources = ["/TestToSnakeCaseData.csv"], numLinesToSkip = 1)
     @DisplayName("toSnakeCase 関数のテスト")
             /**
-             * toSnakeCase テストメソッド
+             * mapKotlinTypeToSqlType テストメソッド
              * @param testData CSV ファイルから取り込んだテストデータ
              * @param expected CSV ファイルから取り込んだ期待値
              */

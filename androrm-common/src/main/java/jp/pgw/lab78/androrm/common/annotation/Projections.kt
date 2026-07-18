@@ -3,7 +3,7 @@ package jp.pgw.lab78.androrm.common.annotation
 /**
  * ## AndrORM プロジェクション複数定義アノテーションクラス
  * ### @Projection の定義を配列として複数定義する
- * @param value エンティティ派生名
+ * @param value 複数のプロジェクション定義
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

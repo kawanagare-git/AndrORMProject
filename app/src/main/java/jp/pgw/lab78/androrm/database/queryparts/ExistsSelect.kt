@@ -11,6 +11,9 @@ import jp.pgw.lab78.androrm.database.reference.TableRef
 /**
  * ## exists 用 Select クラス
  * ### exists 専用のサブクエリを生成する
+ *
+ * ### 仕様
+ * #### `select 1` を基礎として FROM、JOIN、WHERE、HAVING を構築し、EXISTS 条件向けのサブクエリを生成する。
  * @param fromTable exists の from 句に記述するテーブル参照
  * @author Masahiro Inoue
  * @since 2026-07-10

@@ -16,7 +16,7 @@ object SupportOperation {
      * ### EmployeeEntity クラスプロパティを文字列で指定して KProperty1 オブジェクトを取得する
      * @param propertyName 取得したいプロパティの名前を文字列で指定する
      * @return 指定されたプロパティに対応する KProperty1 オブジェクトを返す
-     * @throws IllegalArgumentException 指定されたプロパティ名が EmployeeEntity クラスのプロパティに存在しない場合にスローされる
+     * @throws IllegalStateException 指定されたプロパティ名が EmployeeEntity クラスのプロパティに存在しない場合
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
@@ -37,7 +37,7 @@ object SupportOperation {
      * ### EmployeeEntity クラスプロパティを文字列で指定して ColumnRef オブジェクトを取得する
      * @param propertyName 取得したいプロパティの名前を文字列で指定する
      * @return 指定されたプロパティに対応する ColumnRef オブジェクトを返す
-     * @throws IllegalArgumentException 指定されたプロパティ名が EmployeeEntity クラスのプロパティに存在しない場合にスローされる
+     * @throws IllegalStateException 指定されたプロパティ名が EmployeeEntity クラスのプロパティに存在しない場合
      * @author Masahiro Inoue
      * @since 2026-05-13
      */

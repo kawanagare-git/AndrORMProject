@@ -8,6 +8,9 @@ import kotlin.reflect.KProperty1
 /**
  * ## 並び替え DSL クラス
  * ### 並び替え条件を DSL 形式で指定するためのクラス
+ *
+ * ### 仕様
+ * #### プロパティ参照を指定順に蓄積し、昇順／降順と NULLS FIRST／LAST を直前の並び替え条件へ適用する。
  * @author Masahiro Inoue
  * @since 2025-10-21
  */

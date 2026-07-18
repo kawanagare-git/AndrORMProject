@@ -29,7 +29,7 @@ object SupportFunction {
      * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
      * @param T [Entity] インターフェースを実装するクラスの型。
      * @return `KClass` に付与された `@Table` アノテーション
-     *         / アノテーションが付与されていない場合 IllegalStateException をスロー。
+     * @throws IllegalStateException アノテーションが付与されていない場合
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -75,13 +75,14 @@ object SupportFunction {
         this.findColumnAnnotationSafely()?.alias?.takeIf { it.isNotBlank() } ?: EMPTY_STRING
 
     /**
-     * ## テーブルエイリアス取得
-     * ### 指定されたエンティティクラスから
-     * ### `@Table`アノテーションに定義されているテーブルエイリアスを取得
-     * @receiver `@Table` アノテーションが付与されている [Entity] （上限境界）型の [KClass] インスタンス。
+     * ## カラムエイリアス取得
+     * ### 指定されたエンティティクラスのプロパティから
+     * ### `@Column` アノテーションに定義されているカラムエイリアスを取得
+     * @receiver 対象プロパティを持つ [Entity] （上限境界）型の [KClass] インスタンス。
      * @param T [Entity] インターフェースを実装するクラスの型。
      * @param propertyName プロパティ名
-     * @return `KClass` に付与された `@Table` アノテーションのテーブルエイリアス
+     * @return プロパティに付与された `@Column` アノテーションのカラムエイリアス
+     *         / 取得できない場合、空文字列
      * @author Masahiro Inoue
      * @since 2026-06-27
      */
@@ -91,7 +92,7 @@ object SupportFunction {
 
     /**
      * ## カラム名の取得
-     * @receiver `@Column` アノテーションが付与されている [Entity] （上限境界）型の [KProperty1] インスタンス。
+     * @receiver 対象プロパティを持つ [Entity] （上限境界）型の [KClass] インスタンス。
      * @param T [Entity] インターフェースを実装するクラスの型。
      * @param propertyName プロパティ名
      * @return プロパティに付与された @Column アノテーションからカラム名を取得
@@ -119,7 +120,8 @@ object SupportFunction {
     /**
      * ## クラスをスネークケースに変換
      * @receiver [KClass] インスタンス。
-     * @return スネークケースに変換されたクラス名（nullなら例外）
+     * @return スネークケースに変換されたクラス名
+     * @throws IllegalStateException クラス名を取得できない場合
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -129,7 +131,7 @@ object SupportFunction {
 
     /**
      * ## プロパティ名をスネークケースに変換
-     * @return スネークケースに変換されたクラス名（nullなら例外）
+     * @return スネークケースに変換されたプロパティ名
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -231,6 +233,7 @@ object SupportFunction {
      * @param target 取得対象のインスタンス
      * @param propertyName 値を取得するプロパティ名
      * @return 取得した値
+     * @throws IllegalArgumentException 指定されたプロパティが存在しない場合
      * @author Masahiro Inoue
      * @since 2026-05-23
      */

@@ -24,6 +24,10 @@ import kotlin.reflect.full.primaryConstructor
  * ### SelectEntity 実装クラスを実行時に解析し
  * ### EntityMeta / PropertyMeta を生成する
  *
+ * ### 仕様
+ * #### Entity の主コンストラクタ順にプロパティを解析し、Table、Column、Function アノテーションと型情報をメタ情報へ反映する。
+ * #### アノテーションで未指定のテーブル名・別名・カラム名は命名規則から補完し、コンストラクタに対応しない定義は拒否する。
+ *
  * @author Masahiro Inoue
  * @since 2026-04-27
  */

@@ -6,6 +6,9 @@ import jp.pgw.lab78.androrm.database.interfaces.SqlExpression
 /**
  * ## 生 SQL 式
  * ### 任意の SQL 断片を式として扱う
+ *
+ * ### 仕様
+ * #### SQL 断片は加工せず返し、付随するバインド値を指定順にバインド値管理オブジェクトへ追加する。
  * @param expression SQL 断片
  * @param bindValues バインド値
  * @author Masahiro Inoue

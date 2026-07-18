@@ -177,7 +177,8 @@ enum class LogScope(private val moduleName: String) : AndrOrmLoggerLike {
          * ## ログスコープ取得メソッド
          * ### 指定された名前に基づいて、対応するログスコープを取得する。
          * @param name ログスコープ名
-         * @return 対応するログスコープ、存在しない場合は null
+         * @return 対応するログスコープ
+         * @throws IllegalArgumentException 対応するログスコープが存在しない場合
          * @author Masahiro Inoue
          * @since 2026-01-25
          */

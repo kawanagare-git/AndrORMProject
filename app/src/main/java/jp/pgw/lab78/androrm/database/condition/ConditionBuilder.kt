@@ -8,6 +8,10 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
  * ## SQL 条件外観調整クラス
  * ### 「where」「 join」に記述するときの
  * ### 外観を分かりやすくするクラス
+ *
+ * ### 仕様
+ * #### WHERE／JOIN の条件 DSL として比較・集合・範囲・NULL・存在・論理条件を蓄積し、通常値を指定順にバインドする。
+ * #### カラム名は必要に応じてテーブル別名付きで生成する。
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

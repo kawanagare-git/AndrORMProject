@@ -18,6 +18,10 @@ import kotlin.reflect.KProperty1
 /**
  * ## SQL 条件基底クラス
  * ### SQL で使用する結合・検索条件を生成するための基底クラス
+ *
+ * ### 仕様
+ * #### WHERE、JOIN、HAVING などへ配置できる条件要素を共通の SQL 構築インターフェースとして表現する。
+ * #### 具体的な比較条件、自由記述、論理グループはそれぞれが自身の SQL 断片を生成する。
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
@@ -35,6 +39,10 @@ sealed class Condition : QueryStructureLike {
 /**
  * ## 条件定義クラス
  * ### join や where で使用する条件の基底クラス
+ *
+ * ### 仕様
+ * #### 比較演算子と左辺を保持する条件群の基底となり、値比較、範囲、集合、サブクエリ、NULL 判定を型別に表現する。
+ * #### 通常値を使用する具象条件はプレースホルダーを出力し、値自体は条件ビルダー側で管理する。
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
@@ -46,7 +54,6 @@ sealed class Compare : Condition() {
      * @param lhsProperty 検索条件のカラム
      * @param operator 比較演算子
      * @param value 検索値
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -74,7 +81,6 @@ sealed class Compare : Condition() {
      * @param lhsProperty 検索条件のカラム
      * @param start 下限検索値
      * @param end 上限検索値
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-09-13
      */
@@ -155,7 +161,6 @@ sealed class Compare : Condition() {
      * ## EXISTS 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param subQuery サブクエリ
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -179,7 +184,6 @@ sealed class Compare : Condition() {
      * ## NOT EXISTS 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param subQuery サブクエリ
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -203,7 +207,6 @@ sealed class Compare : Condition() {
      * ## null 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param lhsProperty 検索条件のカラム
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -227,7 +230,6 @@ sealed class Compare : Condition() {
      * ## not null 条件記述用クラス
      * ### where に使用する単一条件を指定
      * @param lhsProperty 検索条件のカラム
-     * @return 条件インスタンスを返却（this）
      * @author Masahiro Inoue
      * @since 2025-10-03
      */
@@ -273,6 +275,9 @@ private fun Any.toSqlConditionText(): String =
 /**
  * ## 条件定義クラス
  * ### join や where で使用する条件の基底クラス
+ *
+ * ### 仕様
+ * #### 呼び出し元が指定した SQL 条件断片を加工せず保持し、そのまま条件要素として出力する。
  * @param text 自由記述した検索条件
  * @author Masahiro Inoue
  * @since 2025-08-01
@@ -294,6 +299,9 @@ data class FreeText(
 /**
  * ## GROUP BY 条件定義クラス
  * ### GROUP BY で使用する条件の基底クラス
+ *
+ * ### 仕様
+ * #### Entity プロパティをテーブル別名付きカラム名へ変換し、GROUP BY の1要素として出力する。
  * @param column 検索条件のカラム
  * @author Masahiro Inoue
  * @since 2026-01-20
@@ -318,8 +326,11 @@ data class GroupByColumn(
 /**
  * ## 複数条件記述用クラス
  * ### 複数の条件を束ねる論理条件（AND/OR）
+ *
+ * ### 仕様
+ * #### 子条件を保持した順に指定演算子で連結して括弧で囲む。子条件がない状態での SQL 構築は許可しない。
  * @param operator "AND" または "OR"
- * @param conditions 検索条件のカラム
+ * @param conditions 論理演算子で結合する検索条件のリスト
  * @author Masahiro Inoue
  * @since 2025-08-01
  */

@@ -3,16 +3,13 @@ package jp.pgw.lab78.androrm.ksp.validator
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
+import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueType
+import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_DEFAULT_VALUE
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_FQN
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import java.time.format.ResolverStyle
 
 /**
  * ## @Column defaultValue 検証クラス
@@ -21,116 +18,6 @@ import java.time.format.ResolverStyle
  * @since 2026-06-13
  */
 class ColumnDefaultValueValidator : LoggerLike by logger {
-
-    companion object {
-        private const val NULL_VALUE = "NULL"
-        private const val CURRENT_DATE_VALUE = "CURRENT_DATE"
-        private const val CURRENT_TIME_VALUE = "CURRENT_TIME"
-        private const val CURRENT_TIMESTAMP_VALUE = "CURRENT_TIMESTAMP"
-        private const val CURRENT_TIMESTAMP_ISO_VALUE = "CURRENT_TIMESTAMP_ISO"
-
-        private const val TYPE_INT = "kotlin.Int"
-        private const val TYPE_LONG = "kotlin.Long"
-        private const val TYPE_FLOAT = "kotlin.Float"
-        private const val TYPE_DOUBLE = "kotlin.Double"
-        private const val TYPE_BOOLEAN = "kotlin.Boolean"
-        private const val TYPE_STRING = "kotlin.String"
-        private const val TYPE_BYTE_ARRAY = "kotlin.ByteArray"
-        private const val TYPE_LOCAL_DATE = "java.time.LocalDate"
-        private const val TYPE_LOCAL_TIME = "java.time.LocalTime"
-        private const val TYPE_LOCAL_DATE_TIME = "java.time.LocalDateTime"
-        private val integerRegex = "^[+-]?\\d+$".toRegex()
-        private val decimalRegex = "^[+-]?\\d+(\\.\\d+)?$".toRegex()
-        private val sqlStringRegex = "^'(?:''|[^'])*'$".toRegex()
-        private val dateRegex = "^\\d{4}-\\d{2}-\\d{2}$".toRegex()
-        private val timeRegex = "^\\d{2}:\\d{2}:\\d{2}$".toRegex()
-        private val dateTimeTRegex = "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$".toRegex()
-        private val dateTimeSpaceRegex = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$".toRegex()
-        private val dateTimeSpaceFormatter = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")
-            .withResolverStyle(ResolverStyle.STRICT)
-    }
-
-    private data class DefaultValueContext(
-        val propertyName: String,
-        val typeName: String,
-        val nullable: Boolean,
-        val value: String,
-    )
-
-    private data class DateTimeLiteralValidator(
-        val regex: Regex,
-        val formatChecker: (String) -> Boolean,
-    )
-
-    /** 型名をキーにした defaultValue 検証関数 */
-    private val validatorsByType: Map<String, (DefaultValueContext) -> Boolean> = mapOf(
-        TYPE_INT to { context -> integerRegex.matches(context.value) },
-        TYPE_LONG to { context -> integerRegex.matches(context.value) },
-        TYPE_FLOAT to { context -> decimalRegex.matches(context.value) },
-        TYPE_DOUBLE to { context -> decimalRegex.matches(context.value) },
-        TYPE_BOOLEAN to { context -> context.value == "0" || context.value == "1" },
-        TYPE_STRING to { context -> sqlStringRegex.matches(context.value) },
-        TYPE_LOCAL_DATE to { context ->
-            isValidLocalDateTimeDefault(
-                context, CURRENT_DATE_VALUE,
-                localDateLiteralValidator,
-            )
-        },
-        TYPE_LOCAL_TIME to { context ->
-            isValidLocalDateTimeDefault(
-                context, CURRENT_TIME_VALUE,
-                localTimeLiteralValidator,
-            )
-        },
-        TYPE_LOCAL_DATE_TIME to { context ->
-            isValidLocalDateTimeDefault(
-                context, CURRENT_TIMESTAMP_VALUE, *(localDateTimeLiteralValidators)
-            )
-        },
-        TYPE_BYTE_ARRAY to { false },
-    )
-
-    /** LocalDate 文字列リテラル検証関数 */
-    private val localDateLiteralValidator =
-        DateTimeLiteralValidator(
-            regex = dateRegex,
-            formatChecker = { literal ->
-                runCatching {
-                    LocalDate.parse(literal, DateTimeFormatter.ISO_LOCAL_DATE)
-                }.isSuccess
-            },
-        )
-
-    /** LocalTime 文字列リテラル検証関数 */
-    private val localTimeLiteralValidator =
-        DateTimeLiteralValidator(
-            regex = timeRegex,
-            formatChecker = { literal ->
-                runCatching {
-                    LocalTime.parse(literal, DateTimeFormatter.ISO_LOCAL_TIME)
-                }.isSuccess
-            },
-        )
-
-    /** LocalDateTime 文字列リテラル検証関数 */
-    private val localDateTimeLiteralValidators = arrayOf(
-        DateTimeLiteralValidator(
-            regex = dateTimeTRegex,
-            formatChecker = { literal ->
-                runCatching {
-                    LocalDateTime.parse(literal, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                }.isSuccess
-            },
-        ),
-        DateTimeLiteralValidator(
-            regex = dateTimeSpaceRegex,
-            formatChecker = { literal ->
-                runCatching {
-                    LocalDateTime.parse(literal, dateTimeSpaceFormatter)
-                }.isSuccess
-            },
-        ),
-    )
 
     /**
      * ## Projection 内の @Column defaultValue 検証
@@ -186,66 +73,12 @@ class ColumnDefaultValueValidator : LoggerLike by logger {
      */
     private fun KSPropertyDeclaration.isValidDefaultValue(
         defaultValue: String,
-    ): Boolean {
-        val context = DefaultValueContext(
-            propertyName = simpleName.asString(),
-            typeName = typeName(),
+    ): Boolean = SqlDefaultValueValidator.isValid(
+        type = SqlDefaultValueType.fromQualifiedName(typeName()),
             nullable = isNullable(),
             value = defaultValue,
+        allowBlank = false,
         )
-        if (context.value.equals(NULL_VALUE, ignoreCase = true)) {
-            return context.nullable
-        }
-        val validator = validatorsByType[context.typeName] ?: return false
-        return validator(context)
-    }
-
-    /**
-     * ## LocalDateTime defaultValue 検証
-     * ### 'YYYY-MM-DDTHH:MM:SS' / 'YYYY-MM-DD HH:MM:SS' / CURRENT_TIMESTAMP を許可する
-     * @param context defaultValue 検証コンテキスト
-     * @return 妥当な場合 true
-     * @author Masahiro Inoue
-     * @since 2026-06-13
-     */
-    private fun isValidLocalDateTimeDefault(
-        context: DefaultValueContext,
-        dateType: String,
-        vararg literalValidator: DateTimeLiteralValidator,
-    ): Boolean {
-        if (context.value.equals(dateType, ignoreCase = true)) {
-            return true
-        }
-        if (
-            context.typeName == TYPE_LOCAL_DATE_TIME &&
-            context.value.equals(CURRENT_TIMESTAMP_ISO_VALUE, ignoreCase = true)
-        ) {
-            return true
-        }
-        val literal = context.value.toSqlStringLiteralValue() ?: return false
-        return literalValidator.any { validator ->
-            if (validator.regex.matches(literal)) {
-                validator.formatChecker(literal)
-            } else {
-                false
-            }
-        }
-    }
-
-    /**
-     * ## SQL 文字列リテラル値取得
-     * ### 'text' 形式の SQL 文字列から中身を取得する
-     * @receiver defaultValue
-     * @return SQL 文字列リテラルの中身。不正な場合 null
-     * @author Masahiro Inoue
-     * @since 2026-06-13
-     */
-    private fun String.toSqlStringLiteralValue(): String? =
-        if (sqlStringRegex.matches(this)) {
-            substring(1, length - 1).replace("''", "'")
-        } else {
-            null
-        }
 
     /**
      * ## @Column defaultValue 取得

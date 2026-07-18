@@ -67,6 +67,9 @@ class AndrOrmDatabaseAndroidTest {
         private var afterTableRowCounts: MutableMap<String, Long> = mutableMapOf()
         private var deleteTableRowCounts: MutableMap<String, Long> = mutableMapOf()
 
+        /** アップグレード前の各テーブル件数 */
+        private var preUpgradeTableRowCounts: Map<String, Long> = emptyMap()
+
         private var isUpgrade = false
         private var version = if (isUpgrade) 2 else 1
         private var index = if (isUpgrade) 1 else 0
@@ -76,6 +79,15 @@ class AndrOrmDatabaseAndroidTest {
 
         /** JOIN SELECT 結果：CharacterStaticInfo + CharacterPossessions + CharacterEquip */
         private var csinCpbCebJoinResult: List<Map<String, SelectEntity?>> = emptyList()
+
+        /** EXISTS SELECT 結果：CharacterEquip に対応する CharacterPossessions が存在する装備 */
+        private var existsSelectResult: List<Map<String, SelectEntity?>> = emptyList()
+
+        /** EXISTS SELECT のバインド値 */
+        private var existsSelectBindValues: List<Any?> = emptyList()
+
+        /** EXISTS SELECT のクエリ文字列 */
+        private var existsSelectQuery: String = EMPTY_STRING
 
         /**
          * ## androidTest 開始前処理
@@ -280,7 +292,7 @@ class AndrOrmDatabaseAndroidTest {
 
     /**
      * ## step06 更新データ件数確認
-     * ### SeedData 投入後の各テーブル件数を確認する
+     * ### 更新後の各テーブル件数を確認する
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
@@ -317,8 +329,8 @@ class AndrOrmDatabaseAndroidTest {
     }
 
     /**
-     * ## step06 更新データ件数確認
-     * ### SeedData 投入後の各テーブル件数を確認する
+     * ## step08 Upsert 後データ件数確認
+     * ### Upsert 後の各テーブル件数を確認する
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
@@ -362,8 +374,8 @@ class AndrOrmDatabaseAndroidTest {
     }
 
     /**
-     * ## step06 追加データ件数確認
-     * ### SeedData 投入後の各テーブル件数を確認する
+     * ## step10 Absert 後データ件数確認
+     * ### Absert 後の各テーブル件数を確認する
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
@@ -450,6 +462,159 @@ class AndrOrmDatabaseAndroidTest {
         databaseHelper.use { helper ->
             actualCount = deleteData(helper).toLong()
         }
+    }
+
+    /**
+     * ## step14 削除後データ件数確認
+     * ### step13 で削除した後の各テーブル件数と削除件数を確認する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    @Test
+    fun step14_verifyDeletedRowCounts() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+        refreshTableRowCounts(databaseHelper)
+
+        deleteTableRowCounts.forEach { (tableName, deleteCount) ->
+            beforeTableRowCounts[tableName] = beforeTableRowCounts.getValue(tableName) - deleteCount
+        }
+
+        val expectedDeleteCount = deleteTableRowCounts.values.sum()
+        assertNotEquals(0, actualCount)
+        assertEquals(expectedDeleteCount, actualCount)
+        assertEquals(beforeTableRowCounts, afterTableRowCounts.toMap())
+        Log.d("step14", "actualCount = $actualCount")
+    }
+
+    /**
+     * ## step15 EXISTS SELECT 実行
+     * ### 装備スロットを2～5に限定し、対応する所持品とアイテムマスターをカラム比較で存在検査する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    @Test
+    fun step15_selectExists() {
+        val characterEquip = TableRef(CharacterEquipBase::class, "CE_EXISTS")
+        val characterPossessions = TableRef(CharacterPossessionsBase::class, "CP_EXISTS")
+        val itemMaster = TableRef(ItemMasterBase::class, "IM_EXISTS")
+        val selectExists = Select(characterEquip).where {
+            characterEquip[CharacterEquipBase::equipSlot] between (2 to 5)
+            exists(characterPossessions) {
+                characterPossessions[CharacterPossessionsBase::characterPk] eq
+                        characterEquip[CharacterEquipBase::characterPk]
+                characterPossessions[CharacterPossessionsBase::itemPk] eq
+                        characterEquip[CharacterEquipBase::itemPk]
+            }
+            exists(itemMaster) {
+                itemMaster[ItemMasterBase::itemPk] eq characterEquip[CharacterEquipBase::itemPk]
+            }
+        }
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            existsSelectResult = helper.transaction {
+                helper.executeSelectAsEntityList(selectExists)
+            }
+            existsSelectQuery = selectExists.queryString
+            existsSelectBindValues = selectExists.bindValues.toList()
+            AndroidTestCsvExporter.exportSelectEntityResultToDownload(
+                context = InstrumentationRegistry.getInstrumentation().targetContext,
+                stepName = testName.methodName,
+                resultName = "select_exists_CE_CP_IM",
+                rows = existsSelectResult,
+            )
+            actualCount = existsSelectResult.size.toLong()
+            Log.d(testStep, selectExists.queryString)
+            Log.d(testStep, selectExists.bindValues.joinToString())
+        }
+    }
+
+    /**
+     * ## step16 EXISTS SELECT 結果検証
+     * ### step15 で取得した相関 EXISTS SELECT の結果を検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    @Test
+    fun step16_verifySelectExists() {
+        assertTrue(
+            "step15_selectExists の結果がありません。",
+            existsSelectResult.isNotEmpty(),
+        )
+        assertEquals(55, existsSelectResult.size)
+        assertEquals(listOf(2, 5), existsSelectBindValues)
+        assertTrue(
+            existsSelectQuery.contains(
+                "exists (select 1 from ITEM_MASTER IM_EXISTS " +
+                        "where IM_EXISTS.ITEM_PK = CE_EXISTS.ITEM_PK)"
+            )
+        )
+
+        val characterEquipList = existsSelectResult.map { row ->
+            row.getValue("CE_EXISTS") as CharacterEquipBase
+        }
+        assertEquals(characterEquipList.size, characterEquipList.toSet().size)
+        assertTrue(characterEquipList.all { entity -> entity.equipSlot in 2..5 })
+        actualCount = characterEquipList.size.toLong()
+    }
+
+    /**
+     * ## step17 データベースアップグレード
+     * ### CharacterStaticInfoV2 を使用してデータベースをバージョン2へアップグレードする
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    @Test
+    fun step17_upgradeDatabase() {
+        preUpgradeTableRowCounts = afterTableRowCounts.toMap()
+        isUpgrade = true
+        version = 2
+        index = 1
+        currentTableDefinitions = tableDefinitions[index]
+
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+        databaseHelper.use { helper ->
+            assertEquals(version, helper.writableDatabase.version)
+        }
+    }
+
+    /**
+     * ## step18 データベースアップグレード結果検証
+     * ### バージョン、テーブル定義、追加カラムおよび既存データ件数を検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    @Test
+    fun step18_verifyUpgradedDatabase() {
+        assertTrue(isUpgrade)
+        assertEquals(2, version)
+        assertSame(CharacterStaticInfoV2::class, currentTableDefinitions.first())
+
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+        databaseHelper.use { helper ->
+            val db = helper.readableDatabase
+            assertEquals(version, db.version)
+            assertEquals(
+                AndroidTestSeedData.rowCountByTable.keys,
+                findUserTableNames(db).toSet(),
+            )
+            assertTrue(
+                findTableColumnNames(db, CharacterStaticInfoV2::class.getTableName())
+                    .contains("MAIN_ELEMENT")
+            )
+            db.rawQuery(
+                "select MAIN_ELEMENT from ${CharacterStaticInfoV2::class.getTableName()}",
+                emptyArray<String>(),
+            ).use { cursor ->
+                assertTrue(cursor.count > 0)
+                while (cursor.moveToNext()) {
+                    assertEquals(1, cursor.getInt(0))
+                }
+            }
+        }
+
+        refreshTableRowCounts(createDatabaseHelper(version, *currentTableDefinitions))
+        assertEquals(preUpgradeTableRowCounts, afterTableRowCounts.toMap())
     }
 
     /**
@@ -1291,6 +1456,28 @@ class AndrOrmDatabaseAndroidTest {
         }
 
         return tableNames
+    }
+
+    /**
+     * ## テーブルカラム名取得
+     * @param db SQLiteDatabase
+     * @param tableName テーブル名
+     * @return 指定テーブルのカラム名リスト
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun findTableColumnNames(
+        db: SQLiteDatabase,
+        tableName: String,
+    ): List<String> {
+        val columnNames = mutableListOf<String>()
+        db.rawQuery("pragma table_info(${quoteString(tableName)})", emptyArray<String>()).use { cursor ->
+            val nameIndex = cursor.getColumnIndexOrThrow("name")
+            while (cursor.moveToNext()) {
+                columnNames += cursor.getString(nameIndex)
+            }
+        }
+        return columnNames
     }
 
     /**

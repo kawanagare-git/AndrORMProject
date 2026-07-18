@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
 import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
@@ -91,6 +92,78 @@ class AndrOrmDatabaseHelperTest {
             ),
             captureExecutedSql(db, 4),
         )
+    }
+
+    @Test
+    fun testOnUpgrade_withMigrationDefaultAndNullableColumns_usesAnnotationAndOmitsNullableColumn() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        Mockito.doReturn(cursor).`when`(db).rawQuery(
+            Mockito.eq("select * from TEST_UPGRADE_DEFAULT_ENTITY limit 0"),
+            Mockito.any(),
+        )
+        Mockito.doReturn(arrayOf("ID", "NAME")).`when`(cursor).columnNames
+        val helper = TestAndrOrmDatabaseHelper(
+            TestUpgradeDefaultEntity::class,
+        )
+
+        helper.onUpgrade(
+            db = db,
+            oldVersion = 1,
+            newVersion = 2,
+        )
+
+        assertEquals(
+            listOf(
+                "create table TEST_UPGRADE_DEFAULT_ENTITY_new " +
+                        "(ID INTEGER, NAME TEXT, SCORE INTEGER, LABEL TEXT, NOTE TEXT)",
+                "insert into TEST_UPGRADE_DEFAULT_ENTITY_new (ID,NAME,SCORE,LABEL) " +
+                        "select ID,NAME,1,'database' from TEST_UPGRADE_DEFAULT_ENTITY",
+                "drop table if exists TEST_UPGRADE_DEFAULT_ENTITY",
+                "alter table TEST_UPGRADE_DEFAULT_ENTITY_new rename to TEST_UPGRADE_DEFAULT_ENTITY",
+            ),
+            captureExecutedSql(db, 4),
+        )
+    }
+
+    @Test
+    fun testOnUpgrade_withKotlinDefaultButWithoutMigrationDefault_throwsError() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        Mockito.doReturn(cursor).`when`(db).rawQuery(
+            Mockito.eq("select * from TEST_UPGRADE_MISSING_DEFAULT_ENTITY limit 0"),
+            Mockito.any(),
+        )
+        Mockito.doReturn(arrayOf("ID")).`when`(cursor).columnNames
+        val helper = TestAndrOrmDatabaseHelper(TestUpgradeMissingDefaultEntity::class)
+
+        val actual = assertThrows<IllegalStateException> {
+            helper.onUpgrade(db = db, oldVersion = 1, newVersion = 2)
+        }
+
+        assertTrue(actual.message.orEmpty().contains("TestUpgradeMissingDefaultEntity"))
+        assertTrue(actual.message.orEmpty().contains("score"))
+        assertTrue(actual.message.orEmpty().contains("非nullableカラム追加時に @MigrationDefault が必要"))
+    }
+
+    @Test
+    fun testOnUpgrade_withInvalidMigrationDefault_throwsError() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        Mockito.doReturn(cursor).`when`(db).rawQuery(
+            Mockito.eq("select * from TEST_UPGRADE_INVALID_DEFAULT_ENTITY limit 0"),
+            Mockito.any(),
+        )
+        Mockito.doReturn(arrayOf("ID")).`when`(cursor).columnNames
+        val helper = TestAndrOrmDatabaseHelper(TestUpgradeInvalidDefaultEntity::class)
+
+        val actual = assertThrows<IllegalArgumentException> {
+            helper.onUpgrade(db = db, oldVersion = 1, newVersion = 2)
+        }
+
+        assertTrue(actual.message.orEmpty().contains("TestUpgradeInvalidDefaultEntity"))
+        assertTrue(actual.message.orEmpty().contains("enabled"))
+        assertTrue(actual.message.orEmpty().contains("@MigrationDefault('true')"))
     }
 
     @Test
@@ -920,5 +993,38 @@ class AndrOrmDatabaseHelperTest {
     private data class TestUnknownEntity(
         @Column(name = "ID")
         val id: Long,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_UPGRADE_DEFAULT_ENTITY", alias = "TUDE")
+    private data class TestUpgradeDefaultEntity(
+        @Column(name = "ID")
+        val id: Long,
+        @Column(name = "NAME")
+        val name: String,
+        @Column(name = "SCORE")
+        @MigrationDefault("1")
+        val score: Int = 99,
+        @Column(name = "LABEL")
+        @MigrationDefault("'database'")
+        val label: String = "kotlin",
+        @Column(name = "NOTE")
+        val note: String? = null,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_UPGRADE_MISSING_DEFAULT_ENTITY", alias = "TUMDE")
+    private data class TestUpgradeMissingDefaultEntity(
+        @Column(name = "ID")
+        val id: Long,
+        @Column(name = "SCORE")
+        val score: Int = 99,
+    ) : TableDefinitionEntity
+
+    @Table(name = "TEST_UPGRADE_INVALID_DEFAULT_ENTITY", alias = "TUIDE")
+    private data class TestUpgradeInvalidDefaultEntity(
+        @Column(name = "ID")
+        val id: Long,
+        @Column(name = "ENABLED")
+        @MigrationDefault("true")
+        val enabled: Boolean,
     ) : TableDefinitionEntity
 }

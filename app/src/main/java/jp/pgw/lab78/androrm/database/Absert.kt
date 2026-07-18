@@ -19,6 +19,10 @@ import kotlin.reflect.KClass
  * ### INSERT IF ABSENT の意
  * ### SQLite の INSERT ... ON CONFLICT ... DO NOTHING 文を生成します
  *
+ * ### 仕様
+ * #### 1件以上の Entity と衝突判定カラムから一括 INSERT 文を構築し、衝突行は更新せず無視する。
+ * #### バインド値は Entity の追加順、各 Entity のコンストラクタ定義順で保持する。
+ *
  * @param entityClass Absert 対象 Entity クラス
  * @author Masahiro Inoue
  * @since 2026-07-02

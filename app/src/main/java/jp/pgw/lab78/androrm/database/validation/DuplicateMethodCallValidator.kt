@@ -15,6 +15,9 @@ interface QueryMethodCall {
 /**
  * ## 重複メソッド呼び出し検証
  * ### 同一 QueryBuilder インスタンス内で、同じメソッドが複数回指定されないことを検証する
+ *
+ * ### 仕様
+ * #### 呼び出し済み識別子を保持し、同じ識別子の2回目以降の指定を `IllegalStateException` として拒否する。
  * @param ownerName 検証対象クラス名
  * @author Masahiro Inoue
  * @since 2026-05-14

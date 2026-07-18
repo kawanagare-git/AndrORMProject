@@ -10,6 +10,9 @@ import kotlin.reflect.KProperty1
 /**
  * ## Order クラス
  * ### ORDER BY 句を構築するためのデータ構造
+ *
+ * ### 仕様
+ * #### Entity プロパティ、昇降順、NULL の配置を保持し、テーブル別名付きカラムの ORDER BY 要素へ変換する。
  * @param column 並び替え対象カラム
  * @param ascending 並び順（ASC / DESC）
  * @param nullsLast NULL の並び順（NULLS FIRST / LAST）

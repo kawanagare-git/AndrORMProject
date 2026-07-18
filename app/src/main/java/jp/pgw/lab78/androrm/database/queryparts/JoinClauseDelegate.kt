@@ -12,6 +12,10 @@ import kotlin.reflect.KClass
  * ## JOIN 句生成委譲クラス
  * ### Select / Update で共通利用する JOIN 句を管理する
  *
+ * ### 仕様
+ * #### Entity または `TableRef` と ON 条件から JOIN 句を追加し、句とバインド値を指定順に保持する。
+ * #### ON 条件を後置指定する中間オブジェクトを提供し、追加時に所有側へ変更と結合テーブルを通知する。
+ *
  * @param owner join 呼び出し後に返す所有クラス
  * @param onChanged JOIN 条件変更時の処理
  * @param onTableJoined JOIN 対象テーブル登録時の処理
@@ -141,6 +145,9 @@ class JoinClauseDelegate<O, E : Entity>(
 /**
  * ## JOIN 種別
  * ### Select / Update で共通利用する JOIN 種別
+ *
+ * ### 仕様
+ * #### SQL の JOIN キーワードと、結合先 Entity を nullable として扱う必要があるかを列挙値ごとに保持する。
  *
  * @author Masahiro Inoue
  * @since 2026-05-24

@@ -10,6 +10,9 @@ import kotlin.reflect.KProperty1
 /**
  * ## 関数生成クラス
  * ### 関数定義クラスに付与する生成クラス
+ *
+ * ### 仕様
+ * #### Entity プロパティをテーブル別名付きカラムへ変換し、必要に応じて `DISTINCT` を付けて関数呼び出しを生成する。
  * @param query クエリに使用される文字列
  * @author Masahiro Inoue
  * @since 2025-08-08

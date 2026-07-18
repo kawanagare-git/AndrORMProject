@@ -2,7 +2,7 @@ package jp.pgw.lab78.androrm.database.condition.interfaces
 
 /**
  * ## AndrORM 論理条件生成インターフェース
- * ### 「join」・「where」・「having by」の
+ * ### 「join」・「where」・「having」の
  * ### 論理積・論理和の外観を整える雛形
  * @author Masahiro Inoue
  * @since 2025-08-01

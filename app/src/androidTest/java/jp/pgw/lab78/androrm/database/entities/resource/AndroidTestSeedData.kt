@@ -16,6 +16,8 @@ object AndroidTestSeedData {
     private const val CHARACTER_COUNT = 4
     private const val MASTER_COUNT = 40
     private const val BROKEN_RELATION_COUNT = 4
+    private const val UPDATE_TARGET_PERCENT = 30
+    private const val UNREGISTERED_ITEM_PK_BASE = 200_000
 
     private const val CREATE_METHOD = "ANDROID_TEST_SEED"
     private const val UPDATE_METHOD = "ANDROID_TEST_SEED"
@@ -104,6 +106,28 @@ object AndroidTestSeedData {
         )
     }
 
+    /** ITEM_MASTER に存在しない所持品（偶数 ITEM_PK） */
+    private val unregisteredPossessions: List<Pair<Int, Int>> =
+        characterStaticInfoList
+            .drop(characterStaticInfoList.size * UPDATE_TARGET_PERCENT / 100)
+            .take(5)
+            .mapIndexed { index, character ->
+                character.characterPk to UNREGISTERED_ITEM_PK_BASE + (index + 1) * 2
+            }
+
+    /** ITEM_MASTER に存在しない装備（奇数 ITEM_PK） */
+    private val unregisteredEquips: List<Triple<Int, Int, Int>> =
+        characterStaticInfoList
+            .drop(characterStaticInfoList.size * UPDATE_TARGET_PERCENT / 100)
+            .take(5)
+            .mapIndexed { index, character ->
+                Triple(
+                    character.characterPk,
+                    2 + index % 4,
+                    UNREGISTERED_ITEM_PK_BASE + index * 2 + 1,
+                )
+            }
+
     /** 魔法マスタ */
     val spellsMasterList: List<SpellsMaster> =
         magicCategories.flatMapIndexed { effectIndex, effect ->
@@ -179,19 +203,33 @@ object AndroidTestSeedData {
                 updateMethod = UPDATE_METHOD,
                 updateTime = LocalDateTime.now(),
             )
+        } + unregisteredPossessions.map { (characterPk, itemPk) ->
+            CharacterPossessions(
+                characterPk = characterPk,
+                itemPk = itemPk,
+                itemStatus = "ITEM_MASTER_NOT_FOUND",
+                createMethod = CREATE_METHOD,
+                createTime = LocalDateTime.now(),
+                updateMethod = UPDATE_METHOD,
+                updateTime = LocalDateTime.now(),
+            )
         }
 
     /** キャラクタ装備 */
     val characterEquipList: List<CharacterEquip> =
         Keys.CHARACTER_PK.list.flatMap { characterPk ->
             equipableSlots.mapIndexed { index, slot ->
-                val item = characterPossessionsList.filter {
+                val unregisteredItemPk = unregisteredEquips
+                    .firstOrNull { (targetCharacterPk, targetSlot) ->
+                        targetCharacterPk == characterPk && targetSlot == slot
+                    }?.third
+                val itemPk = unregisteredItemPk ?: characterPossessionsList.filter {
                     it.characterPk == characterPk
                 }[index % (MASTER_COUNT / 2)].itemPk
                 CharacterEquip(
                     characterPk = characterPk,
                     equipSlot = slot,
-                    itemPk = item,
+                    itemPk = itemPk,
                     createMethod = CREATE_METHOD,
                     createTime = LocalDateTime.now(),
                     updateMethod = UPDATE_METHOD,
