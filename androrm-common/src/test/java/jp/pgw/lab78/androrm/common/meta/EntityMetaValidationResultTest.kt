@@ -15,6 +15,16 @@ import org.junit.jupiter.params.provider.CsvSource
  */
 class EntityMetaValidationResultTest {
 
+    /**
+     * ## エラー・警告有無判定の検証
+     * ### errorsとwarningsの内容に応じてhasErrorsとhasWarningsが正しく判定されることを検証する
+     * @param errors エラーメッセージのテストデータ
+     * @param warnings 警告メッセージのテストデータ
+     * @param expectedHasErrors エラー有無の期待値
+     * @param expectedHasWarnings 警告有無の期待値
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("errors と warnings の有無に応じて hasErrors / hasWarnings を判定できる")
     @ParameterizedTest(
         name = "[{index}] errors={0}, warnings={1}, hasErrors={2}, hasWarnings={3}",
@@ -49,6 +59,14 @@ class EntityMetaValidationResultTest {
         assertEquals(expectedHasWarnings, target.hasWarnings)
     }
 
+    /**
+     * ## エラー・警告内容保持の検証
+     * ### 指定したerrorsとwarningsが順序および内容を維持して保持されることを検証する
+     * @param errors エラーメッセージのテストデータ
+     * @param warnings 警告メッセージのテストデータ
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("errors と warnings に指定した内容を保持できる")
     @ParameterizedTest(
         name = "[{index}] errors={0}, warnings={1}",
@@ -85,7 +103,11 @@ class EntityMetaValidationResultTest {
     /**
      * ## String List 変換
      * ### AnyListConverter の戻り値を EntityMetaValidationResult 用の List<String> に変換する
-     * @return String リスト
+     * @receiver 変換対象のエラーまたは警告リスト
+     * @return 各要素を文字列化したリスト
+     * @throws IllegalArgumentException リストにnull要素が含まれる場合
+     * @author Masahiro Inoue
+     * @since 2026-05-21
      */
     private fun List<Any?>.toStringList(): List<String> =
         map { value ->

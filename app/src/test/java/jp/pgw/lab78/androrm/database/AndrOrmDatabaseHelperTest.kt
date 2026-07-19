@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteStatement
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
@@ -36,8 +37,20 @@ import java.time.LocalDateTime
 import kotlin.reflect.KClass
 import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity as EmployeeTableEntity
 
+/**
+ * AndrOrmDatabaseHelperのDDL、移行、DML、SELECT実行を検証する。
+ *
+ * @author Masahiro Inoue
+ * @since 2026-05-31
+ */
 class AndrOrmDatabaseHelperTest {
 
+    /**
+     * Entity間でインデックス名が重複した場合にDDL実行前に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnCreate_duplicateIndexNamesAcrossEntities_throwsBeforeExecutingDdl() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -50,10 +63,60 @@ class AndrOrmDatabaseHelperTest {
             helper.onCreate(db)
         }
 
-        assertEquals(AE00020.format("shared_index0"), actual.message)
+        assertEquals(AE00020.format("shared_index_0"), actual.message)
         Mockito.verifyNoInteractions(db)
     }
 
+    /**
+     * 同じEntityを重複登録した場合は事前検査せず、SQLiteのCREATE TABLE例外を通知することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Test
+    fun testOnCreate_duplicateSameEntity_delegatesDuplicateTableErrorToSQLite() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val createTableQuery = Create(TestLargeEntity::class).build()
+        var createTableCount = 0
+        Mockito.doAnswer { invocation ->
+            if (invocation.getArgument<String>(0) == createTableQuery) {
+                createTableCount++
+                if (createTableCount == 2) {
+                    throw SQLiteException("table TEST_LARGE_ENTITY already exists")
+                }
+            }
+            null
+        }.`when`(db).execSQL(Mockito.anyString())
+        val helper = TestAndrOrmDatabaseHelper(
+            TestLargeEntity::class,
+            TestLargeEntity::class,
+        )
+
+        assertThrows<SQLiteException> {
+            helper.onCreate(db)
+        }
+
+        assertEquals(
+            listOf(
+                createTableQuery,
+                """create index "IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("ACTIVE", "CREATED_AT")""",
+                """create unique index "UQ_TEST_CODE_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("CODE")""",
+                """create unique index "UQ_TEST_PERSONAL_INFO_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("NAME", "FURIGANA", "GENDER", "BIRTHDAY", "PLACE_OF_BIRTH")""",
+                createTableQuery,
+            ),
+            captureExecutedSql(db, 5),
+        )
+    }
+
+    /**
+     * DB作成時に定義Entityのテーブルとインデックス作成文が実行されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnCreate_withDefineEntity_executeCreateTableAndIndexQueries() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -65,24 +128,30 @@ class AndrOrmDatabaseHelperTest {
 
         assertEquals(
             listOf(
-                "create table TEST_LARGE_ENTITY " +
-                        "(ID INTEGER, CODE TEXT, NAME TEXT, FURIGANA TEXT, GENDER TEXT, " +
-                        "BIRTHDAY DATETIME, PLACE_OF_BIRTH TEXT, EMAIL TEXT, PHONE_NUMBER TEXT, " +
-                        "POSTAL_CODE TEXT, PREFECTURE TEXT, CITY TEXT, ADDRESS_LINE TEXT, " +
-                        "SCORE REAL, BALANCE INTEGER, ACTIVE INTEGER, REGISTERED_AT DATETIME, " +
-                        "LAST_LOGIN_AT DATETIME, MEMO TEXT, CREATED_AT DATETIME, UPDATED_AT DATETIME, " +
-                        "primary key (ID))",
-                "create index IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED0 " +
-                        "on TEST_LARGE_ENTITY (ACTIVE, CREATED_AT)",
-                "create unique index UQ_TEST_CODE0 " +
-                        "on TEST_LARGE_ENTITY (CODE)",
-                "create unique index UQ_TEST_PERSONAL_INFO0 " +
-                        "on TEST_LARGE_ENTITY (NAME, FURIGANA, GENDER, BIRTHDAY, PLACE_OF_BIRTH)",
+                """create table "TEST_LARGE_ENTITY" """ +
+                        """("ID" INTEGER not null, "CODE" TEXT not null, "NAME" TEXT not null, "FURIGANA" TEXT not null, "GENDER" TEXT not null, """ +
+                        """"BIRTHDAY" DATETIME not null, "PLACE_OF_BIRTH" TEXT not null, "EMAIL" TEXT not null, "PHONE_NUMBER" TEXT not null, """ +
+                        """"POSTAL_CODE" TEXT not null, "PREFECTURE" TEXT not null, "CITY" TEXT not null, "ADDRESS_LINE" TEXT not null, """ +
+                        """"SCORE" REAL not null, "BALANCE" INTEGER not null, "ACTIVE" INTEGER not null, "REGISTERED_AT" DATETIME not null, """ +
+                        """"LAST_LOGIN_AT" DATETIME not null, "MEMO" TEXT not null, "CREATED_AT" DATETIME not null, "UPDATED_AT" DATETIME not null, """ +
+                        """primary key ("ID"))""",
+                """create index "IDX_TEST_LARGE_ENTITY_ACTIVE_CREATED_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("ACTIVE", "CREATED_AT")""",
+                """create unique index "UQ_TEST_CODE_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("CODE")""",
+                """create unique index "UQ_TEST_PERSONAL_INFO_0" """ +
+                        """on "TEST_LARGE_ENTITY" ("NAME", "FURIGANA", "GENDER", "BIRTHDAY", "PLACE_OF_BIRTH")""",
             ),
             captureExecutedSql(db, 4),
         )
     }
 
+    /**
+     * DB更新時に標準移行クエリが順番どおり実行されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnUpgrade_withDefineEntity_executeStandardMigrationQueries() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -98,9 +167,10 @@ class AndrOrmDatabaseHelperTest {
 
         assertEquals(
             listOf(
-                "create table TEST_ALL_ENTITY_new " +
-                        "(ID INTEGER, NAME TEXT, ADDRESS TEXT, BIRTHDAY DATETIME, " +
-                        "SUB_ID INTEGER, UPDATE_DATE DATETIME, INSERT_DATE_TIME DATETIME)",
+                "drop table if exists TEST_ALL_ENTITY_new",
+                """create table "TEST_ALL_ENTITY_new" """ +
+                        """("ID" INTEGER not null, "NAME" TEXT not null, "ADDRESS" TEXT not null, "BIRTHDAY" DATETIME not null, """ +
+                        """"SUB_ID" INTEGER, "UPDATE_DATE" DATETIME not null, "INSERT_DATE_TIME" DATETIME not null)""",
                 "insert into TEST_ALL_ENTITY_new " +
                         "(ID,NAME,ADDRESS,BIRTHDAY,SUB_ID,UPDATE_DATE,INSERT_DATE_TIME) " +
                         "select ID,NAME,ADDRESS,BIRTHDAY,SUB_ID,UPDATE_DATE,INSERT_DATE_TIME " +
@@ -108,10 +178,16 @@ class AndrOrmDatabaseHelperTest {
                 "drop table if exists TEST_ALL_ENTITY",
                 "alter table TEST_ALL_ENTITY_new rename to TEST_ALL_ENTITY",
             ),
-            captureExecutedSql(db, 4),
+            captureExecutedSql(db, 5),
         )
     }
 
+    /**
+     * 移行時にMigrationDefaultを使用し、未指定のnullableカラムを転送対象から除外することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnUpgrade_withMigrationDefaultAndNullableColumns_usesAnnotationAndOmitsNullableColumn() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -133,17 +209,24 @@ class AndrOrmDatabaseHelperTest {
 
         assertEquals(
             listOf(
-                "create table TEST_UPGRADE_DEFAULT_ENTITY_new " +
-                        "(ID INTEGER, NAME TEXT, SCORE INTEGER, LABEL TEXT, NOTE TEXT)",
+                "drop table if exists TEST_UPGRADE_DEFAULT_ENTITY_new",
+                """create table "TEST_UPGRADE_DEFAULT_ENTITY_new" """ +
+                        """("ID" INTEGER not null, "NAME" TEXT not null, "SCORE" INTEGER not null, "LABEL" TEXT not null, "NOTE" TEXT)""",
                 "insert into TEST_UPGRADE_DEFAULT_ENTITY_new (ID,NAME,SCORE,LABEL) " +
                         "select ID,NAME,1,'database' from TEST_UPGRADE_DEFAULT_ENTITY",
                 "drop table if exists TEST_UPGRADE_DEFAULT_ENTITY",
                 "alter table TEST_UPGRADE_DEFAULT_ENTITY_new rename to TEST_UPGRADE_DEFAULT_ENTITY",
             ),
-            captureExecutedSql(db, 4),
+            captureExecutedSql(db, 5),
         )
     }
 
+    /**
+     * Kotlin既定値だけを持つnon-nullカラムの移行を拒否することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnUpgrade_withKotlinDefaultButWithoutMigrationDefault_throwsError() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -164,6 +247,12 @@ class AndrOrmDatabaseHelperTest {
         assertTrue(actual.message.orEmpty().contains("非nullableカラム追加時に @MigrationDefault が必要"))
     }
 
+    /**
+     * 不正なMigrationDefaultを持つカラムの移行を拒否することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testOnUpgrade_withInvalidMigrationDefault_throwsError() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -184,6 +273,12 @@ class AndrOrmDatabaseHelperTest {
         assertTrue(actual.message.orEmpty().contains("@MigrationDefault('true')"))
     }
 
+    /**
+     * 未登録Entityのカラム対応定義を指定した場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testMigrateDatabase_customColumnMappingsUnknownEntity_throwsIllegalStateException() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -206,6 +301,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * 未知の旧カラムを移行対応へ指定した場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testMigrateDatabase_customColumnMappingsUnknownOldColumn_throwsIllegalArgumentException() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -228,6 +329,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * バインド値がないDMLをコンパイルして実行することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteDml_withoutBindValues_compileStatementAndExecuteUpdateDelete() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -258,6 +365,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(statement).executeUpdateDelete()
     }
 
+    /**
+     * DMLの各値を順番どおりバインドして実行することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteDml_withBindValues_bindArgsAndExecuteUpdateDelete() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -306,6 +419,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(statement).executeUpdateDelete()
     }
 
+    /**
+     * DMLのnull値がbindNullでバインドされることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteDml_withNullBindValue_bindNull() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -333,6 +452,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(statement).executeUpdateDelete()
     }
 
+    /**
+     * DMLのByteArray値がBLOBとしてバインドされることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteDml_withByteArrayBindValue_bindBlob() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -361,6 +486,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(statement).executeUpdateDelete()
     }
 
+    /**
+     * バインド値がないSELECTをrawQueryで実行することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsCursor_withoutBindValues_rawQuery() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -385,6 +516,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(db).rawQuery(sql, null)
     }
 
+    /**
+     * SELECTのバインド値がselectionArgsへ変換されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsCursor_withBindValues_rawQueryWithSelectionArgs() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -422,6 +559,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * Cursor取得時にnullのバインド値を拒否することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsCursor_withNullBindValue_throwsIllegalArgumentException() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -447,6 +590,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * Cursor取得時にByteArrayのバインド値を拒否することを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsCursor_withByteArrayBindValue_throwsIllegalArgumentException() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -472,6 +621,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * Cursorの複数行がMapの一覧へ変換されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsMapList_withRows_returnMapList() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -524,6 +679,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(cursor).close()
     }
 
+    /**
+     * Selectインスタンスの実行結果がMapの一覧として返ることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsMapList_withSelectInstance_returnsMapList() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -598,6 +759,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(cursor).close()
     }
 
+    /**
+     * Selectインスタンスの実行結果がEntity一覧のMapへ変換されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsEntityList_withSelectInstance_returnsEntityListMap() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -689,6 +856,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(cursor).close()
     }
 
+    /**
+     * SELECT結果に対応するカラム定義がない場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testCreateSelectEntity_withoutColumnTarget_throwsColumnTargetNotFound() {
         val helper = TestAndrOrmDatabaseHelper(
@@ -711,6 +884,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * SELECT結果に必要なカラム値がない場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testCreateSelectEntity_withoutColumnValue_throwsColumnValueNotFound() {
         val helper = TestAndrOrmDatabaseHelper(
@@ -737,6 +916,12 @@ class AndrOrmDatabaseHelperTest {
         )
     }
 
+    /**
+     * BLOBカラムがByteArrayとしてMapへ格納されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsMapList_withBlob_returnByteArrayValue() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -769,6 +954,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(cursor).close()
     }
 
+    /**
+     * LEFT JOIN結果が一対一・一対多・結合先なしのEntity構造へ変換されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Test
     fun testExecuteSelectAsEntityList_withLeftJoin_returnsOneToOneOneToManyAndNoJoinedEntity() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
@@ -875,7 +1066,6 @@ class AndrOrmDatabaseHelperTest {
 
         val actual: List<Map<String, SelectEntity?>> =
             helper.executeSelectAsEntityList(query = select)
-        println(actual)
         assertEquals(
             listOf(
                 mapOf(
@@ -931,13 +1121,32 @@ class AndrOrmDatabaseHelperTest {
         Mockito.verify(cursor).close()
     }
 
+    /**
+     * バインド値を持たない検証用QueryBuilderLike実装。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     private class TestQueryBuilderLike(
         private val query: String,
     ) : QueryBuilderLike<TableDefinitionEntity> {
 
+        /**
+         * コンストラクタで指定されたクエリを返す。
+         *
+         * @return 検証用クエリ
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
         override fun build(): String = query
     }
 
+    /**
+     * バインド値を保持する検証用QueryBuilderLike実装。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     private class TestQueryBuilderLikeWithBindValues(
         private val query: String,
         bindValues: List<Any?>,
@@ -948,9 +1157,26 @@ class AndrOrmDatabaseHelperTest {
             addBindValues(bindValues)
         }
 
+        /**
+         * コンストラクタで指定されたクエリを返す。
+         *
+         * @return 検証用クエリ
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
         override fun build(): String = query
     }
 
+    /**
+     * リフレクションを使用して非公開のSELECT Entity生成処理を呼び出す。
+     *
+     * @receiver 検証対象のデータベースヘルパー
+     * @param row SELECT結果の行データ
+     * @param columnTargets 結果カラムとプロパティの対応
+     * @return 生成されたSELECT Entity
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     private fun TestAndrOrmDatabaseHelper.invokeCreateSelectEntity(
         row: Map<String, Any?>,
         columnTargets: List<SelectColumnTarget>,
@@ -970,6 +1196,15 @@ class AndrOrmDatabaseHelperTest {
         ) as SelectEntity
     }
 
+    /**
+     * 指定回数実行されたexecSQLのSQL文字列を取得する。
+     *
+     * @param db 検証対象のSQLiteDatabase
+     * @param count 期待する実行回数
+     * @return 実行されたSQL文字列の一覧
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     private fun captureExecutedSql(
         db: SQLiteDatabase,
         count: Int,
@@ -984,6 +1219,12 @@ class AndrOrmDatabaseHelperTest {
         return captor.allValues
     }
 
+    /**
+     * DB移行処理とカラム対応定義を公開して検証するデータベースヘルパー。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     private open class TestAndrOrmDatabaseHelper(
         vararg entities: KClass<out TableDefinitionEntity>,
         private val customColumnMappings:
@@ -995,6 +1236,14 @@ class AndrOrmDatabaseHelperTest {
         *entities,
     ) {
 
+        /**
+         * 保護されたDB移行処理をテストから呼び出す。
+         *
+         * @param db 移行対象のSQLiteDatabase
+         * @param newVersion 新しいDBバージョン
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
         fun callMigrateDatabase(
             db: SQLiteDatabase,
             newVersion: Int = 1,
@@ -1002,17 +1251,36 @@ class AndrOrmDatabaseHelperTest {
             migrateDatabase(db, newVersion)
         }
 
+        /**
+         * 検証用に指定されたカラム対応定義を返す。
+         *
+         * @return Entityごとのカラム対応定義
+         * @author Masahiro Inoue
+         * @since 2026-05-31
+         */
         override fun resolveColumnMappings():
                 Map<KClass<out TableDefinitionEntity>, List<Pair<String, String>>> =
             customColumnMappings
     }
 
+    /**
+     * 未登録Entityのカラム対応定義を検証するためのEntity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_UNKNOWN_ENTITY", alias = "TUE")
     private data class TestUnknownEntity(
         @Column(name = "ID")
         val id: Long,
     ) : TableDefinitionEntity
 
+    /**
+     * Entity間インデックス名重複検証の一つ目のEntity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_DUPLICATE_INDEX_FIRST", alias = "TDIF")
     @Index(name = "SHARED_INDEX", properties = ["id"])
     private data class TestDuplicateIndexFirstEntity(
@@ -1020,6 +1288,12 @@ class AndrOrmDatabaseHelperTest {
         val id: Long,
     ) : TableDefinitionEntity
 
+    /**
+     * Entity間インデックス名重複検証の二つ目のEntity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_DUPLICATE_INDEX_SECOND", alias = "TDIS")
     @Index(name = "shared_index", properties = ["id"])
     private data class TestDuplicateIndexSecondEntity(
@@ -1027,6 +1301,12 @@ class AndrOrmDatabaseHelperTest {
         val id: Long,
     ) : TableDefinitionEntity
 
+    /**
+     * MigrationDefaultとnullableカラムを持つ移行検証用Entity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_UPGRADE_DEFAULT_ENTITY", alias = "TUDE")
     private data class TestUpgradeDefaultEntity(
         @Column(name = "ID")
@@ -1043,6 +1323,12 @@ class AndrOrmDatabaseHelperTest {
         val note: String? = null,
     ) : TableDefinitionEntity
 
+    /**
+     * 必須のMigrationDefaultを持たない移行検証用Entity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_UPGRADE_MISSING_DEFAULT_ENTITY", alias = "TUMDE")
     private data class TestUpgradeMissingDefaultEntity(
         @Column(name = "ID")
@@ -1051,6 +1337,12 @@ class AndrOrmDatabaseHelperTest {
         val score: Int = 99,
     ) : TableDefinitionEntity
 
+    /**
+     * 不正なMigrationDefaultを持つ移行検証用Entity。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-31
+     */
     @Table(name = "TEST_UPGRADE_INVALID_DEFAULT_ENTITY", alias = "TUIDE")
     private data class TestUpgradeInvalidDefaultEntity(
         @Column(name = "ID")

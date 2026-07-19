@@ -57,7 +57,12 @@ object AndroidTestSeedData {
         "FTN",
     )
 
-    /** プライマリキー管理 */
+    /**
+     * ## プライマリキー管理列挙型
+     * ### データ種別ごとに生成済みプライマリキーを保持する
+     * @author Masahiro Inoue
+     * @since 2026-06-14
+     */
     enum class Keys {
         CHARACTER_PK,
         ITEM_PK,
@@ -329,7 +334,15 @@ object AndroidTestSeedData {
             )
         }
 
-    /** プライマリキー作成 */
+    /**
+     * ## プライマリキー作成
+     * ### キー構成値からテスト用プライマリキーを生成して管理一覧へ追加する
+     * @param keys 生成キーの種別
+     * @param keyParts キー生成に使用する値
+     * @return 生成したプライマリキー
+     * @author Masahiro Inoue
+     * @since 2026-06-14
+     */
     private fun createPk(keys: Keys, vararg keyParts: Any): Int =
         (10_000 + Math.floorMod(
             keyParts.joinToString(separator = "").hashCode(),

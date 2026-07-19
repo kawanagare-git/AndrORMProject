@@ -54,6 +54,8 @@ class WhereClauseDelegate<O>(
      *
      * @param block 条件を構築するための DSL ブロック
      * @return 所有クラス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun where(block: ConditionBuilder.() -> Unit): O {
         check(!isSpecified) {
@@ -75,6 +77,9 @@ class WhereClauseDelegate<O>(
     /**
      * ## WHERE 条件文字列生成
      * ### `where` は含めず、条件部分のみ生成する
+     * @return WHEREキーワードを含まない条件文字列
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun buildCondition(): String =
         whereConditions.joinToString(AND.query) { it.build() }
@@ -82,6 +87,9 @@ class WhereClauseDelegate<O>(
     /**
      * ## WHERE 句生成
      * ### 条件がない場合は空文字を返す
+     * @return 生成されたWHERE句
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun buildClause(): String =
         if (whereConditions.isEmpty()) {

@@ -41,7 +41,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
     protected val list = mutableListOf<Condition>()
     private val delegate by LogicalConditionDelegate({ createSelf() }, list)
 
-    /** ## 派生クラスで自分自身を返すファクトリ */
+    /**
+     * 派生クラスと同じ型の条件ビルダーを生成する。
+     *
+     * @return 新しい条件ビルダー
+     * @author Masahiro Inoue
+     * @since 2025-10-19
+     */
     protected abstract fun createSelf(): B
 
     // --- DSL演算子群 ---
@@ -773,6 +779,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
         private val column: ColumnRef<out T, *>,
         private val start: Any,
     ) {
+        /**
+         * BETWEEN条件の上限値を指定し、条件一覧へ追加する。
+         *
+         * @param end 上限値
+         * @author Masahiro Inoue
+         * @since 2025-10-19
+         */
         infix fun and(end: Any) {
             list += Compare.Between(column.build(), start, formatValue(valueHolder, end))
         }

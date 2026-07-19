@@ -14,6 +14,12 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import java.lang.reflect.InvocationTargetException
 
+/**
+ * ## 関数プロパティ生成テストクラス
+ * ### SQL関数の引数として許可されるプロパティ名とリテラルを検証する
+ * @author Masahiro Inoue
+ * @since 2026-05-03
+ */
 class FunctionPropertyFactoryTest {
 
     private lateinit var target: FunctionPropertyFactory
@@ -30,6 +36,12 @@ class FunctionPropertyFactoryTest {
         "updatedBy",
     )
 
+    /**
+     * ## テスト前処理
+     * ### KSPロガーと関数プロパティ生成対象を初期化する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @BeforeEach
     fun setUp() {
         // モックの生成
@@ -46,6 +58,15 @@ class FunctionPropertyFactoryTest {
         target = FunctionPropertyFactory()
     }
 
+    /**
+     * ## テスト用関数Projection生成
+     * @param function SQLカラム関数
+     * @param alias 関数列の別名
+     * @param args 関数引数
+     * @return テスト用関数Projection
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     private fun functionProjectionOf(
         function: ColumnFunction = ColumnFunction.MAX,
         alias: String = "TEST_ALIAS",
@@ -67,6 +88,10 @@ class FunctionPropertyFactoryTest {
      * )
      *
      * を reflection で呼び出す。
+     * @param functionProjection 検証する関数Projection
+     * @param properties 利用可能なプロパティ名
+     * @author Masahiro Inoue
+     * @since 2026-05-03
      */
     private fun invokeCheckFunctionArgs(
         functionProjection: FunctionProjection,
@@ -88,6 +113,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 空引数の検証
+     * ### 引数を持たない関数が受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgsIsEmpty() {
         val projection = functionProjectionOf(
@@ -100,6 +131,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 既存プロパティ名引数の検証
+     * ### Entityに存在するプロパティ名が受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgIsExistingPropertyName() {
         val projection = functionProjectionOf(
@@ -113,6 +150,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 文字列リテラル引数の検証
+     * ### SQL文字列リテラルが受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgIsStringLiteral() {
         val projection = functionProjectionOf(
@@ -126,6 +169,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 整数リテラル引数の検証
+     * ### 整数リテラルが受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgIsIntegerLiteral() {
         val projection = functionProjectionOf(
@@ -139,6 +188,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 小数リテラル引数の検証
+     * ### 小数リテラルが受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgIsDecimalLiteral() {
         val projection = functionProjectionOf(
@@ -152,6 +207,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## Booleanリテラル引数の検証
+     * ### Booleanリテラルが受理されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldPass_whenArgIsBooleanLiteral() {
         val projection = functionProjectionOf(
@@ -165,6 +226,12 @@ class FunctionPropertyFactoryTest {
         }
     }
 
+    /**
+     * ## 未知プロパティ名引数の検証
+     * ### 存在しないプロパティ名がエラーログへ記録されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldLogError_whenArgIsUnknownPropertyName() {
         val projection = functionProjectionOf(
@@ -187,6 +254,12 @@ class FunctionPropertyFactoryTest {
         )
     }
 
+    /**
+     * ## 混在引数内の不正値検証
+     * ### 正常値と不正値が混在しても不正な引数がエラーログへ記録されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-05-03
+     */
     @Test
     fun checkFunctionArgs_shouldLogError_whenMixedArgsContainInvalidValue() {
         val projection = functionProjectionOf(

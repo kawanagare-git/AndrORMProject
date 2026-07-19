@@ -15,6 +15,13 @@ import java.util.stream.Stream
  */
 class EntityMetaValidatorTest {
 
+    /**
+     * ## EntityMeta検証結果の検証
+     * ### テストケースごとのエラー・警告件数とメッセージ内容が期待どおりであることを検証する
+     * @param testCase 検証対象と期待結果を保持するテストケース
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("EntityMetaValidator は EntityMeta の検証結果を正しく返す")
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource("validateData")
@@ -64,6 +71,13 @@ class EntityMetaValidatorTest {
         )
     }
 
+    /**
+     * ## 正常なEntityMetaの検証
+     * ### 妥当なEntityMetaでエラーと警告が発生しないことを検証する
+     * @param testCase 正常なEntityMetaを保持するテストケース
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("正常な EntityMeta はエラー・警告なしになる")
     @ParameterizedTest(name = "[{index}] {0}")
     @MethodSource("validData")
@@ -83,6 +97,16 @@ class EntityMetaValidatorTest {
         assertEquals(emptyList<String>(), actual.warnings)
     }
 
+    /**
+     * ## メッセージ部分一致検証
+     * ### 実際のメッセージ一覧に期待する文字列断片がすべて含まれることを検証する
+     * @param actual 実際のメッセージ一覧
+     * @param expectedFragments 期待する文字列断片
+     * @param label 検証対象を表すラベル
+     * @param caseName テストケース名
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     private fun assertContainsFragments(
         actual: List<String>,
         expectedFragments: List<String>,
@@ -101,6 +125,14 @@ class EntityMetaValidatorTest {
     /**
      * ## 検証テストケース
      * ### EntityMetaValidator のエラー・警告検証用データ
+     * @property caseName テストケース名
+     * @property entityMeta 検証対象のEntityMeta
+     * @property expectedErrorCount 期待するエラー件数
+     * @property expectedWarningCount 期待する警告件数
+     * @property expectedErrorFragments エラーメッセージに期待する文字列断片
+     * @property expectedWarningFragments 警告メッセージに期待する文字列断片
+     * @author Masahiro Inoue
+     * @since 2026-05-21
      */
     data class ValidateTestCase(
         val caseName: String,
@@ -110,22 +142,51 @@ class EntityMetaValidatorTest {
         val expectedErrorFragments: List<String>,
         val expectedWarningFragments: List<String>,
     ) {
+        /**
+         * ## テストケース名文字列化
+         * @return テストケース名
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         override fun toString(): String = caseName
     }
 
     /**
      * ## 正常系テストケース
      * ### エラー・警告なしを期待する EntityMeta
+     * @property caseName テストケース名
+     * @property entityMeta 検証対象のEntityMeta
+     * @author Masahiro Inoue
+     * @since 2026-05-21
      */
     data class ValidTestCase(
         val caseName: String,
         val entityMeta: EntityMeta,
     ) {
+        /**
+         * ## テストケース名文字列化
+         * @return テストケース名
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         override fun toString(): String = caseName
     }
 
+    /**
+     * ## EntityMetaValidatorテストデータ提供オブジェクト
+     * ### 正常系およびエラー・警告検証用のMethodSourceを生成する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     companion object {
 
+        /**
+         * ## 正常系テストデータ生成
+         * ### エラーと警告が発生しないEntityMetaのテストケースを生成する
+         * @return 正常系テスト引数
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         @JvmStatic
         fun validData(): Stream<Arguments> =
             Stream.of(
@@ -171,6 +232,13 @@ class EntityMetaValidatorTest {
                 ),
             )
 
+        /**
+         * ## 検証ルール別テストデータ生成
+         * ### エラーまたは警告を期待するEntityMetaのテストケースを生成する
+         * @return 検証ルール別テスト引数
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         @JvmStatic
         fun validateData(): Stream<Arguments> =
             Stream.of(
@@ -327,6 +395,15 @@ class EntityMetaValidatorTest {
                 ),
             )
 
+        /**
+         * ## EntityMeta生成
+         * ### テスト用のEntity名とプロパティ一覧からEntityMetaを生成する
+         * @param entityName Entity名
+         * @param properties プロパティメタ情報一覧
+         * @return テスト用EntityMeta
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         private fun createEntityMeta(
             entityName: String,
             properties: List<PropertyMeta>,
@@ -339,6 +416,20 @@ class EntityMetaValidatorTest {
                 properties = properties,
             )
 
+        /**
+         * ## PropertyMeta生成
+         * ### プロパティの定義情報からテスト用PropertyMetaを生成する
+         * @param propertyName Kotlinプロパティ名
+         * @param columnName DBカラム名
+         * @param aliasName SELECT結果エイリアス
+         * @param isFunction 関数列であるか
+         * @param hideFromSelect SELECT対象から除外するか
+         * @param hasColumnAnnotation Columnアノテーションがあるか
+         * @param hasFunctionAnnotation Functionアノテーションがあるか
+         * @return テスト用PropertyMeta
+         * @author Masahiro Inoue
+         * @since 2026-05-21
+         */
         private fun createPropertyMeta(
             propertyName: String,
             columnName: String,

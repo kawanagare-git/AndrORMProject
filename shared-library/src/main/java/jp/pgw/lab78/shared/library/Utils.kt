@@ -1,5 +1,10 @@
 package jp.pgw.lab78.shared.library
 
+/**
+ * 共有ライブラリで利用する共通ユーティリティ。
+ * @author Masahiro Inoue
+ * @since 2024-10-19
+ */
 object Utils {
     /**
      * ## Null 判定拡張メソッド

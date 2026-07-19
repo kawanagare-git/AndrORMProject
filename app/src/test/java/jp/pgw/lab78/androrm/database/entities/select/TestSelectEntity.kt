@@ -9,6 +9,8 @@ import java.time.LocalDate
 
 /**
  * テスト用 data クラス
+  * @author Masahiro Inoue
+  * @since 2025-03-02
  */
 @Table(alias = "TS")
 data class TestSelectEntity(

@@ -7,6 +7,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import jp.pgw.lab78.androrm.common.Constants.COMMA
+import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import java.io.OutputStreamWriter
 import kotlin.reflect.KProperty1
@@ -157,7 +159,7 @@ object AndroidTestCsvExporter {
 
             OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
                 writer.appendLine(
-                    cursor.columnNames.joinToString(",") { columnName ->
+                    cursor.columnNames.joinToString(COMMA) { columnName ->
                         escapeCsv(columnName)
                     }
                 )
@@ -223,14 +225,14 @@ object AndroidTestCsvExporter {
 
         OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
             writer.appendLine(
-                columns.joinToString(",") { column ->
+                columns.joinToString(COMMA) { column ->
                     escapeCsv(column.header)
                 }
             )
 
             rows.forEach { row ->
                 writer.appendLine(
-                    columns.joinToString(",") { column ->
+                    columns.joinToString(COMMA) { column ->
                         escapeCsv(
                             column.valueToString(row[column.alias])
                         )
@@ -330,6 +332,8 @@ object AndroidTestCsvExporter {
          * ## CSV 値文字列化
          * @param entity 対象 Entity
          * @return CSV 出力値
+         * @author Masahiro Inoue
+         * @since 2026-07-05
          */
         fun valueToString(entity: SelectEntity?): String {
             val value = valueGetter(entity)
@@ -354,7 +358,7 @@ object AndroidTestCsvExporter {
         cursor: Cursor,
     ): String =
         (0 until cursor.columnCount)
-            .joinToString(",") { index ->
+            .joinToString(COMMA) { index ->
                 escapeCsv(
                     cursorValueToString(
                         cursor = cursor,
@@ -423,13 +427,13 @@ object AndroidTestCsvExporter {
         value: String,
     ): String {
         val requiresQuote =
-            value.contains(",") ||
-                    value.contains("\"") ||
+            value.contains(COMMA) ||
+                    value.contains(D_QUOTE) ||
                     value.contains("\n") ||
                     value.contains("\r")
 
         if (requiresQuote) {
-            return "\"${value.replace("\"", "\"\"")}\""
+            return D_QUOTE + value.replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
         }
 
         return value
@@ -446,5 +450,5 @@ object AndroidTestCsvExporter {
     private fun quoteIdentifier(
         identifier: String,
     ): String =
-        "\"${identifier.replace("\"", "\"\"")}\""
+        D_QUOTE + identifier.replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
 }

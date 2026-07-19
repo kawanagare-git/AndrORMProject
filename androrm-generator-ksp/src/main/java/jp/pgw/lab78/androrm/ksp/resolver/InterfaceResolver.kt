@@ -23,6 +23,12 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
  */
 class InterfaceResolver() : LoggerLike by logger {
 
+    /**
+     * ## インターフェース解決用定数
+     * ### Entityパッケージ情報のアノテーション名を保持する
+     * @author Masahiro Inoue
+     * @since 2026-04-21
+     */
     companion object {
         /** @EntityPackageInfo の変数名定義（basePackage） */
         private const val BASE_PACKAGE = "basePackage"

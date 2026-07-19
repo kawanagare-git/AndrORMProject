@@ -11,6 +11,13 @@ import jp.pgw.lab78.androrm.common.database.annotation.Unique
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
+/**
+ * ## キャラクタ固定情報V1テーブルEntity
+ * ### DBバージョン1のキャラクタ識別情報を定義する
+ * ### V2との移行検証では意図的に同じテーブル名を使用するため、テーブル名重複検査を抑制する
+ * @author Masahiro Inoue
+ * @since 2026-06-13
+ */
 @Projections(
     [
         Projection(
@@ -82,6 +89,7 @@ import java.time.LocalDateTime
 )
 @Table(name = "CHARACTER_STATIC_INFO", alias = "CSI")
 @Unique(properties = ["userId", "characterNo"])
+@Suppress("AndrOrmDuplicateTableNameRule")
 data class CharacterStaticInfoV1(
     @PrimaryKey
     val characterPk: Int,

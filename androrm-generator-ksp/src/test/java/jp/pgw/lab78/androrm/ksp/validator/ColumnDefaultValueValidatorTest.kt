@@ -18,11 +18,23 @@ import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.*
 import java.util.stream.Stream
 
+/**
+ * ## カラム既定値検証テストクラス
+ * ### Kotlin型とnull許容性に応じた既定値検証結果を確認する
+ * @author Masahiro Inoue
+ * @since 2026-06-13
+ */
 class ColumnDefaultValueValidatorTest {
 
     private lateinit var target: ColumnDefaultValueValidator
     private lateinit var mockKspLogger: KSPLogger
 
+    /**
+     * ## テストケース提供オブジェクト
+     * ### 有効および無効な既定値のパラメータ化テストデータを提供する
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     companion object {
         private const val PROPERTY_NAME = "target"
         private const val TEST_CLASS_NAME =
@@ -39,6 +51,12 @@ class ColumnDefaultValueValidatorTest {
         private const val TYPE_LOCAL_TIME = "java.time.LocalTime"
         private const val TYPE_LOCAL_DATE_TIME = "java.time.LocalDateTime"
 
+        /**
+         * ## 有効な既定値ケース生成
+         * @return 有効な型、null許容性および既定値の組み合わせ
+         * @author Masahiro Inoue
+         * @since 2026-06-13
+         */
         @JvmStatic
         fun validDefaultValueCases(): Stream<Arguments> = Stream.of(
             arguments("defaultValue 未指定", TYPE_STRING, false, ""),
@@ -97,6 +115,12 @@ class ColumnDefaultValueValidatorTest {
             arguments("ByteArray? / NULL", TYPE_BYTE_ARRAY, true, "NULL"),
         )
 
+        /**
+         * ## 無効な既定値ケース生成
+         * @return 無効な型、null許容性および既定値の組み合わせ
+         * @author Masahiro Inoue
+         * @since 2026-06-13
+         */
         @JvmStatic
         fun invalidDefaultValueCases(): Stream<Arguments> = Stream.of(
             arguments("Int / SQL文字列", TYPE_INT, false, "'0'"),
@@ -142,6 +166,12 @@ class ColumnDefaultValueValidatorTest {
         )
     }
 
+    /**
+     * ## テスト前処理
+     * ### KSPロガーと検証対象を初期化する
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     @BeforeEach
     fun setUp() {
         val mockProcessor = mock<SymbolProcessorEnvironment>()
@@ -156,6 +186,15 @@ class ColumnDefaultValueValidatorTest {
         target = ColumnDefaultValueValidator()
     }
 
+    /**
+     * ## 有効な既定値の検証
+     * @param caseName テストケース名
+     * @param typeName プロパティの完全修飾型名
+     * @param nullable null許容の場合true
+     * @param defaultValue 検証する既定値
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     @ParameterizedTest(name = "{0}")
     @MethodSource("validDefaultValueCases")
     fun validate_shouldReturnTrue_whenDefaultValueIsValid(
@@ -174,11 +213,19 @@ class ColumnDefaultValueValidatorTest {
         )
         val definition = projectionDefinitionOf()
         val result = target.validate(classDecl, definition)
-        println("$definition -> $result")
         assertTrue(result, caseName)
         verify(mockKspLogger, never()).error(any<String>(), anyOrNull())
     }
 
+    /**
+     * ## 無効な既定値の検証
+     * @param caseName テストケース名
+     * @param typeName プロパティの完全修飾型名
+     * @param nullable null許容の場合true
+     * @param defaultValue 検証する既定値
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     @ParameterizedTest(name = "{0}")
     @MethodSource("invalidDefaultValueCases")
     fun validate_shouldReturnFalse_whenDefaultValueIsInvalid(
@@ -210,6 +257,12 @@ class ColumnDefaultValueValidatorTest {
         )
     }
 
+    /**
+     * ## テスト用Projection定義生成
+     * @return 既定値検証に使用するProjection定義
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun projectionDefinitionOf(): ProjectionDefinition =
         ProjectionDefinition(
             entityNameExtend = "DefaultValueTest",
@@ -220,6 +273,13 @@ class ColumnDefaultValueValidatorTest {
             ),
         )
 
+    /**
+     * ## テスト用クラス宣言生成
+     * @param property クラスに含めるプロパティ宣言
+     * @return モック化したクラス宣言
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun classDeclarationOf(
         property: KSPropertyDeclaration,
     ): KSClassDeclaration {
@@ -232,6 +292,16 @@ class ColumnDefaultValueValidatorTest {
         return classDecl
     }
 
+    /**
+     * ## テスト用プロパティ宣言生成
+     * @param propertyName プロパティ名
+     * @param typeName 完全修飾型名
+     * @param nullable null許容の場合true
+     * @param defaultValue カラム既定値
+     * @return モック化したプロパティ宣言
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun propertyDeclarationOf(
         propertyName: String,
         typeName: String,
@@ -252,6 +322,13 @@ class ColumnDefaultValueValidatorTest {
         return property
     }
 
+    /**
+     * ## テスト用Columnアノテーション生成
+     * @param defaultValue カラム既定値
+     * @return モック化したColumnアノテーション
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun columnAnnotationOf(
         defaultValue: String,
     ): KSAnnotation {
@@ -272,6 +349,14 @@ class ColumnDefaultValueValidatorTest {
         return annotation
     }
 
+    /**
+     * ## テスト用アノテーション引数生成
+     * @param name 引数名
+     * @param value 引数値
+     * @return モック化したアノテーション引数
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun valueArgumentOf(
         name: String,
         value: String,
@@ -285,6 +370,14 @@ class ColumnDefaultValueValidatorTest {
         return argument
     }
 
+    /**
+     * ## テスト用型参照生成
+     * @param qualifiedName 完全修飾型名
+     * @param nullable null許容の場合true
+     * @return モック化した型参照
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun typeReferenceOf(
         qualifiedName: String,
         nullable: Boolean = false,
@@ -304,6 +397,13 @@ class ColumnDefaultValueValidatorTest {
         return typeReference
     }
 
+    /**
+     * ## テスト用KSP名生成
+     * @param value 名前の文字列表現
+     * @return モック化したKSP名
+     * @author Masahiro Inoue
+     * @since 2026-06-13
+     */
     private fun nameOf(
         value: String,
     ): KSName {

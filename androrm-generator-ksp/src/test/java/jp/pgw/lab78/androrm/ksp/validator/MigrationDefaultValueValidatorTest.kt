@@ -36,6 +36,12 @@ class MigrationDefaultValueValidatorTest {
     private lateinit var target: MigrationDefaultValueValidator
     private lateinit var logger: KSPLogger
 
+    /**
+     * ## テスト前処理
+     * ### KSPロガーと検証対象を初期化する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @BeforeEach
     fun setUp() {
         val environment = mock<SymbolProcessorEnvironment>()
@@ -48,6 +54,12 @@ class MigrationDefaultValueValidatorTest {
         target = MigrationDefaultValueValidator()
     }
 
+    /**
+     * ## 有効なMigrationDefault値の検証
+     * ### 正しい既定値が受理されエラーを出力しないことを確認する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @Test
     fun testValidate_withValidMigrationDefault_returnsTrue() {
         val entity = entityOf(propertyOf("status", "kotlin.Int", "0"))
@@ -56,6 +68,12 @@ class MigrationDefaultValueValidatorTest {
         verify(logger, never()).error(any<String>(), anyOrNull())
     }
 
+    /**
+     * ## 無効なBoolean既定値の検証
+     * ### 検証失敗時にEntity名、プロパティ名および値がログへ出力されることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @Test
     fun testValidate_withInvalidBooleanMigrationDefault_returnsFalseAndLogsEntityProperty() {
         val entity = entityOf(propertyOf("enabled", "kotlin.Boolean", "true"))
@@ -71,7 +89,13 @@ class MigrationDefaultValueValidatorTest {
         )
     }
 
-    /** テスト用Entity宣言を生成する */
+    /**
+     * テスト用Entity宣言を生成する
+     * @param property Entityへ設定するプロパティ宣言
+     * @return モック化したEntity宣言
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     private fun entityOf(property: KSPropertyDeclaration): KSClassDeclaration {
         val entity = mock<KSClassDeclaration>()
         val qualifiedName = nameOf("test.MigrationEntity")
@@ -80,7 +104,15 @@ class MigrationDefaultValueValidatorTest {
         return entity
     }
 
-    /** テスト用プロパティ宣言を生成する */
+    /**
+     * テスト用プロパティ宣言を生成する
+     * @param name プロパティ名
+     * @param typeName 完全修飾型名
+     * @param value MigrationDefault値
+     * @return モック化したプロパティ宣言
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     private fun propertyOf(
         name: String,
         typeName: String,
@@ -96,7 +128,13 @@ class MigrationDefaultValueValidatorTest {
         return property
     }
 
-    /** テスト用MigrationDefaultアノテーションを生成する */
+    /**
+     * テスト用MigrationDefaultアノテーションを生成する
+     * @param value アノテーション値
+     * @return モック化したMigrationDefaultアノテーション
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     private fun migrationDefaultOf(value: String): KSAnnotation {
         val annotation = mock<KSAnnotation>()
         val argument = mock<KSValueArgument>()
@@ -111,7 +149,13 @@ class MigrationDefaultValueValidatorTest {
         return annotation
     }
 
-    /** テスト用型参照を生成する */
+    /**
+     * テスト用型参照を生成する
+     * @param qualifiedName 完全修飾型名
+     * @return モック化した型参照
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     private fun typeReferenceOf(qualifiedName: String): KSTypeReference {
         val typeReference = mock<KSTypeReference>()
         val type = mock<KSType>()
@@ -126,7 +170,13 @@ class MigrationDefaultValueValidatorTest {
         return typeReference
     }
 
-    /** テスト用KSNameを生成する */
+    /**
+     * テスト用KSNameを生成する
+     * @param value 名前の文字列表現
+     * @return モック化したKSP名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     private fun nameOf(value: String): KSName {
         val name = mock<KSName>()
         whenever(name.asString()).thenReturn(value)

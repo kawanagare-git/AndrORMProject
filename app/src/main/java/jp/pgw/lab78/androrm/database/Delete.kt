@@ -17,6 +17,8 @@ import kotlin.reflect.KClass
  * ### 仕様
  * #### Entity のテーブルに対する DELETE 文を生成し、`where` で指定した条件値をバインド値として保持する。
  * #### 全件削除は `deleteAll` による明示的な許可を必要とし、条件未指定の誤操作を防止する。
+ * @author Masahiro Inoue
+ * @since 2026-05-24
  */
 class Delete<T : DeleteEntity>(
     private val entityClass: KClass<out T>
@@ -40,12 +42,33 @@ class Delete<T : DeleteEntity>(
             isBuild = false
         }
 
+    /**
+     * DELETE文へ適用する検索条件を設定する。
+     *
+     * @param block 検索条件を構築する処理
+     * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
+     */
     fun where(block: ConditionBuilder.() -> Unit): Delete<T> =
         whereDelegate.where(block)
 
+    /**
+     * WHERE句で保持されたバインド値を返す。
+     *
+     * @return WHERE句のバインド値
+     * @author Masahiro Inoue
+     * @since 2026-05-24
+     */
     protected override fun additionalBindValues(): List<Any?> =
         whereDelegate.bindValues
 
+    /**
+     * 条件を指定しない全件削除を明示的に許可する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-24
+     */
     fun deleteAll() {
         isBuild = true
     }

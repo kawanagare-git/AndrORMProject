@@ -14,6 +14,8 @@ import java.time.LocalDateTime
 /**
  * ## 大項目テスト用 Entity
  * ### CREATE TABLE / INDEX / UNIQUE 生成確認用
+  * @author Masahiro Inoue
+  * @since 2026-05-28
  */
 @Projections(
     [

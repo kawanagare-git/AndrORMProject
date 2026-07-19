@@ -13,12 +13,29 @@ import kotlin.reflect.KProperty1
 /**
  * ## HavingConditionBuilder テスト
  * ### HAVING 用の集計関数条件を検証する
+  * @author Masahiro Inoue
+  * @since 2026-05-18
  */
 class HavingConditionBuilderTest {
 
+    /**
+     * 指定された列のMAX関数式を生成する。
+     * @param column MAX関数を適用する列。
+     * @return 処理結果。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     private fun <T : Entity> max(column: KProperty1<T, *>): String =
         MAX.build(column)
 
+    /**
+     * 「testMaxFunctionDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param value 追加する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("HAVING の MAX 関数条件 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, value={1}, expected={2}")
     @CsvSource(
@@ -53,6 +70,13 @@ class HavingConditionBuilderTest {
         assertEquals(listOf(value), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testMaxFunctionLogicalDsl」の条件における期待動作を検証する。
+     * @param logicalOperator logicalOperatorとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("HAVING の MAX 関数論理条件 DSL を検証する")
     @ParameterizedTest(name = "[{index}] operator={0}, expected={1}")
     @CsvSource(

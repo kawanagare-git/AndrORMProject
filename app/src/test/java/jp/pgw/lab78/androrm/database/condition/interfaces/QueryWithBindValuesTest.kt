@@ -19,6 +19,8 @@ class QueryWithBindValuesTest {
     /**
      * ## QueryWithBindValues テスト用具象クラス
      * ### abstract class をテストするための最小実装
+      * @author Masahiro Inoue
+      * @since 2026-05-21
      */
     private class TestQueryWithBindValues(
         private val additionalValues: List<Any?> = emptyList(),
@@ -27,6 +29,8 @@ class QueryWithBindValuesTest {
         /**
          * ## バインド値追加
          * ### internal メソッドをテストから扱いやすくするためのラッパー
+          * @author Masahiro Inoue
+          * @since 2026-05-21
          */
         fun addValue(value: Any?) {
             addBindValue(value)
@@ -35,6 +39,8 @@ class QueryWithBindValuesTest {
         /**
          * ## バインド値複数追加
          * ### Iterator の中身が展開されることを検証するためのラッパー
+          * @author Masahiro Inoue
+          * @since 2026-05-21
          */
         fun addValues(values: List<Any?>) {
             addBindValues(values)
@@ -43,6 +49,8 @@ class QueryWithBindValuesTest {
         /**
          * ## バインド値クリア
          * ### protected メソッドをテストから扱いやすくするためのラッパー
+          * @author Masahiro Inoue
+          * @since 2026-05-21
          */
         fun clearValues() {
             clearBindValues()
@@ -51,10 +59,19 @@ class QueryWithBindValuesTest {
         /**
          * ## 追加バインド値取得
          * ### 後置追加したいバインド値を返す
+          * @author Masahiro Inoue
+          * @since 2026-05-21
          */
         override fun additionalBindValues(): List<Any?> = additionalValues
     }
 
+    /**
+     * 「testAddBindValue」の条件における期待動作を検証する。
+     * @param valueList 追加する値を保持する一覧。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("addBindValue で値を1件追加できる")
     @ParameterizedTest(name = "[{index}] value={0}, expected={1}")
     @CsvSource(
@@ -82,6 +99,13 @@ class QueryWithBindValuesTest {
         assertEquals(expected, target.bindValues)
     }
 
+    /**
+     * 「testAddBindValues」の条件における期待動作を検証する。
+     * @param values 追加する値の一覧。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("addBindValues で Iterator の中身を展開して追加できる")
     @ParameterizedTest(name = "[{index}] values={0}, expected={1}")
     @CsvSource(
@@ -107,6 +131,15 @@ class QueryWithBindValuesTest {
         assertEquals(expected, target.bindValues)
     }
 
+    /**
+     * 「testAddBindValueAndAddBindValues」の条件における期待動作を検証する。
+     * @param firstValueList 最初に追加する値の一覧。
+     * @param values 追加する値の一覧。
+     * @param lastValueList 最後に追加する値の一覧。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("addBindValue と addBindValues を呼び出し順に保持できる")
     @ParameterizedTest(name = "[{index}] first={0}, values={1}, last={2}, expected={3}")
     @CsvSource(
@@ -137,6 +170,14 @@ class QueryWithBindValuesTest {
         assertEquals(expected, target.bindValues)
     }
 
+    /**
+     * 「testAdditionalBindValues」の条件における期待動作を検証する。
+     * @param values 追加する値の一覧。
+     * @param additionalValues 追加のバインド値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("additionalBindValues の値を bindValues の末尾に合成できる")
     @ParameterizedTest(name = "[{index}] values={0}, additional={1}, expected={2}")
     @CsvSource(
@@ -164,6 +205,13 @@ class QueryWithBindValuesTest {
         assertEquals(expected, target.bindValues)
     }
 
+    /**
+     * 「testClearBindValues」の条件における期待動作を検証する。
+     * @param values 追加する値の一覧。
+     * @param additionalValues 追加のバインド値。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("clearBindValues で内部保持しているバインド値をクリアできる")
     @ParameterizedTest(name = "[{index}] values={0}, additional={1}")
     @CsvSource(
@@ -188,6 +236,11 @@ class QueryWithBindValuesTest {
         assertEquals(additionalValues, target.bindValues)
     }
 
+    /**
+     * 「testClearBindValuesDoesNotClearAdditionalBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("clearBindValues では additionalBindValues の値は消えない")
     @Test
     fun testClearBindValuesDoesNotClearAdditionalBindValues() {

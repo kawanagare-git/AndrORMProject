@@ -8,6 +8,12 @@ import kotlin.reflect.KClass
  * androrm-common/src/main/java/jp/pgw/lab78/androrm/common/annotation/EntityPackageInfo.kt
  * も適切に修正すること
  */
+/**
+ * ## 共通エンティティ定数
+ * ### エンティティ定義で使用する定数を管理
+ * @author Masahiro Inoue
+ * @since 2025-08-01
+ */
 object EntityConstants {
     /**
      * ## 共通インターフェス定義列挙型

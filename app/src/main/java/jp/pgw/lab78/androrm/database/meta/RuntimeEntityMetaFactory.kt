@@ -39,6 +39,8 @@ class RuntimeEntityMetaFactory {
      *
      * @param entityClass Select 対象 Entity クラス
      * @return 生成された EntityMeta
+     * @author Masahiro Inoue
+     * @since 2026-04-27
      */
     fun <T : SelectEntity> create(entityClass: KClass<out T>): EntityMeta {
         // テーブル情報の解決

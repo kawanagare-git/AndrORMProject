@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.Constants.D_QUOTE_CHAR
 import jp.pgw.lab78.androrm.common.dml.interfaces.SqlFunction
 import jp.pgw.lab78.androrm.support.converter.AnyListConverter
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,6 +17,12 @@ import org.junit.jupiter.params.provider.CsvSource
  */
 class ColumnFunctionTest {
 
+    /**
+     * ## ColumnFunction は定義された functionName / argumentArity / returnType を保持できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("ColumnFunction は定義された functionName / argumentArity / returnType を保持できる")
     @ParameterizedTest(name = "[{index}] function={0}")
     @CsvSource(
@@ -66,6 +73,12 @@ class ColumnFunctionTest {
         assertEquals(expectedReturnType, function.returnType)
     }
 
+    /**
+     * ## createQuery は単一引数関数のクエリを生成できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("createQuery は単一引数関数のクエリを生成できる")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}")
     @CsvSource(
@@ -89,6 +102,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## createQuery は単一引数関数に複数引数を渡した場合、先頭引数だけを使用する
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("createQuery は単一引数関数に複数引数を渡した場合、先頭引数だけを使用する")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}")
     @CsvSource(
@@ -97,7 +116,7 @@ class ColumnFunctionTest {
         "AVG, gross:deduction, avg(gross)",
         "MAX, gross:deduction, max(gross)",
         "MIN, gross:deduction, min(gross)",
-        quoteCharacter = '"',
+        quoteCharacter = D_QUOTE_CHAR,
     )
     fun testCreateQuerySingleArgumentUsesFirstArgumentOnly(
         function: ColumnFunction,
@@ -109,27 +128,33 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## createQuery は複数引数関数のクエリを生成できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("createQuery は複数引数関数のクエリを生成できる")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}")
     @CsvSource(
         value = [
-            "GROUP_CONCAT, \"name:','\", \"group_concat(name,',')\"",
-            "REPLACE, \"name:'old':'new'\", \"replace(name,'old','new')\"",
-            "SUBSTR, \"name:1:3\", \"substr(name,1,3)\"",
-            "TRIM, \"name:' '\", \"trim(name,' ')\"",
-            "LTRIM, \"name:' '\", \"ltrim(name,' ')\"",
-            "RTRIM, \"name:' '\", \"rtrim(name,' ')\"",
-            "DATE, \"created_at:'localtime'\", \"date(created_at,'localtime')\"",
-            "TIME, \"created_at:'localtime'\", \"time(created_at,'localtime')\"",
-            "DATETIME, \"created_at:'localtime'\", \"datetime(created_at,'localtime')\"",
-            "STRFTIME, \"'%Y-%m-%d':created_at\", \"strftime('%Y-%m-%d',created_at)\"",
-            "JULIANDAY, \"created_at:'localtime'\", \"julianday(created_at,'localtime')\"",
+            """GROUP_CONCAT, "name:','", "group_concat(name,',')"""",
+            """REPLACE, "name:'old':'new'", "replace(name,'old','new')"""",
+            """SUBSTR, "name:1:3", "substr(name,1,3)"""",
+            """TRIM, "name:' '", "trim(name,' ')"""",
+            """LTRIM, "name:' '", "ltrim(name,' ')"""",
+            """RTRIM, "name:' '", "rtrim(name,' ')"""",
+            """DATE, "created_at:'localtime'", "date(created_at,'localtime')"""",
+            """TIME, "created_at:'localtime'", "time(created_at,'localtime')"""",
+            """DATETIME, "created_at:'localtime'", "datetime(created_at,'localtime')"""",
+            """STRFTIME, "'%Y-%m-%d':created_at", "strftime('%Y-%m-%d',created_at)"""",
+            """JULIANDAY, "created_at:'localtime'", "julianday(created_at,'localtime')"""",
             "ABS, gross, abs(gross)",
-            "IFNULL, \"name:'unknown'\", \"ifnull(name,'unknown')\"",
-            "COALESCE, \"name:nickname:'unknown'\", \"coalesce(name,nickname,'unknown')\"",
-            "NULLIF, \"gross:0\", \"nullif(gross,0)\"",
+            """IFNULL, "name:'unknown'", "ifnull(name,'unknown')"""",
+            """COALESCE, "name:nickname:'unknown'", "coalesce(name,nickname,'unknown')"""",
+            """NULLIF, "gross:0", "nullif(gross,0)"""",
         ],
-        quoteCharacter = '"',
+        quoteCharacter = D_QUOTE_CHAR,
     )
     fun testCreateQueryMultiArgument(
         function: ColumnFunction,
@@ -141,6 +166,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## COUNT_ALL は引数に関係なく count(*) を生成できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("COUNT_ALL は引数に関係なく count(*) を生成できる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -158,6 +189,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## CONCAT は引数を SQLite の文字列連結演算子で結合できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("CONCAT は引数を SQLite の文字列連結演算子で結合できる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -173,6 +210,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## ROUND は現在の実装どおり round() を生成する
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("ROUND は現在の実装どおり round() を生成する")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -190,6 +233,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## RANDOM は引数なしで random() を生成できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("RANDOM は引数なしで random() を生成できる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -204,6 +253,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## CUSTOM は現在の実装どおり空の関数名でクエリを生成する
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("CUSTOM は現在の実装どおり空の関数名でクエリを生成する")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -218,6 +273,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## getReturnType は固定戻り値型を返せる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("getReturnType は固定戻り値型を返せる")
     @ParameterizedTest(name = "[{index}] function={0}")
     @CsvSource(
@@ -251,6 +312,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## SUM の getReturnType は引数型から戻り値型を推論できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("SUM の getReturnType は引数型から戻り値型を推論できる")
     @ParameterizedTest(name = "[{index}] argTypes={0}")
     @CsvSource(
@@ -271,6 +338,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## MAX / MIN の getReturnType は引数型の広い方を返せる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("MAX / MIN の getReturnType は引数型の広い方を返せる")
     @ParameterizedTest(name = "[{index}] function={0}, argTypes={1}")
     @CsvSource(
@@ -293,6 +366,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## ABS / IFNULL / COALESCE / NULLIF の getReturnType は引数型の広い方を返せる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("ABS / IFNULL / COALESCE / NULLIF の getReturnType は引数型の広い方を返せる")
     @ParameterizedTest(name = "[{index}] function={0}, argTypes={1}")
     @CsvSource(
@@ -319,6 +398,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## widerType は2つの型から広い型を返せる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("widerType は2つの型から広い型を返せる")
     @ParameterizedTest(name = "[{index}] type1={0}, type2={1}")
     @CsvSource(
@@ -339,6 +424,12 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## resolveSumReturnType は SUM の戻り値型を推論できる
+     * ### ColumnFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     @DisplayName("resolveSumReturnType は SUM の戻り値型を推論できる")
     @ParameterizedTest(name = "[{index}] argTypes={0}")
     @CsvSource(
@@ -360,6 +451,15 @@ class ColumnFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## ColumnFunction引数配列変換
+     * ### テストデータの各要素を文字列へ変換し、可変長引数へ渡す配列を生成する
+     * @receiver 変換対象の引数リスト
+     * @return nullを含まない文字列配列
+     * @throws IllegalArgumentException リストにnull要素が含まれる場合
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     private fun List<Any?>.toStringArray(): Array<String> =
         map { value ->
             requireNotNull(value) {
@@ -367,6 +467,15 @@ class ColumnFunctionTest {
             }.toString()
         }.toTypedArray()
 
+    /**
+     * ## ColumnFunction引数型リスト変換
+     * ### テストデータの各要素を型名文字列へ変換する
+     * @receiver 変換対象の型情報リスト
+     * @return nullを含まない型名文字列リスト
+     * @throws IllegalArgumentException リストにnull要素が含まれる場合
+     * @author Masahiro Inoue
+     * @since 2026-05-22
+     */
     private fun List<Any?>.toStringList(): List<String> =
         map { value ->
             requireNotNull(value) {

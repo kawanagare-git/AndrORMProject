@@ -13,6 +13,8 @@ import jp.pgw.lab78.androrm.detekt.log.AndrOrmLogger
  *   androrm:
  *     AndrOrmEntityRefRule:
  *       active: true
+ *     AndrOrmDuplicateTableNameRule:
+ *       active: true
  * ```
  * ### のように書く想定。
  * @author Masahiro Inoue
@@ -35,7 +37,10 @@ class AndrOrmRuleSetProvider : RuleSetProvider {
         AndrOrmLogger.log.info("[AndrOrmRuleSetProvider.instance] called")
         return RuleSet(
             ruleSetId,
-            listOf(AndrOrmEntityRefRule(config))
+            listOf(
+                AndrOrmEntityRefRule(config),
+                AndrOrmDuplicateTableNameRule(config),
+            )
         )
     }
 }

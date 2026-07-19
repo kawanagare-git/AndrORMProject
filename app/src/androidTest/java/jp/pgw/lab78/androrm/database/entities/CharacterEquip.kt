@@ -11,6 +11,12 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
+/**
+ * ## キャラクタ装備テーブルEntity
+ * ### キャラクタごとの装備スロットと装備アイテムを定義する
+ * @author Masahiro Inoue
+ * @since 2026-06-14
+ */
 @Projections(
     [
         Projection(

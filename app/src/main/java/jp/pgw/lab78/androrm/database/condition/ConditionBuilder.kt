@@ -21,6 +21,12 @@ class ConditionBuilder(
     private val enableAlias: Boolean = true
 ) :
     BaseConditionBuilder<ConditionBuilder>(valueHolder, enableAlias) {
-    /** Self インスタンス生成関数（自クラスを生成する） */
+    /**
+     * 同じバインド値保持先と別名設定を共有する条件ビルダーを生成する。
+     *
+     * @return 新しい条件ビルダー
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     override fun createSelf() = ConditionBuilder(valueHolder, enableAlias)
 }

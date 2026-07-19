@@ -12,10 +12,20 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
+/**
+ * RuntimeEntityMetaFactoryの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 class RuntimeEntityMetaFactoryTest {
 
     private val factory = RuntimeEntityMetaFactory()
 
+    /**
+     * 「testCreate_withExplicitTableAnnotation_returnsEntityMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withExplicitTableAnnotation_returnsEntityMeta() {
         val actual = factory.create(ExplicitTableEntity::class)
@@ -38,6 +48,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withoutTableAnnotation_usesClassNameSnakeCase」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withoutTableAnnotation_usesClassNameSnakeCase() {
         val actual = factory.create(ImplicitTableEntity::class)
@@ -48,6 +63,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withBlankTableAnnotation_usesClassNameSnakeCase」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withBlankTableAnnotation_usesClassNameSnakeCase() {
         val actual = factory.create(BlankTableEntity::class)
@@ -58,6 +78,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withColumnAnnotation_returnsColumnPropertyMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withColumnAnnotation_returnsColumnPropertyMeta() {
         val actual = factory.create(ExplicitTableEntity::class)
@@ -77,6 +102,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withColumnHideFromSelect_returnsHiddenPropertyMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withColumnHideFromSelect_returnsHiddenPropertyMeta() {
         val actual = factory.create(ExplicitTableEntity::class)
@@ -91,6 +121,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withoutColumnAnnotation_returnsImplicitColumnPropertyMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withoutColumnAnnotation_returnsImplicitColumnPropertyMeta() {
         val actual = factory.create(ImplicitTableEntity::class)
@@ -107,6 +142,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withBlankColumnAnnotation_usesPropertyNameSnakeCase」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withBlankColumnAnnotation_usesPropertyNameSnakeCase() {
         val actual = factory.create(BlankColumnEntity::class)
@@ -119,6 +159,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withFunctionAnnotation_returnsFunctionPropertyMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withFunctionAnnotation_returnsFunctionPropertyMeta() {
         val actual = factory.create(FunctionColumnEntity::class)
@@ -138,6 +183,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withFunctionBlankAlias_usesPropertyNameSnakeCase」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withFunctionBlankAlias_usesPropertyNameSnakeCase() {
         val actual = factory.create(FunctionColumnEntity::class)
@@ -151,6 +201,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withFunctionRaw_returnsRawFunctionPropertyMeta」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withFunctionRaw_returnsRawFunctionPropertyMeta() {
         val actual = factory.create(FunctionColumnEntity::class)
@@ -167,6 +222,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withColumnAndFunctionAnnotation_prioritizesFunction」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withColumnAndFunctionAnnotation_prioritizesFunction() {
         val actual = factory.create(ColumnAndFunctionEntity::class)
@@ -183,6 +243,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_returnsPropertiesInConstructorParameterOrder」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_returnsPropertiesInConstructorParameterOrder() {
         val actual = factory.create(ConstructorOrderEntity::class)
@@ -193,6 +258,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withoutPrimaryConstructor_throwsAE00007」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withoutPrimaryConstructor_throwsAE00007() {
         val actual = assertThrows<IllegalStateException> {
@@ -205,6 +275,11 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 「testCreate_withoutConstructorProperty_throwsAE00008」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     @Test
     fun testCreate_withoutConstructorProperty_throwsAE00008() {
         val actual = assertThrows<IllegalStateException> {
@@ -217,11 +292,23 @@ class RuntimeEntityMetaFactoryTest {
         )
     }
 
+    /**
+     * 指定されたプロパティ名に対応するメタ情報を取得する。
+     * @param propertyName 取得するプロパティ名。
+     * @return 処理結果。
+     * @author Masahiro Inoue
+     * @since 2026-06-10
+     */
     private fun jp.pgw.lab78.androrm.common.meta.EntityMeta.property(
         propertyName: String,
     ): PropertyMeta = properties.first { it.propertyName == propertyName }
 }
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用ExplicitTableEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 @Table(name = "EMPLOYEE", alias = "EMP")
 private data class ExplicitTableEntity(
     @Column(name = "ID")
@@ -232,21 +319,41 @@ private data class ExplicitTableEntity(
     val age: Int,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用ImplicitTableEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 private data class ImplicitTableEntity(
     val id: Long,
     val employeeName: String,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用BlankTableEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 @Table(name = "", alias = "")
 private data class BlankTableEntity(
     val id: Long,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用BlankColumnEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 private data class BlankColumnEntity(
     @Column(name = "", alias = "")
     val employeeName: String,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用FunctionColumnEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 @Table(name = "SALARY", alias = "SAL")
 private data class FunctionColumnEntity(
     @Column(name = "GROSS")
@@ -271,6 +378,11 @@ private data class FunctionColumnEntity(
     val grossRank: Long,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用ColumnAndFunctionEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 private data class ColumnAndFunctionEntity(
     @Column(name = "TOTAL", alias = "TOTAL")
     @Function(
@@ -281,6 +393,11 @@ private data class ColumnAndFunctionEntity(
     val totalGross: Long,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用ConstructorOrderEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 private data class ConstructorOrderEntity(
     @Column(name = "SECOND_VALUE")
     val secondValue: String,
@@ -290,7 +407,18 @@ private data class ConstructorOrderEntity(
     val thirdValue: Int,
 ) : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用NoPrimaryConstructorEntity。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 private object NoPrimaryConstructorEntity : SelectEntity
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用ConstructorParameterOnlyEntity。
+ * @param id idとして使用する値。
+ * @author Masahiro Inoue
+ * @since 2026-06-10
+ */
 @Suppress("UNUSED_PARAMETER")
 private class ConstructorParameterOnlyEntity(id: Long) : SelectEntity

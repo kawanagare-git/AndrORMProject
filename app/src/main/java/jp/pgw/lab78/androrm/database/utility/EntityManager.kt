@@ -20,7 +20,6 @@ import jp.pgw.lab78.androrm.database.interfaces.SqlExpression
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
-import jp.pgw.lab78.shared.library.Utils.isNotNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -72,7 +71,14 @@ object EntityManager {
     internal val tableMetadata: Map<String, TableDefinition<Entity>>
         get() = _tableMetadata
 
-    /** SELECT 結果カラムとプロパティの紐づけ */
+    /**
+     * SELECT結果のカラム名とEntityプロパティ名の対応を保持する。
+     *
+     * @property propertyName Entityのプロパティ名
+     * @property resultColumnName SELECT結果のカラム名
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     data class SelectColumnTarget(
         val propertyName: String,
         val resultColumnName: String,
@@ -302,17 +308,42 @@ object EntityManager {
      */
     fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
 
-    /** 型変換用データクラス */
+    /**
+     * Kotlin型とSQLite型の変換処理を保持する。
+     *
+     * @property columnType SQLiteのカラム型
+     * @property toBindValue SQLiteStatementへ値をバインドする処理
+     * @property toProperty SELECT結果をプロパティ型へ変換する処理
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     data class DataConverter<T : Any>(
         val columnType: String,
         val toBindValue: (SQLiteStatement, Int, T) -> Unit,
         val toProperty: (Any?) -> T
     ) {
+        /**
+         * 値を対象型へ変換し、SQLiteStatementへバインドする。
+         *
+         * @param statement バインド先のSQLiteStatement
+         * @param index バインド位置
+         * @param value バインドする値
+         * @author Masahiro Inoue
+         * @since 2025-08-01
+         */
         @Suppress("UNCHECKED_CAST")
         fun toBind(statement: SQLiteStatement, index: Int, value: Any) {
             toBindValue(statement, index, value as T)
         }
 
+        /**
+         * SELECT結果を対象のプロパティ型へ変換する。
+         *
+         * @param value 変換する値
+         * @return 変換後の値
+         * @author Masahiro Inoue
+         * @since 2025-08-01
+         */
         @Suppress("UNCHECKED_CAST")
         fun toProp(value: Any?): T = toProperty(value)
     }
@@ -384,6 +415,8 @@ object EntityManager {
      * ## Kotlin 型 SQL 型変換関数
      * ### クラスのフィールド型をデータベースのカラム型に変換
      * @param field 変換対象のフィールドを指定
+     * @return SQLiteカラム型
+     * @throws IllegalArgumentException 未対応のKotlin型が指定された場合
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
@@ -394,13 +427,10 @@ object EntityManager {
             // それ以外は、KClass<*> を取得
             else -> field::class
         }
-        require(
-            valueForJudgment.isNotNull()
-                    || DataConvertedMap[valueForJudgment].isNotNull()
-        ) {
+        val converter = requireNotNull(DataConvertedMap[valueForJudgment]) {
             AE00009.format(valueForJudgment)
         }
-        return DataConvertedMap[valueForJudgment]?.columnType!!
+        return converter.columnType
     }
 
     /**

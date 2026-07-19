@@ -34,6 +34,12 @@ class ExistsSelect<T : SelectEntity>(
      * @since 2025-08-01
      */
     init {
+        /**
+         * EXISTSサブクエリの主Entityを検証し、FROM句とテーブル別名を初期化する。
+         *
+         * @author Masahiro Inoue
+         * @since 2026-07-10
+         */
         @InfoLog
         @TraceLog
         fun initialize() {

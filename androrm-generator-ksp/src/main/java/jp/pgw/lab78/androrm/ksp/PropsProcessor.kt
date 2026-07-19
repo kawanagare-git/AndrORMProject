@@ -41,6 +41,12 @@ import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
 class PropsProcessor(
     private val codeGenerator: CodeGenerator,
 ) : SymbolProcessor, LoggerLike by logger {
+    /**
+     * ## プロセッサ共通定義
+     * ### Entityパッケージ情報の解決に使用する定数を保持する
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     companion object {
         /** @EntityPackageInfo */
         private val ENTITY_PACKAGE_INFO_FQN = EntityPackageInfo::class.qualifiedName!!

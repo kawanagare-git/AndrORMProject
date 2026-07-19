@@ -150,12 +150,13 @@ open class AndrOrmDatabaseHelper(
      */
     override fun onCreate(db: SQLiteDatabase) {
         val usedIndexNames = mutableSetOf<String>()
-        val createTableList = entities.map { entity ->
+        val createQueriesByEntity = entities.distinct().associateWith { entity ->
             val create = Create(entity)
             create.build() to create.buildIndexQueries(0, usedIndexNames)
         }
         // テーブル作成
-        createTableList.forEach { (createTableQuery, createIndexQueries) ->
+        entities.forEach { entity ->
+            val (createTableQuery, createIndexQueries) = createQueriesByEntity.getValue(entity)
             db.execSQL(createTableQuery)
             // テーブル毎のインデックス作成
             createIndexQueries.forEach { createIndexQuery ->
@@ -167,6 +168,8 @@ open class AndrOrmDatabaseHelper(
     /**
      * ## データベース更新
      * ### データベースバージョンを比較してテーブル追加・変更を実施
+     * ### 移行開始時に各移行対象の `<テーブル名>_new` を削除するため、この接尾辞は移行専用として予約する
+     * ### 利用者が同名テーブルを作成していた場合、そのテーブルとデータはアップグレード時に削除される
      * @param db SQLite データベース
      * @param oldVersion 適用前データベースバージョン
      * @param newVersion 適用後データベースバージョン
@@ -185,6 +188,7 @@ open class AndrOrmDatabaseHelper(
      * ## DB 移行処理
      * ### 新テーブルを生成し、旧テーブルから移行可能なカラムの値を転送してテーブルを置き換える
      * ### 旧テーブルに存在しない非nullableカラムは MigrationDefault の値で補完し、nullableカラムは転送対象外とする
+     * ### 前回の移行失敗で残った可能性がある `<テーブル名>_new` は、新しい一時テーブルを作成する前に削除する
      * @param db SQLite データベース
      * @param newVersion 適用後データベースバージョン。新規インデックスの適用判定に使用する
      * @author Masahiro Inoue
@@ -197,6 +201,11 @@ open class AndrOrmDatabaseHelper(
         // 新旧テーブル名を作成
         val tableNames =
             entities.associateWith { entity -> entity.getTableName() to "${entity.getTableName()}$NEW_TABLE_SUFFIX" }
+        // 前回の移行失敗で残った可能性がある一時テーブルを削除
+        val dropTemporaryTableQueryList = tableNames.values.map { tableNamePair ->
+            "drop table if exists ${tableNamePair.second}"
+        }
+        executeQuery(db, dropTemporaryTableQueryList)
         // 新旧テーブルカラムのマッピング
         preparedColumnMappings = entities.associateWith { entity ->
             entity.getConstructorOrderedProperties()

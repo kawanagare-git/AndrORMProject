@@ -17,6 +17,12 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 @HavingDslMarker
 class HavingConditionBuilder(private val valueHolder: QueryWithBindValues) :
     BaseConditionBuilder<HavingConditionBuilder>(valueHolder) {
-    /** Self インスタンス生成関数（自クラスを生成する） */
+    /**
+     * 同じバインド値保持先を共有するHAVING条件ビルダーを生成する。
+     *
+     * @return 新しいHAVING条件ビルダー
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     override fun createSelf() = HavingConditionBuilder(valueHolder)
 }

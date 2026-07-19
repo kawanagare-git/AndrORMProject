@@ -15,6 +15,12 @@ import org.junit.jupiter.api.Test
  */
 class SelectAppendSelectableColumnsTest {
 
+    /**
+     * 主Entityの非表示カラムがSELECT対象から除外されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-10
+     */
     @Test
     fun appendSelectableColumns_shouldExcludeHiddenColumn_whenMainEntityContainsHiddenColumn() {
         val query = Select(EmployeeEntity::class).build()
@@ -47,6 +53,12 @@ class SelectAppendSelectableColumnsTest {
         )
     }
 
+    /**
+     * 結合Entityの選択可能カラムへ結合時のテーブル別名が使用されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-10
+     */
     @Test
     fun appendSelectableColumns_shouldUseJoinedTableAlias_whenJoinedEntityContainsSelectableColumns() {
         val query = Select(EmployeeEntityIdSelection::class)
@@ -55,7 +67,6 @@ class SelectAppendSelectableColumnsTest {
                 condition("1 = 1")
             }
             .build()
-        println(query)
         assertAll(
             {
                 assertTrue(
@@ -96,6 +107,12 @@ class SelectAppendSelectableColumnsTest {
         )
     }
 
+    /**
+     * 同じEntityを再結合した場合に指定した連番付き別名が使用されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-10
+     */
     @Test
     fun appendSelectableColumns_shouldUseNumberedAlias_whenSameEntityIsJoinedAgain() {
         val main = TableRef(EmployeeEntity::class, "M")
@@ -106,7 +123,6 @@ class SelectAppendSelectableColumnsTest {
                 condition("1 = 1")
             }
             .build()
-        println(query)
         assertAll(
             {
                 assertTrue(

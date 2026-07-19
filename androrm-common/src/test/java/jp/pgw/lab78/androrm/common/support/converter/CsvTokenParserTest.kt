@@ -8,9 +8,17 @@ import org.junit.jupiter.api.Test
 /**
  * ## CsvTokenParser テスト
  * ### CSV 用テストデータ内の List / 2次元 List / 特殊値変換を検証する
+ * @author Masahiro Inoue
+ * @since 2026-05-20
  */
 class CsvTokenParserTest {
 
+    /**
+     * ## parseList は ':' 区切りの文字列を List に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList は ':' 区切りの文字列を List に変換できる")
     fun parseList_basic() {
@@ -22,6 +30,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parseList は '\\:' を値としての ':' に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList は '\\:' を値としての ':' に変換できる")
     fun parseList_escapeColon() {
@@ -33,6 +47,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parseList は '\\^' を値としての '^' に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList は '\\^' を値としての '^' に変換できる")
     fun parseList_escapeRowDelimiter() {
@@ -44,6 +64,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parseList は '\\\\' を値としての '\\' に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList は '\\\\' を値としての '\\' に変換できる")
     fun parseList_escapeBackslash() {
@@ -55,6 +81,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parse2dList は '^' で行、':' で列を分割できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parse2dList は '^' で行、':' で列を分割できる")
     fun parse2dList_basic() {
@@ -69,6 +101,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parse2dList はエスケープされた ':' と '^' を値として扱える
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parse2dList はエスケープされた ':' と '^' を値として扱える")
     fun parse2dList_escapeDelimiter() {
@@ -83,6 +121,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## toStringValue は '<null>' を null に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toStringValue は '<null>' を null に変換できる")
     fun toStringValue_nullToken() {
@@ -91,6 +135,12 @@ class CsvTokenParserTest {
         assertEquals(null, actual)
     }
 
+    /**
+     * ## toStringValue は '<empty>' を空文字に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toStringValue は '<empty>' を空文字に変換できる")
     fun toStringValue_emptyToken() {
@@ -99,6 +149,12 @@ class CsvTokenParserTest {
         assertEquals("", actual)
     }
 
+    /**
+     * ## toAnyValue は整数文字列を Int に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toAnyValue は整数文字列を Int に変換できる")
     fun toAnyValue_int() {
@@ -107,6 +163,12 @@ class CsvTokenParserTest {
         assertEquals(123, actual)
     }
 
+    /**
+     * ## toAnyValue は小数文字列を Double に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toAnyValue は小数文字列を Double に変換できる")
     fun toAnyValue_double() {
@@ -115,6 +177,12 @@ class CsvTokenParserTest {
         assertEquals(12.34, actual)
     }
 
+    /**
+     * ## toAnyValue は true / false を Boolean に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toAnyValue は true / false を Boolean に変換できる")
     fun toAnyValue_boolean() {
@@ -122,6 +190,12 @@ class CsvTokenParserTest {
         assertEquals(false, CsvTokenParser.toAnyValue("false"))
     }
 
+    /**
+     * ## toAnyValue は '<null>' を null に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toAnyValue は '<null>' を null に変換できる")
     fun toAnyValue_nullToken() {
@@ -130,6 +204,12 @@ class CsvTokenParserTest {
         assertEquals(null, actual)
     }
 
+    /**
+     * ## toAnyValue は '<empty>' を空文字に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("toAnyValue は '<empty>' を空文字に変換できる")
     fun toAnyValue_emptyToken() {
@@ -138,6 +218,12 @@ class CsvTokenParserTest {
         assertEquals("", actual)
     }
 
+    /**
+     * ## parseList の終端文字を'\\'を設定 List に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList の終端文字を'\\'を設定 List に変換できる")
     fun parseList_LastSlash() {
@@ -146,6 +232,12 @@ class CsvTokenParserTest {
         assertEquals(listOf("A", "B", "C", "\\"), actual)
     }
 
+    /**
+     * ## parse2dList は行分割時に列区切り用エスケープを温存できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parse2dList は行分割時に列区切り用エスケープを温存できる")
     fun parse2dList_keepListDelimiterEscapeWhenSplittingRows() {
@@ -160,6 +252,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parse2dList は '\\\\' を値としての '\\' に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parse2dList は '\\\\' を値としての '\\' に変換できる")
     fun parse2dList_escapeBackslash() {
@@ -174,6 +272,12 @@ class CsvTokenParserTest {
         )
     }
 
+    /**
+     * ## parseList は '<emptyList>' を空 List に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parseList は '<emptyList>' を空 List に変換できる")
     fun parseList_emptyListToken() {
@@ -182,6 +286,12 @@ class CsvTokenParserTest {
         assertEquals(emptyList<String>(), actual)
     }
 
+    /**
+     * ## parse2dList は '<emptyList>' を空の2次元 List に変換できる
+     * ### CsvTokenParser が仕様どおりに変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-20
+     */
     @Test
     @DisplayName("parse2dList は '<emptyList>' を空の2次元 List に変換できる")
     fun parse2dList_emptyListToken() {

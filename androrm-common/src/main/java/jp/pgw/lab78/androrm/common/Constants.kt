@@ -19,7 +19,7 @@ object Constants {
     const val SPACE = " "
 
     /** カンマ */
-    private const val COMMA = ","
+    const val COMMA = ","
 
     /** スラッシュ */
     const val SLASH = "/"
@@ -31,6 +31,12 @@ object Constants {
     const val PRIMARY_DELIMITER = COMMA
     const val SECONDARY_DELIMITER = SLASH
     const val TERTIARY_DELIMITER = COLON
+
+    /** 囲み文字 */
+    const val S_QUOTE = "'"
+    const val D_QUOTE = """""""
+    const val D_QUOTE_CHAR = '"'
+    const val B_QUOTE = "`"
 
     /** 引数区切り文字 */
     const val ARGUMENT_DELIMITER = "$PRIMARY_DELIMITER$SPACE"
@@ -114,6 +120,8 @@ object Constants {
     /**
      * ## 論理演算子
      * @param query クエリ文字列
+     * @author Masahiro Inoue
+     * @since 2026-03-10
      */
     enum class LogicalOperator(val query: String) {
         AND(" and "),
@@ -123,6 +131,8 @@ object Constants {
     /**
      * ## 論理演算子
      * @param query クエリ文字列
+     * @author Masahiro Inoue
+     * @since 2026-03-10
      */
     enum class IndexType(val query: String) {
         UNIQUE("unique "),

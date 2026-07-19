@@ -5,8 +5,21 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
+/**
+ * Orderの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-05-14
+ */
 class OrderTest {
 
+    /**
+     * 昇順指定とNULL配置指定からORDER BY句を構築できることを検証する。
+     * @param ascending 昇順にする場合はtrue。
+     * @param nullsLast NULLを末尾に配置する場合はtrue。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-14
+     */
     @ParameterizedTest
     @CsvSource(
         "'true','true','EMP.EMPLOYEE_ID asc nulls last'",

@@ -58,6 +58,12 @@ class Select<T : SelectEntity>(
         isDistinct,
     )
 
+    /**
+     * SELECT文生成に関する補助処理を提供する。
+     *
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     companion object {
         /**
          * ## テーブル間データ転送用
@@ -96,6 +102,12 @@ class Select<T : SelectEntity>(
      * @since 2025-08-01
      */
     init {
+        /**
+         * 主Entityを検証し、SELECT対象列、FROM句、テーブル別名を初期化する。
+         *
+         * @author Masahiro Inoue
+         * @since 2025-08-01
+         */
         @InfoLog
         @TraceLog
         fun initialize() {
@@ -115,6 +127,13 @@ class Select<T : SelectEntity>(
         initialize()
     }
 
+    /**
+     * 結合したテーブルのメタ情報を検証し、SELECT対象列と使用済み別名へ登録する。
+     *
+     * @param joinedTable 結合したテーブル参照
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     override fun onTableJoined(
         joinedTable: TableRef<out SelectEntity>,
     ) {

@@ -27,6 +27,12 @@ import kotlin.reflect.KClass
 class Insert<T : InsertEntity>(
     private val entityClass: KClass<out T>
 ) : QueryBuilderLike<T>, QueryWithBindValues() {
+    /**
+     * INSERT文生成に関する補助処理を提供する。
+     *
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     companion object {
         /**
          * ## テーブル間データ転送用
@@ -68,19 +74,40 @@ class Insert<T : InsertEntity>(
     /** エンティティ一覧 */
     private var entities: MutableList<T> = mutableListOf()
 
-    /** エンティティを1件追加 */
+    /**
+     * INSERT対象のエンティティを1件追加する。
+     *
+     * @param entity 追加するエンティティ
+     * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     fun addEntity(entity: T): Insert<T> {
         addEntities(listOf(entity))
         return this
     }
 
-    /** エンティティを複数件追加 */
+    /**
+     * INSERT対象のエンティティを可変長引数から追加する。
+     *
+     * @param entities 追加するエンティティ
+     * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     fun addEntities(vararg entities: T): Insert<T> {
         addEntities(entities.asList())
         return this
     }
 
-    /** エンティティを複数件追加 */
+    /**
+     * INSERT対象のエンティティをリストから追加する。
+     *
+     * @param entities 追加するエンティティのリスト
+     * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2025-08-01
+     */
     fun addEntities(entities: List<T>): Insert<T> {
         isBuild = false
         this.entities.addAll(entities)

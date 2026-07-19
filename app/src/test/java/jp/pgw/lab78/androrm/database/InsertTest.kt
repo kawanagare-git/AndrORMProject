@@ -9,7 +9,19 @@ import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+/**
+ * INSERT文の生成仕様を検証する。
+ *
+ * @author Masahiro Inoue
+ * @since 2026-05-23
+ */
 class InsertTest {
+    /**
+     * 1件のEntityからINSERT文とバインド値が生成されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-23
+     */
     @Test
     fun testSingleLineBuild() {
         val updateDate = LocalDate.of(2026, 5, 23)
@@ -25,7 +37,6 @@ class InsertTest {
         val insert = Insert(TestInsertEntity::class)
         val query = insert.addEntities(testInsertEntityList).build()
         val values = insert.bindValues
-        println("$query / values = $values")
         assertEquals(
             "insert into TEST_INSERT_ENTITY (NAME, ADDRESS, BIRTHDAY, UPDATE_DATE, INSERT_DATE_TIME) values(?, ?, ?, ?, ?)",
             query
@@ -38,6 +49,12 @@ class InsertTest {
         )
     }
 
+    /**
+     * 複数件のEntityから一括INSERT文とバインド値が生成されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-23
+     */
     @Test
     fun testMultiLineBuild() {
         val updateAt = LocalDateTime.of(2026, 5, 23, 0, 10, 59)
@@ -58,7 +75,6 @@ class InsertTest {
         val insert = Insert(SalaryEntityInsert::class)
         val query = insert.addEntities(testInsertEntityList).build()
         val values = insert.bindValues
-        println("$query / values = $values")
         assertEquals(
             "insert into SALARY (EMPLOYEE_ID, PAY_MONTH, GROSS, UPDATE_DATE_TIME, UPDATE_BY_ID) values(?, ?, ?, ?, ?), (?, ?, ?, ?, ?)",
             query
@@ -71,6 +87,12 @@ class InsertTest {
         )
     }
 
+    /**
+     * 複数回追加したEntityが一つのINSERT文へ反映されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-23
+     */
     @Test
     fun testAddMultiLineBuild() {
         val createAt = LocalDateTime.of(2026, 5, 23, 0, 10, 59)
@@ -88,7 +110,6 @@ class InsertTest {
         val insert = Insert(DepartmentEntityInsert::class)
         val query1 = insert.addEntities(testInsertEntityList).build()
         val values1 = insert.bindValues
-        println("$query1 / values = $values1")
         assertEquals(
             "insert into DEPARTMENT (ID, DEPARTMENT, SECTION, CREATE_DATE_TIME, CREATED_BY_ID, UPDATE_DATE_TIME, UPDATE_BY_ID) values(?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)",
             query1
@@ -108,7 +129,6 @@ class InsertTest {
         )
         val query2 = insert.build()
         val values2 = insert.bindValues
-        println("$query2 / values = $values2")
         assertEquals(
             "insert into DEPARTMENT (ID, DEPARTMENT, SECTION, CREATE_DATE_TIME, CREATED_BY_ID, UPDATE_DATE_TIME, UPDATE_BY_ID) values(?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?), (?, ?, ?, ?, ?, ?, ?)",
             query2
@@ -123,6 +143,12 @@ class InsertTest {
         )
     }
 
+    /**
+     * 対象Entityが空の場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-23
+     */
     @Test
     fun testBuildEmptyList() {
         val insert = Insert(TestInsertEntity::class)

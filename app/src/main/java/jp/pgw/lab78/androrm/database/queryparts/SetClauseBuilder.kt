@@ -119,6 +119,14 @@ private data class ExcludedColumnExpression<T : Entity>(
     private val entityClass: KClass<out T>,
     private val property: KProperty1<T, *>,
 ) : SqlExpression {
+    /**
+     * `excluded`テーブルを参照するカラム式を生成する。
+     *
+     * @param valueHolder バインド値の保持先
+     * @return 生成されたカラム式
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
     override fun build(valueHolder: QueryWithBindValues): String =
         "excluded.${entityClass.getColumnName(property.name)}"
 }
@@ -132,6 +140,14 @@ private data class UpsertTargetColumnExpression<T : Entity>(
     private val entityClass: KClass<out T>,
     private val property: KProperty1<T, *>,
 ) : SqlExpression {
+    /**
+     * UPSERT対象テーブルを参照するカラム式を生成する。
+     *
+     * @param valueHolder バインド値の保持先
+     * @return 生成されたカラム式
+     * @author Masahiro Inoue
+     * @since 2026-06-27
+     */
     override fun build(valueHolder: QueryWithBindValues): String =
         entityClass.getColumnName(property.name)
 }

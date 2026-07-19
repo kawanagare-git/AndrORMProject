@@ -80,6 +80,15 @@ operator fun ColumnRef<out Entity, *>.times(rhs: Any?): SqlExpression =
 operator fun ColumnRef<out Entity, *>.div(rhs: Any?): SqlExpression =
     this.toSqlExpression() / rhs
 
+/**
+ * SQL式同士を加算する二項式を生成する。
+ *
+ * @receiver 左辺のSQL式
+ * @param rhs 右辺の値またはSQL式
+ * @return 加算を表すSQL式
+ * @author Masahiro Inoue
+ * @since 2026-06-19
+ */
 operator fun SqlExpression.plus(rhs: Any?): SqlExpression =
     BinaryExpression(
         lhs = this,
@@ -87,6 +96,15 @@ operator fun SqlExpression.plus(rhs: Any?): SqlExpression =
         rhs = rhs.toSqlExpression(),
     )
 
+/**
+ * SQL式同士を減算する二項式を生成する。
+ *
+ * @receiver 左辺のSQL式
+ * @param rhs 右辺の値またはSQL式
+ * @return 減算を表すSQL式
+ * @author Masahiro Inoue
+ * @since 2026-06-19
+ */
 operator fun SqlExpression.minus(rhs: Any?): SqlExpression =
     BinaryExpression(
         lhs = this,
@@ -94,6 +112,15 @@ operator fun SqlExpression.minus(rhs: Any?): SqlExpression =
         rhs = rhs.toSqlExpression(),
     )
 
+/**
+ * SQL式同士を乗算する二項式を生成する。
+ *
+ * @receiver 左辺のSQL式
+ * @param rhs 右辺の値またはSQL式
+ * @return 乗算を表すSQL式
+ * @author Masahiro Inoue
+ * @since 2026-06-19
+ */
 operator fun SqlExpression.times(rhs: Any?): SqlExpression =
     BinaryExpression(
         lhs = this,
@@ -101,6 +128,15 @@ operator fun SqlExpression.times(rhs: Any?): SqlExpression =
         rhs = rhs.toSqlExpression(),
     )
 
+/**
+ * SQL式同士を除算する二項式を生成する。
+ *
+ * @receiver 左辺のSQL式
+ * @param rhs 右辺の値またはSQL式
+ * @return 除算を表すSQL式
+ * @author Masahiro Inoue
+ * @since 2026-06-19
+ */
 operator fun SqlExpression.div(rhs: Any?): SqlExpression =
     BinaryExpression(
         lhs = this,

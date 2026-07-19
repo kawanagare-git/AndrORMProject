@@ -10,8 +10,18 @@ import org.junit.jupiter.api.Test
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+/**
+ * Upsertの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-05-27
+ */
 class UpsertTest {
 
+    /**
+     * 「testSingleLineBuild」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testSingleLineBuild() {
         val birthday = LocalDate.of(1968, 1, 7)
@@ -36,7 +46,6 @@ class UpsertTest {
             }
         val query = upsert.addEntity(entity).build()
         val values = upsert.bindValues
-        println("$query / values = $values")
         assertEquals(
             "insert into TEST_ALL_ENTITY " +
                     "(ID, NAME, ADDRESS, BIRTHDAY, UPDATE_DATE, INSERT_DATE_TIME) " +
@@ -60,6 +69,11 @@ class UpsertTest {
         )
     }
 
+    /**
+     * 「testMultiLineBuild」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testMultiLineBuild() {
         val birthday1 = LocalDate.of(1968, 1, 7)
@@ -97,7 +111,6 @@ class UpsertTest {
             }
         val query = upsert.addEntities(entityList).build()
         val values = upsert.bindValues
-        println("$query / values = $values")
         assertEquals(
             "insert into TEST_ALL_ENTITY " +
                     "(ID, NAME, ADDRESS, BIRTHDAY, UPDATE_DATE, INSERT_DATE_TIME) " +
@@ -126,6 +139,11 @@ class UpsertTest {
         )
     }
 
+    /**
+     * 「testAddEntityBuild」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testAddEntityBuild() {
         val createdAt = LocalDateTime.of(2026, 5, 27, 12, 1, 0)
@@ -147,8 +165,6 @@ class UpsertTest {
         val query = upsert.build()
         val values = upsert.bindValues
 
-        println("$query / values = $values")
-
         assertEquals(
             "insert into SALARY " +
                     "(EMPLOYEE_ID, PAY_MONTH, CREATE_DATE_TIME) " +
@@ -168,6 +184,11 @@ class UpsertTest {
         )
     }
 
+    /**
+     * 「testBuildEmptyList」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildEmptyList() {
         val upsert = Upsert(TestAllEntityComprehensive::class)
@@ -179,6 +200,11 @@ class UpsertTest {
         assertEquals(AE00016, actual.message)
     }
 
+    /**
+     * 「testBuildWithoutConflictColumns」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildWithoutConflictColumns() {
         val birthday = LocalDate.of(1968, 1, 7)
@@ -206,6 +232,11 @@ class UpsertTest {
         assertEquals(AE00017, actual.message)
     }
 
+    /**
+     * 「testBuildWithoutUpdateColumns」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildWithoutUpdateColumns() {
         val birthday = LocalDate.of(1968, 1, 7)
@@ -230,6 +261,11 @@ class UpsertTest {
         assertEquals(AE00018, actual.message)
     }
 
+    /**
+     * 「testBuildWithWhereBuildsDoUpdateWhereClause」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildWithWhereBuildsDoUpdateWhereClause() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
@@ -278,6 +314,11 @@ class UpsertTest {
         )
     }
 
+    /**
+     * 「testOnConflictCalledTwiceReplacesConflictColumns」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testOnConflictCalledTwiceReplacesConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)

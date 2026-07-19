@@ -16,8 +16,20 @@ import java.util.stream.Stream
  */
 class SqlDefaultValueValidatorTest {
 
+    /**
+     * ## SQL既定値テストデータ提供オブジェクト
+     * ### 型、null許容性、既定値の組み合わせをパラメータ化テストへ提供する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     companion object {
-        /** 妥当な型別SQL既定値 */
+        /**
+         * ## 妥当な型別SQL既定値生成
+         * ### 各対応型で許可される既定値とnull許容性の組み合わせを生成する
+         * @return 妥当な既定値のテスト引数
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
         @JvmStatic
         fun validValues(): Stream<Arguments> = Stream.of(
             Arguments.of(SqlDefaultValueType.INT, false, "-1"),
@@ -38,7 +50,13 @@ class SqlDefaultValueValidatorTest {
             Arguments.of(SqlDefaultValueType.BYTE_ARRAY, true, "NULL"),
         )
 
-        /** 不正な型別SQL既定値 */
+        /**
+         * ## 不正な型別SQL既定値生成
+         * ### 型の書式またはnull許容性に違反する既定値の組み合わせを生成する
+         * @return 不正な既定値のテスト引数
+         * @author Masahiro Inoue
+         * @since 2026-07-18
+         */
         @JvmStatic
         fun invalidValues(): Stream<Arguments> = Stream.of(
             Arguments.of(SqlDefaultValueType.INT, false, "'1'"),
@@ -56,7 +74,15 @@ class SqlDefaultValueValidatorTest {
         )
     }
 
-    /** 妥当な値を許可することを検証する */
+    /**
+     * ## 妥当なSQL既定値の検証
+     * ### 型とnull許容性に適合する既定値を許可することを検証する
+     * @param type SQL既定値の対応型
+     * @param nullable nullを許容するか
+     * @param value 検証対象の既定値
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @ParameterizedTest
     @MethodSource("validValues")
     fun testIsValid_withValidValue_returnsTrue(
@@ -67,7 +93,15 @@ class SqlDefaultValueValidatorTest {
         assertTrue(SqlDefaultValueValidator.isValid(type, nullable, value, allowBlank = false))
     }
 
-    /** 不正な値を拒否することを検証する */
+    /**
+     * ## 不正なSQL既定値の検証
+     * ### 型の書式またはnull許容性に違反する既定値を拒否することを検証する
+     * @param type SQL既定値の対応型
+     * @param nullable nullを許容するか
+     * @param value 検証対象の既定値
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @ParameterizedTest
     @MethodSource("invalidValues")
     fun testIsValid_withInvalidValue_returnsFalse(
@@ -78,7 +112,12 @@ class SqlDefaultValueValidatorTest {
         assertFalse(SqlDefaultValueValidator.isValid(type, nullable, value, allowBlank = false))
     }
 
-    /** Columnだけが未指定値を許可できることを検証する */
+    /**
+     * ## 空のSQL既定値の検証
+     * ### allowBlankの指定に応じて空文字の許可結果が変わることを検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @org.junit.jupiter.api.Test
     fun testIsValid_withBlankValue_respectsAllowBlank() {
         assertTrue(
@@ -93,7 +132,12 @@ class SqlDefaultValueValidatorTest {
         )
     }
 
-    /** AndrORM固有日時予約値をSQLite式へ変換することを検証する */
+    /**
+     * ## CURRENT_TIMESTAMP_ISO正規化の検証
+     * ### AndrORM固有の日時予約値をSQLiteで実行可能な式へ変換することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
     @org.junit.jupiter.api.Test
     fun testNormalize_withCurrentTimestampIso_returnsSqliteExpression() {
         assertEquals(

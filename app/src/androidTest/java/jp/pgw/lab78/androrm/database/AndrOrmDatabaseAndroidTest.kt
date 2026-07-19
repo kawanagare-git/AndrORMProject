@@ -6,6 +6,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
@@ -47,6 +48,12 @@ import kotlin.use
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class AndrOrmDatabaseAndroidTest {
+    /**
+     * ## Android結合テスト共通状態
+     * ### 全テストStepで共有する設定値、件数および検証結果を保持する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     companion object {
         /** ログ出力有効フラグ */
         private const val LOGGING_ENABLED_PROPERTY = "androrm.logging.enabled"
@@ -197,6 +204,8 @@ class AndrOrmDatabaseAndroidTest {
     /**
      * ## step19投入データ
      * ### savepoint前後へ投入する8テーブル分のInsertEntityを保持する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
      */
     private data class Step19InsertData(
         val itemMasterList: List<ItemMasterInsert>,
@@ -212,6 +221,8 @@ class AndrOrmDatabaseAndroidTest {
     /**
      * ## step21投入データ
      * ### step03由来とstep19由来を結合した9テーブル分のAbsert対象を保持する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
      */
     private data class Step21AbsertData(
         val characterStaticInfoList: List<CharacterStaticInfoV2Insert>,
@@ -1440,13 +1451,21 @@ class AndrOrmDatabaseAndroidTest {
      * ## 更新対象セグメント取得
      * ### リストを30%単位で分割し、指定位置の対象データを取得する
      * @param segmentIndex 0: step05、1: step07
+     * @return 指定位置に対応する更新対象リスト
+     * @author Masahiro Inoue
+     * @since 2026-06-16
      */
     private fun <T> List<T>.targetSegment(segmentIndex: Int): List<T> {
         val targetCount = size * UPDATE_TARGET_PERCENT / 100
         return drop(targetCount * segmentIndex).take(targetCount)
     }
 
-    /** ITEM_MASTER更新対象 */
+    /**
+     * ## ITEM_MASTER更新対象取得
+     * @return UPDATE対象とするアイテム一覧
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun itemMasterUpdateTargets(): List<ItemMaster> {
         val targetCount = AndroidTestSeedData.itemMasterList.size * UPDATE_TARGET_PERCENT / 100
         val existingTargets = AndroidTestSeedData.itemMasterList.filter { entity ->
@@ -1459,7 +1478,12 @@ class AndrOrmDatabaseAndroidTest {
         return existingTargets + additionalTargets
     }
 
-    /** SPELLS_MASTER更新対象 */
+    /**
+     * ## SPELLS_MASTER更新対象取得
+     * @return UPDATE対象とする魔法一覧
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun spellsMasterUpdateTargets(): List<SpellsMaster> {
         val targetCount = AndroidTestSeedData.spellsMasterList.size * UPDATE_TARGET_PERCENT / 100
         val existingTargets = AndroidTestSeedData.spellsMasterList.filter { entity ->
@@ -1472,6 +1496,15 @@ class AndrOrmDatabaseAndroidTest {
         return existingTargets + additionalTargets
     }
 
+    /**
+     * ## UPDATEデータ実行
+     * ### 各テーブルの対象行を一つのトランザクションで更新する
+     * @param databaseHelper DB操作ヘルパー
+     * @param testStep 更新元として記録するテストStep
+     * @return 全UPDATEの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun updateData(
         databaseHelper: AndrOrmDatabaseHelper,
         testStep: String,
@@ -1624,6 +1657,14 @@ class AndrOrmDatabaseAndroidTest {
     /**
      * ## Upsert 分割実行
      * ### SQLite のバインド変数上限を超えない件数に分割して実行する
+     * @param databaseHelper DB操作ヘルパー
+     * @param entityClass Upsert対象Entityクラス
+     * @param entities 登録するEntity一覧
+     * @param onConflict 競合キー設定
+     * @param set 競合時の更新設定
+     * @return 全バッチの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
      */
     private fun <T : UpsertEntity> executeUpsertInBatches(
         databaseHelper: AndrOrmDatabaseHelper,
@@ -1640,6 +1681,14 @@ class AndrOrmDatabaseAndroidTest {
         return count
     }
 
+    /**
+     * ## UPSERTデータ実行
+     * ### 各テーブルの対象データを一つのトランザクションでUPSERTする
+     * @param databaseHelper DB操作ヘルパー
+     * @return 全UPSERTの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun upsertData(
         databaseHelper: AndrOrmDatabaseHelper,
     ): Int {
@@ -1916,6 +1965,14 @@ class AndrOrmDatabaseAndroidTest {
         }
     }
 
+    /**
+     * ## ABSERTデータ実行
+     * ### 装備データを複合競合キー付きでABSERTする
+     * @param databaseHelper DB操作ヘルパー
+     * @return ABSERTの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun absertData(
         databaseHelper: AndrOrmDatabaseHelper,
     ): Long {
@@ -1979,6 +2036,14 @@ class AndrOrmDatabaseAndroidTest {
         return actualCount
     }
 
+    /**
+     * ## 1テーブルJOINデータ取得
+     * ### キャラクタ魔法と魔法マスタをLEFT JOINして取得する
+     * @param databaseHelper DB操作ヘルパー
+     * @return Entity別名をキーとするJOIN結果
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun selectDataJoin1Tbl(
         databaseHelper: AndrOrmDatabaseHelper,
     ): List<Map<String, SelectEntity?>> {
@@ -2000,6 +2065,14 @@ class AndrOrmDatabaseAndroidTest {
         }
     }
 
+    /**
+     * ## 2テーブルJOINデータ取得
+     * ### キャラクタ基本情報へ装備と所持品をJOINして取得する
+     * @param databaseHelper DB操作ヘルパー
+     * @return Entity別名をキーとするJOIN結果
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun selectDataJoin2Tbl(
         databaseHelper: AndrOrmDatabaseHelper,
     ): List<Map<String, SelectEntity?>> {
@@ -2031,6 +2104,14 @@ class AndrOrmDatabaseAndroidTest {
         }
     }
 
+    /**
+     * ## DELETEデータ実行
+     * ### 全対象テーブルからstep03で更新された行を削除する
+     * @param databaseHelper DB操作ヘルパー
+     * @return 全DELETEの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun deleteData(
         databaseHelper: AndrOrmDatabaseHelper,
     ): Long {
@@ -2191,6 +2272,13 @@ class AndrOrmDatabaseAndroidTest {
         }
     }
 
+    /**
+     * ## 1テーブルJOIN結果検証
+     * ### キャラクタ魔法と魔法マスタの結合件数および未結合行を確認する
+     * @param result 検証するJOIN結果
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun assertSelectDataJoin1Tbl(
         result: List<Map<String, SelectEntity?>>,
     ) {
@@ -2218,6 +2306,13 @@ class AndrOrmDatabaseAndroidTest {
         )
     }
 
+    /**
+     * ## 2テーブルJOIN結果検証
+     * ### キャラクタ別件数と装備・所持品の結合関係を確認する
+     * @param result 検証するJOIN結果
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     private fun assertSelectDataJoin2Tbl(
         result: List<Map<String, SelectEntity?>>,
     ) {
@@ -2291,60 +2386,112 @@ class AndrOrmDatabaseAndroidTest {
      * @author Masahiro Inoue
      * @since 2026-06-16
      */
-    private fun quoteString(str: String): String = "\"${str.replace("\"", "\"\"")}\""
+    private fun quoteString(str: String): String =
+        D_QUOTE + str.replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
 
+    /**
+     * ## 削除件数取得Entityインターフェース
+     * ### 削除対象Stepを条件指定するための共通プロパティを定義する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     interface DeleteCountEntity : SelectEntity, DeleteEntity {
         val updateMethod: String
     }
 
+    /**
+     * CHARACTER_EQUIPの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("CHARACTER_EQUIP", "DC")
     data class CharacterEquipDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * CHARACTER_POSSESSIONSの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("CHARACTER_POSSESSIONS", "DC")
     data class CharacterPossessionsDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * CHARACTER_SPELLSの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("CHARACTER_SPELLS", "DC")
     data class CharacterSpellsDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * CHARACTER_STATIC_INFOの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("CHARACTER_STATIC_INFO", "DC")
     data class CharacterStaticInfoDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * CHARACTER_STATUSの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("CHARACTER_STATUS", "DC")
     data class CharacterStatusDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * ITEM_MASTERの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("ITEM_MASTER", "DC")
     data class ItemMasterDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * MAGIC_TYPE_MASTERYの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("MAGIC_TYPE_MASTERY", "DC")
     data class MagicTypeMasteryDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * SPELLS_MASTERの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("SPELLS_MASTER", "DC")
     data class SpellsMasterDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,
         @Column(hideFromSelect = true) override val updateMethod: String,
     ) : DeleteCountEntity
 
+    /**
+     * WEAPON_MASTERYの削除対象件数を取得する
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
     @Table("WEAPON_MASTERY", "DC")
     data class WeaponMasteryDeleteCount(
         @Function(columnFunction = ColumnFunction.COUNT_ALL, alias = "COUNT") val count: Long,

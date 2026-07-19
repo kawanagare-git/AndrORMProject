@@ -1,6 +1,6 @@
 package jp.pgw.lab78.androrm.detekt.log
 
-import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.logWarning
+import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.logWarning
 import java.io.File
 import java.time.Instant
 import java.time.ZoneId
@@ -51,8 +51,15 @@ object AndrOrmLogger {
             ALL(Level.ALL, "ALL");
 
             companion object {
+                /**
+                 * ## ログ出力レベル判定
+                 * ### どのレベルのログを出力対象とするか
+                 * @param level ログ出力レベルの指定
+                 * @author Masahiro Inoue
+                 * @since 2025-12-30
+                 */
                 fun fromLevel(level: Level): String {
-                    return entries.find { it.level == level }?.displayName ?: ALL.displayName
+                    return entries.find { it.level == level }?.displayName ?: INFO.displayName
                 }
             }
         }

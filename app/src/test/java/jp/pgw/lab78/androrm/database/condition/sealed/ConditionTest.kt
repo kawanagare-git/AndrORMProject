@@ -12,9 +12,18 @@ import org.junit.jupiter.params.provider.CsvSource
 /**
  * ## Condition テスト
  * ### Condition#build が期待する SQL 断片を生成することを確認する
+  * @author Masahiro Inoue
+  * @since 2026-05-13
  */
 class ConditionTest {
 
+    /**
+     * 「value_shouldBuildExpectedSql」の条件における期待動作を検証する。
+     * @param operator operatorとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource(
         "'EQ','EMP.EMPLOYEE_ID = ?'",
@@ -40,6 +49,14 @@ class ConditionTest {
         assertEquals(expected, condition.build())
     }
 
+    /**
+     * 「value_shouldBuildExpectedSql_whenValueIsList」の条件における期待動作を検証する。
+     * @param operator operatorとして使用する値。
+     * @param value 追加する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource(
         "'IN',3,'EMP.EMPLOYEE_ID in (?, ?, ?)'",
@@ -62,6 +79,13 @@ class ConditionTest {
         assertEquals(expected, condition.build())
     }
 
+    /**
+     * 「between_shouldBuildExpectedSql」の条件における期待動作を検証する。
+     * @param refString 列参照を表す文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource("'EmployeeEntity::employeeId', 'EMP.EMPLOYEE_ID between ? and ?'")
     fun between_shouldBuildExpectedSql(refString: String, expected: String) {
@@ -70,6 +94,13 @@ class ConditionTest {
         assertEquals(expected, condition.build())
     }
 
+    /**
+     * 「isNull_shouldBuildExpectedSql」の条件における期待動作を検証する。
+     * @param propertyString プロパティ参照を表す文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is null'")
     fun isNull_shouldBuildExpectedSql(propertyString: String, expected: String) {
@@ -78,6 +109,13 @@ class ConditionTest {
         assertEquals(expected, condition.build())
     }
 
+    /**
+     * 「isNotNull_shouldBuildExpectedSql」の条件における期待動作を検証する。
+     * @param propertyString プロパティ参照を表す文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource("'EmployeeEntity::employeeSubId', 'EMP.EMPLOYEE_SUB_ID is not null'")
     fun isNotNull_shouldBuildExpectedSql(
@@ -88,6 +126,13 @@ class ConditionTest {
         assertEquals(expected, condition.build())
     }
 
+    /**
+     * 「freeText_shouldReturnOriginalText」の条件における期待動作を検証する。
+     * @param actualBase 検証対象の元文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-13
+     */
     @ParameterizedTest
     @CsvSource("'EMP.EMPLOYEE_ID = ?','EMP.EMPLOYEE_ID = ?'")
     fun freeText_shouldReturnOriginalText(actualBase: String, expected: String) {

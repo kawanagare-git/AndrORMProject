@@ -45,6 +45,12 @@ class JoinClauseDelegate<O, E : Entity>(
     /**
      * ## join メソッド
      * ### Entity クラスを指定して JOIN 句を追加する
+     * @param joinType JOIN種別
+     * @param joinedEntity 結合対象のEntityクラス
+     * @param on 結合条件を構築する処理
+     * @return 所有クラス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
@@ -63,6 +69,12 @@ class JoinClauseDelegate<O, E : Entity>(
     /**
      * ## join メソッド
      * ### TableRef を指定して JOIN 句を追加する
+     * @param joinType JOIN種別
+     * @param joinedTable 結合対象のテーブル参照
+     * @param on 結合条件を構築する処理
+     * @return 所有クラス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
@@ -89,6 +101,11 @@ class JoinClauseDelegate<O, E : Entity>(
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
+     * @param joinType JOIN種別
+     * @param joinedEntity 結合対象のEntityクラス
+     * @return JOIN条件指定用の中間オブジェクト
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
@@ -105,6 +122,11 @@ class JoinClauseDelegate<O, E : Entity>(
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
+     * @param joinType JOIN種別
+     * @param joinedTable 結合対象のテーブル参照
+     * @return JOIN条件指定用の中間オブジェクト
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
@@ -117,6 +139,8 @@ class JoinClauseDelegate<O, E : Entity>(
 
     /**
      * ## JOIN 条件指定用中間クラス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     inner class JoinCondition internal constructor(
         private val joinType: JoinType,
@@ -125,6 +149,10 @@ class JoinClauseDelegate<O, E : Entity>(
         /**
          * ## on メソッド
          * ### JOIN 条件を指定する
+         * @param block 結合条件を構築する処理
+         * @return 所有クラス
+         * @author Masahiro Inoue
+         * @since 2026-05-24
          */
         fun on(block: ConditionBuilder.() -> Unit): O =
             this@JoinClauseDelegate.join(
@@ -137,6 +165,9 @@ class JoinClauseDelegate<O, E : Entity>(
     /**
      * ## JOIN 句生成
      * ### JOIN 句がない場合は空文字を返す
+     * @return 生成されたJOIN句
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun buildClause(): String =
         joinClauses.joinToString(" ")

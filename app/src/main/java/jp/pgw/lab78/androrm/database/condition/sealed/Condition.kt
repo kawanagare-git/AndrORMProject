@@ -138,6 +138,13 @@ sealed class Compare : Condition() {
         val lhsProperty: String,
         val subQuery: Select<out SelectEntity>,
     ) : Condition() {
+        /**
+         * IN句へサブクエリを組み込んだ条件文字列を生成する。
+         *
+         * @return 生成された条件文字列
+         * @author Masahiro Inoue
+         * @since 2026-06-27
+         */
         override fun build(): String =
             "$lhsProperty in (${subQuery.build()})"
     }
@@ -153,6 +160,13 @@ sealed class Compare : Condition() {
         val lhsProperty: String,
         val subQuery: Select<out SelectEntity>,
     ) : Condition() {
+        /**
+         * NOT IN句へサブクエリを組み込んだ条件文字列を生成する。
+         *
+         * @return 生成された条件文字列
+         * @author Masahiro Inoue
+         * @since 2026-06-27
+         */
         override fun build(): String =
             "$lhsProperty not in (${subQuery.build()})"
     }

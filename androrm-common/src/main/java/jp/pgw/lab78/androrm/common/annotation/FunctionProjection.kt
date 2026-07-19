@@ -23,6 +23,12 @@ annotation class FunctionProjection(
     val raw: String = ""
 )
 
+/**
+ * ## 戻り値手掛かり
+ * ### @FunctionProjection に指定する戻り値の型推論識別子
+ * @author Masahiro Inoue
+ * @since 2025-08-01
+ */
 enum class ReturnHint {
     AUTO, STRING, INT, LONG, DOUBLE, BOOLEAN, DECIMAL, DATE, DATETIME
 }

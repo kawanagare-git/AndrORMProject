@@ -13,8 +13,18 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
+/**
+ * Updateの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-05-26
+ */
 class UpdateTest {
 
+    /**
+     * 「testBuild_setEntityAndWhere」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testBuild_setEntityAndWhere() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
@@ -37,6 +47,11 @@ class UpdateTest {
         )
     }
 
+    /**
+     * 「testBuild_setDslFromJoinAndWhere」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testBuild_setDslFromJoinAndWhere() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
@@ -72,6 +87,11 @@ class UpdateTest {
         )
     }
 
+    /**
+     * 「testBuild_withoutSet_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testBuild_withoutSet_throwsIllegalArgumentException() {
         val update = Update(TestAllEntityUpdate::class)
@@ -85,6 +105,11 @@ class UpdateTest {
         assertEquals(AE00014, actual.message)
     }
 
+    /**
+     * 「testBuild_withoutWhere_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testBuild_withoutWhere_throwsIllegalArgumentException() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
@@ -98,6 +123,11 @@ class UpdateTest {
         assertEquals(AE00013, actual.message)
     }
 
+    /**
+     * 「testJoin_beforeFrom_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testJoin_beforeFrom_throwsIllegalStateException() {
         val targetTable = TableRef(TestAllEntityUpdate::class, "A")
@@ -111,6 +141,11 @@ class UpdateTest {
         assertEquals(AE00015, actual.message)
     }
 
+    /**
+     * 「testBuild_setDslWithSqlExpression_buildsSetExpressionAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-26
+     */
     @Test
     fun testBuild_setDslWithSqlExpression_buildsSetExpressionAndBindValues() {
         val targetTable = TableRef(TestAllEntityUpdate::class, "A")

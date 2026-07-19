@@ -18,6 +18,12 @@ import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
  */
 class ProjectionExtractor() : LoggerLike by logger {
 
+    /**
+     * ## Projection抽出用定数
+     * ### Projectionアノテーションの識別に使用する完全修飾名を保持する
+     * @author Masahiro Inoue
+     * @since 2026-04-17
+     */
     companion object {
         /** @Projection の完全修飾名 */
         private val PROJECTION_FQN = Projection::class.qualifiedName!!

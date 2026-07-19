@@ -5,6 +5,7 @@ import com.google.devtools.ksp.processing.Dependencies
 import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeName
+import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.factory.GeneratedProperty
@@ -91,7 +92,7 @@ class DataClassWriter(
                     writer.appendLine("  ${annotationHelper.getSimpleName(ann)}")
                 }
                 // プロパティの型を基に、必要なインポートを収集する
-                val comma = if (index == constructorProps.lastIndex) EMPTY_STRING else ","
+                val comma = if (index == constructorProps.lastIndex) EMPTY_STRING else COMMA
                 val defaultValue = if (generatedProperty.hideFromSelect) {
                     " = null"
                 } else {

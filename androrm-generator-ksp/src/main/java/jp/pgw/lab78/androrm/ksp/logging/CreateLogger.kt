@@ -5,6 +5,12 @@ import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.logging.LogLevel
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 
+/**
+ * ## KSPロガー生成オブジェクト
+ * ### KSP実行環境に応じたロガーを初期化し、共有インスタンスを提供する
+ * @author Masahiro Inoue
+ * @since 2026-04-17
+ */
 object CreateLogger {
     /** ログルートディレクトリ */
     private const val LOG_ROOT = "build"

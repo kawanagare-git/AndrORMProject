@@ -7,8 +7,20 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
+/**
+ * ABSERT文の生成仕様を検証する。
+ *
+ * @author Masahiro Inoue
+ * @since 2026-07-03
+ */
 class AbsertTest {
 
+    /**
+     * 1件のEntityからABSERT文とバインド値が生成されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-03
+     */
     @Test
     fun testSingleLineBuild() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
@@ -47,6 +59,12 @@ class AbsertTest {
         )
     }
 
+    /**
+     * 複数件のEntityから一括ABSERT文とバインド値が生成されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-03
+     */
     @Test
     fun testMultiLineBuild() {
         val createdAt1 = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
@@ -96,6 +114,12 @@ class AbsertTest {
         )
     }
 
+    /**
+     * 対象Entityが空の場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-03
+     */
     @Test
     fun testBuildEmptyList() {
         val absert = Absert(SalaryEntityUpsert::class)
@@ -111,6 +135,12 @@ class AbsertTest {
         assertEquals(AE00016, actual.message)
     }
 
+    /**
+     * 競合判定カラムが未指定の場合に例外となることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-03
+     */
     @Test
     fun testBuildWithoutConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
@@ -131,6 +161,12 @@ class AbsertTest {
         assertEquals(AE00017, actual.message)
     }
 
+    /**
+     * 競合判定カラムを再指定した場合に後の指定で置き換わることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-07-03
+     */
     @Test
     fun testOnConflictCalledTwiceReplacesConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)

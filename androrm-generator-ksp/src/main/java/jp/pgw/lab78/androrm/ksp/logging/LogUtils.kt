@@ -1,5 +1,11 @@
 package jp.pgw.lab78.androrm.ksp.logging
 
+/**
+ * ## ログ補助オブジェクト
+ * ### ログ引数の文字列化、正規化および呼び出し元の特定を行う
+ * @author Masahiro Inoue
+ * @since 2026-03-10
+ */
 object LogUtils {
     /** スタックトレースでスキップするメソッド名のサフィックス */
     private val SKIP_METHOD_SUFFIXES = setOf("\$default", "invoke", "invokeSuspend")
@@ -53,6 +59,8 @@ object LogUtils {
      * @param value ログ出力するオブジェクト
      * @param depth 再帰呼び出しの深さ
      * @return オブジェクト文字列
+     * @author Masahiro Inoue
+     * @since 2026-03-10
      */
     private fun stringifyForLog(value: Any?, depth: Int = 0): String {
         if (depth > MAX_DEPTH) return "..."
@@ -82,6 +90,8 @@ object LogUtils {
      * ### ロガー・クラスに属さない、最初のスタックフレームを見つけます。
      * ### コンパイラが生成したメソッド名をチェックするよりも堅牢な方法です。
      * @return 呼び出し元のクラスとメソッド名をフォーマットした文字列。
+     * @author Masahiro Inoue
+     * @since 2026-03-10
      */
     fun getMethodName(): String {
         val stackTrace = Throwable().stackTrace

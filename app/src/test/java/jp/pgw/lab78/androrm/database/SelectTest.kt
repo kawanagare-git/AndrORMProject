@@ -28,6 +28,11 @@ import org.junit.jupiter.api.assertThrows
  */
 class SelectTest {
 
+    /**
+     * 「testTableColumns_buildsSelectForTableTransfer」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testTableColumns_buildsSelectForTableTransfer() {
         val actual = Select.tableColumns(
@@ -41,6 +46,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withoutCondition_buildsBasicSelect」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withoutCondition_buildsBasicSelect() {
         val select = Select(EmployeeEntity::class)
@@ -63,6 +73,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withDistinct_buildsDistinctSelect」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withDistinct_buildsDistinctSelect() {
         val select = Select(EmployeeEntityIdSelection::class, isDistinct = true)
@@ -79,6 +94,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withFunctionProjection_buildsFunctionColumns」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withFunctionProjection_buildsFunctionColumns() {
         val select = Select(SalaryEntitySelective::class)
@@ -102,6 +122,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withWhereLogicalConditions_buildsWhereAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withWhereLogicalConditions_buildsWhereAndBindValues() {
         val select = Select(EmployeeEntity::class)
@@ -134,6 +159,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withRawCondition_buildsWhereAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withRawCondition_buildsWhereAndBindValues() {
         val select = Select(EmployeeEntity::class)
@@ -162,6 +192,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withInListAndBetween_buildsWhereAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withInListAndBetween_buildsWhereAndBindValues() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -184,6 +219,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withJoinOnBlock_buildsJoinSelect」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withJoinOnBlock_buildsJoinSelect() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -210,6 +250,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withJoinConditionOn_buildsInnerJoinSelect」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withJoinConditionOn_buildsInnerJoinSelect() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -238,6 +283,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withJoinConditionOn_buildsLeftJoinSelect」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withJoinConditionOn_buildsLeftJoinSelect() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -266,6 +316,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withTableRefSelfJoin_buildsJoinWithCustomAlias」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withTableRefSelfJoin_buildsJoinWithCustomAlias() {
         val mainTable = TableRef(EmployeeEntity::class, "M")
@@ -304,6 +359,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withHaving_buildsGroupByAndHaving」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withHaving_buildsGroupByAndHaving() {
         val select = Select(SalaryEntitySelective::class)
@@ -332,6 +392,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withOrder_buildsOrderBy」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withOrder_buildsOrderBy() {
         val select = Select(EmployeeEntity::class)
@@ -360,6 +425,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withLimitOnly_buildsLimitAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withLimitOnly_buildsLimitAndBindValues() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -377,6 +447,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withDefaultLimitAndDefaultOffset_buildsLimitOffsetAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withDefaultLimitAndDefaultOffset_buildsLimitOffsetAndBindValues() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -395,6 +470,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_afterAlreadyBuiltAndWhereAdded_rebuildsSql」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_afterAlreadyBuiltAndWhereAdded_rebuildsSql() {
         val select = Select(EmployeeEntityIdSelection::class)
@@ -423,6 +503,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withExistsSubQuery_buildsExistsCondition」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withExistsSubQuery_buildsExistsCondition() {
         val subQuery = Select(EmployeeEntityIdSelection::class)
@@ -452,6 +537,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testWhere_withRawConditionPlaceholderMismatch_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testWhere_withRawConditionPlaceholderMismatch_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
@@ -467,6 +557,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testJoin_withDuplicateAlias_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testJoin_withDuplicateAlias_throwsIllegalArgumentException() {
         val mainTable = TableRef(EmployeeEntity::class, "EMP")
@@ -485,6 +580,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testWhere_calledTwice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testWhere_calledTwice_throwsIllegalStateException() {
         val select = Select(EmployeeEntity::class)
@@ -501,6 +601,11 @@ class SelectTest {
         assertEquals(AE00010.format("Select", "where"), actual.message)
     }
 
+    /**
+     * 「testHaving_calledTwice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testHaving_calledTwice_throwsIllegalStateException() {
         val select = Select(SalaryEntitySelective::class)
@@ -517,6 +622,11 @@ class SelectTest {
         assertEquals(AE00010.format("Select", "having"), actual.message)
     }
 
+    /**
+     * 「testOrder_calledTwice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testOrder_calledTwice_throwsIllegalStateException() {
         val select = Select(EmployeeEntity::class)
@@ -533,6 +643,11 @@ class SelectTest {
         assertEquals(AE00010.format("Select", "order"), actual.message)
     }
 
+    /**
+     * 「testLimit_calledTwice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testLimit_calledTwice_throwsIllegalStateException() {
         val select = Select(EmployeeEntity::class)
@@ -545,6 +660,11 @@ class SelectTest {
         assertEquals(AE00010.format("Select", "limit"), actual.message)
     }
 
+    /**
+     * 「testOffset_calledTwice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testOffset_calledTwice_throwsIllegalStateException() {
         val limitClause = Select(EmployeeEntity::class).limit(10)
@@ -557,6 +677,11 @@ class SelectTest {
         assertEquals(AE00010.format("Select", "offset"), actual.message)
     }
 
+    /**
+     * 「testLimit_withNegativeValue_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testLimit_withNegativeValue_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
@@ -566,6 +691,11 @@ class SelectTest {
         assertEquals(AE00004, actual.message)
     }
 
+    /**
+     * 「testOffset_withNegativeValue_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testOffset_withNegativeValue_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
@@ -575,12 +705,16 @@ class SelectTest {
         assertEquals(AE00005, actual.message)
     }
 
+    /**
+     * 「testConstructor_withDualAnnotationEntity_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testConstructor_withDualAnnotationEntity_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
             Select(InvalidDualAnnotationEntity::class)
         }
-        println(actual)
         assertTrue(
             actual.message.orEmpty().contains(
                 "Property 'id' in entity 'InvalidDualAnnotationEntity' cannot have both @Column and @Function."
@@ -588,6 +722,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testConstructor_withAllHiddenEntity_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testConstructor_withAllHiddenEntity_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
@@ -606,6 +745,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testConstructor_withDuplicateAliasEntity_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testConstructor_withDuplicateAliasEntity_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
@@ -619,12 +763,16 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testConstructor_withDuplicateColumnNameEntity_throwsIllegalArgumentException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testConstructor_withDuplicateColumnNameEntity_throwsIllegalArgumentException() {
         val actual = assertThrows<IllegalArgumentException> {
             Select(InvalidDuplicateAliasEntity::class)
         }
-        println(actual.message)
         assertTrue(
             actual.message.orEmpty().contains(
                 "Duplicate alias 'DUPLICATE_ALIAS' in entity 'InvalidDuplicateAliasEntity'"
@@ -632,6 +780,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * 「testBuild_withWhereSqlExpression_buildsWhereExpressionAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Test
     fun testBuild_withWhereSqlExpression_buildsWhereExpressionAndBindValues() {
         val salaryTable = TableRef(SalaryEntitySelective::class, "SAL")
@@ -661,6 +814,11 @@ class SelectTest {
         )
     }
 
+    /**
+     * Entityメタ情報またはSQL生成の検証に使用するテスト用InvalidDualAnnotationEntity。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Table(name = "INVALID_DUAL_ANNOTATION", alias = "IDA")
     private data class InvalidDualAnnotationEntity(
         @Column(name = "ID")
@@ -668,12 +826,22 @@ class SelectTest {
         val id: Int,
     ) : SelectEntity
 
+    /**
+     * Entityメタ情報またはSQL生成の検証に使用するテスト用InvalidAllHiddenEntity。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Table(name = "INVALID_ALL_HIDDEN", alias = "IAH")
     private data class InvalidAllHiddenEntity(
         @Column(name = "ID", hideFromSelect = true)
         val id: Int,
     ) : SelectEntity
 
+    /**
+     * Entityメタ情報またはSQL生成の検証に使用するテスト用InvalidDuplicateAliasEntity。
+     * @author Masahiro Inoue
+     * @since 2026-06-09
+     */
     @Table(name = "INVALID_DUPLICATE_ALIAS", alias = "IDA2")
     private data class InvalidDuplicateAliasEntity(
         @Column(name = "ID", alias = "DUPLICATE_ALIAS")

@@ -6,6 +6,8 @@ import java.time.LocalDate
 
 /**
  * テスト用 data クラス
+  * @author Masahiro Inoue
+  * @since 2025-12-11
  */
 @Table(alias = "TSEA")
 data class TestSelectEntityWithAlias(

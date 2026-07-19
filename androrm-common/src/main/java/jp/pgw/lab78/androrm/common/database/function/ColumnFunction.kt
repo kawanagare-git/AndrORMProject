@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.database.function
 
+import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.MessageConstants.CE00001
 import jp.pgw.lab78.androrm.common.MessageConstants.CE00002
 import jp.pgw.lab78.androrm.common.MessageConstants.CE00003
@@ -94,7 +95,7 @@ enum class ColumnFunction(
     GROUP_CONCAT(MULTI, String::class.qualifiedName!!) {
         override fun build(vararg args: String): String {
             require(args.size in 1..2) { CE00003 }
-            return "${GROUP_CONCAT.functionName}(${args.joinToString(",")})"
+            return "${GROUP_CONCAT.functionName}(${args.joinToString(COMMA)})"
         }
     },
 
@@ -109,7 +110,7 @@ enum class ColumnFunction(
 
         override fun build(vararg args: String): String {
             require(args.size >= 2) { CE00005 }
-            return args.joinToString(",", "${functionName}(", ")")
+            return args.joinToString(COMMA, "${functionName}(", ")")
         }
     },
 
@@ -124,7 +125,7 @@ enum class ColumnFunction(
 
         override fun build(vararg args: String): String {
             require(args.size >= 2) { CE00005 }
-            return args.joinToString(",", "${functionName}(", ")")
+            return args.joinToString(COMMA, "${functionName}(", ")")
         }
     },
 
@@ -238,7 +239,7 @@ enum class ColumnFunction(
 
         override fun build(vararg args: String): String {
             require(args.size >= 2) { CE00005 }
-            return "$functionName(${args.joinToString(",")})"
+            return "$functionName(${args.joinToString(COMMA)})"
         }
     },
 
@@ -299,8 +300,8 @@ enum class ColumnFunction(
         when (this.argumentArity) {
             NONE -> "$functionName()"
             SINGLE -> "$functionName(${args.first()})"
-            MULTI -> "$functionName(${args.joinToString(",")})"
-            else -> args.joinToString(",")
+            MULTI -> "$functionName(${args.joinToString(COMMA)})"
+            else -> args.joinToString(COMMA)
         }
 
     /**

@@ -18,6 +18,12 @@ import org.junit.jupiter.params.provider.CsvSource
  */
 class SqlAggregateFunctionTest {
 
+    /**
+     * ## getFunctionName は enum 名を小文字の SQL 関数名として返せる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("getFunctionName は enum 名を小文字の SQL 関数名として返せる")
     @ParameterizedTest(name = "[{index}] function={0}, expected={1}")
     @CsvSource(
@@ -37,6 +43,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, function.functionName)
     }
 
+    /**
+     * ## argType は関数ごとの引数タイプを返せる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("argType は関数ごとの引数タイプを返せる")
     @ParameterizedTest(name = "[{index}] function={0}, expected={1}")
     @CsvSource(
@@ -56,6 +68,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, function.argumentArity)
     }
 
+    /**
+     * ## build は単一引数の集約関数 SQL を生成できる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("build は単一引数の集約関数 SQL を生成できる")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}, expected={2}")
     @CsvSource(
@@ -76,6 +94,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## build は単一引数関数に複数引数を渡した場合、先頭引数だけを使用する
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("build は単一引数関数に複数引数を渡した場合、先頭引数だけを使用する")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}, expected={2}")
     @CsvSource(
@@ -96,6 +120,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## build は COUNT_ALL を count(*) として生成できる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("build は COUNT_ALL を count(*) として生成できる")
     @ParameterizedTest(name = "[{index}] args={0}, expected={1}")
     @CsvSource(
@@ -112,6 +142,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## build は複数引数の集約関数 SQL を生成できる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("build は複数引数の集約関数 SQL を生成できる")
     @ParameterizedTest(name = "[{index}] function={0}, args={1}, expected={2}")
     @CsvSource(
@@ -131,6 +167,12 @@ class SqlAggregateFunctionTest {
         assertEquals(expected, actual)
     }
 
+    /**
+     * ## 単一引数関数は引数なしの場合に例外を投げる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("単一引数関数は引数なしの場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] function={0}")
     @CsvSource(
@@ -150,6 +192,12 @@ class SqlAggregateFunctionTest {
         assertEquals(CE00001, actual.message)
     }
 
+    /**
+     * ## 複数引数関数は引数なしまたは1件のみの場合に例外を投げる
+     * ### SqlAggregateFunction が仕様どおりに処理することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-05-21
+     */
     @DisplayName("複数引数関数は引数なしまたは1件のみの場合に例外を投げる")
     @ParameterizedTest(name = "[{index}] args={0}")
     @CsvSource(
@@ -169,7 +217,11 @@ class SqlAggregateFunctionTest {
     /**
      * ## String 配列変換
      * ### AnyListConverter の戻り値を SqlAggregateFunction.build 用の String 配列へ変換する
-     * @return String 配列
+     * @receiver 変換対象の引数リスト
+     * @return 空文字を除外し、各要素を文字列化した配列
+     * @throws IllegalArgumentException リストにnull要素が含まれる場合
+     * @author Masahiro Inoue
+     * @since 2026-05-21
      */
     private fun List<Any?>.toStringArray(): Array<String> =
         filterNot {

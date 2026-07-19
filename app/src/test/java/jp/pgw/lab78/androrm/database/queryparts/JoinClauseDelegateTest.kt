@@ -6,10 +6,25 @@ import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
+/**
+ * JoinClauseDelegateの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-05-27
+ */
 class JoinClauseDelegateTest {
 
+    /**
+     * 句デリゲートのテストで所有者として使用する補助クラス。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     private class TestOwner
 
+    /**
+     * 「testBuildClause_empty」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildClause_empty() {
         val owner = TestOwner()
@@ -22,6 +37,11 @@ class JoinClauseDelegateTest {
         assertEquals("", target.buildClause())
     }
 
+    /**
+     * 「testJoin_tableRef_columnToColumn」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testJoin_tableRef_columnToColumn() {
         var changed = false
@@ -62,6 +82,11 @@ class JoinClauseDelegateTest {
         assertEquals(emptyList<Any?>(), target.bindValues)
     }
 
+    /**
+     * 「testJoin_tableRef_columnToValue」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testJoin_tableRef_columnToValue() {
         val owner = TestOwner()
@@ -89,6 +114,11 @@ class JoinClauseDelegateTest {
         )
     }
 
+    /**
+     * 「testJoin_entityClass_usesDefaultAlias」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testJoin_entityClass_usesDefaultAlias() {
         val owner = TestOwner()
@@ -115,6 +145,11 @@ class JoinClauseDelegateTest {
         )
     }
 
+    /**
+     * 「testJoin_onSyntax」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testJoin_onSyntax() {
         val owner = TestOwner()
@@ -139,6 +174,11 @@ class JoinClauseDelegateTest {
         assertEquals(emptyList<Any?>(), target.bindValues)
     }
 
+    /**
+     * 「testJoin_multiClauses」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testJoin_multiClauses() {
         val owner = TestOwner()

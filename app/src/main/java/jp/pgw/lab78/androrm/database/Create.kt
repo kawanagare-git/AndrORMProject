@@ -1,10 +1,12 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.IndexType
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00037
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.Column
@@ -42,7 +44,7 @@ class Create<T : TableDefinitionEntity>(
 
     /** テーブル名 */
     private val tableName: String =
-        tableNameOverride ?: entityClass.getTableName()
+        validateIdentifier(tableNameOverride ?: entityClass.getTableName())
 
     /** カラム定義対象プロパティ */
     private val columnProperties: List<KProperty1<out T, *>> =
@@ -75,7 +77,7 @@ class Create<T : TableDefinitionEntity>(
                 add(primaryKeyDefinition)
             }
         }
-        return "create table $tableName (${definitions.joinToString(", ")})"
+        return "create table ${quoteIdentifier(tableName)} (${definitions.joinToString(", ")})"
     }
 
     /**
@@ -98,12 +100,12 @@ class Create<T : TableDefinitionEntity>(
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
                 val indexName = annotation.name.takeIf { it.isNotBlank() }
-                    ?.let { specifiedName -> "$specifiedName$indexVersion" }
-                        ?: buildDefaultIndexName(
-                            prefix = "IDX",
-                            properties = annotation.properties,
+                    ?.let { specifiedName -> "${specifiedName}_$indexVersion" }
+                    ?: buildDefaultIndexName(
+                        prefix = "IDX",
+                        properties = annotation.properties,
                         indexVersion = indexVersion,
-                        )
+                    )
                 // インデックス名の登録
                 registerIndexName(indexName, usedIndexNames)
                 // create index 文の生成
@@ -120,12 +122,12 @@ class Create<T : TableDefinitionEntity>(
                 require(annotation.properties.isNotEmpty()) { AE00019 }
                 // インデックス名の取得
                 val indexName = annotation.name.takeIf { it.isNotBlank() }
-                    ?.let { specifiedName -> "$specifiedName$indexVersion" }
-                        ?: buildDefaultIndexName(
+                    ?.let { specifiedName -> "${specifiedName}_$indexVersion" }
+                    ?: buildDefaultIndexName(
                         prefix = "UNIQ",
-                            properties = annotation.properties,
+                        properties = annotation.properties,
                         indexVersion = indexVersion,
-                        )
+                    )
                 // インデックス名の登録
                 registerIndexName(indexName, usedIndexNames)
                 // create index 文の生成
@@ -155,8 +157,8 @@ class Create<T : TableDefinitionEntity>(
         indexType: IndexType = IndexType.UNIQUE,
     ): String {
         val columnNames = properties.map { propertyName -> resolveColumnName(propertyName) }
-        return "create ${indexType.query}index $indexName " +
-                "on $tableName (${columnNames.joinToString(", ")})"
+        return "create ${indexType.query}index ${quoteIdentifier(indexName)} " +
+                "on ${quoteIdentifier(tableName)} (${columnNames.joinToString(", ") { columnName -> quoteIdentifier(columnName) }})"
     }
 
     /**
@@ -216,7 +218,7 @@ class Create<T : TableDefinitionEntity>(
     private fun buildColumnDefinition(
         property: KProperty1<out T, *>,
     ): String {
-        val columnName = property.getColumnName()
+        val columnName = quoteIdentifier(property.getColumnName())
         val sqlType = mapKotlinTypeToSqlType(property.returnType)
         val defaultValue = property.findAnnotation<Column>()
             ?.default
@@ -236,6 +238,9 @@ class Create<T : TableDefinitionEntity>(
             }
         return buildList {
             add("$columnName $sqlType")
+            if (!property.returnType.isMarkedNullable) {
+                add("not null")
+            }
             defaultClause
                 .takeUnless { value -> value.isBlank() }
                 ?.let { value -> add(value) }
@@ -258,7 +263,7 @@ class Create<T : TableDefinitionEntity>(
                 property.findAnnotation<PrimaryKey>() != null
             }
             .map { property ->
-                property.getColumnName()
+                quoteIdentifier(property.getColumnName())
             }
         return if (primaryKeyColumns.isEmpty()) {
             EMPTY_STRING
@@ -276,14 +281,44 @@ class Create<T : TableDefinitionEntity>(
      * ### アノテーションから取得したインデクスを登録する
      * @param indexName 登録対象のINDEX名
      * @param usedIndexNames データベース内で使用済みのINDEX名
+     * @author Masahiro Inoue
+     * @since 2025-08-08
      */
     private fun registerIndexName(
         indexName: String,
         usedIndexNames: MutableSet<String>,
     ) {
+        validateIdentifier(indexName)
         val normalizedIndexName = indexName.uppercase()
         require(usedIndexNames.add(normalizedIndexName)) {
             MessageConstants.AE00020.format(indexName)
         }
     }
+
+    /**
+     * ## SQL 識別子の検証
+     * ### 空白だけの識別子、および SQLite の SQL 文字列で安全に扱えない NUL 文字を拒否する
+     * @param identifier 検証対象の識別子
+     * @return 検証済みの識別子
+     * @author Masahiro Inoue
+     * @since 2025-08-08
+     */
+    private fun validateIdentifier(identifier: String): String {
+        require(identifier.isNotBlank() && '\u0000' !in identifier) {
+            AE00037.format(identifier)
+        }
+        return identifier
+    }
+
+    /**
+     * ## SQL 識別子の引用
+     * ### 識別子内のダブルクォートを二重化し、SQLite のダブルクォート識別子へ変換する
+     * @param identifier 引用対象の識別子
+     * @return 引用済みの識別子
+     * @author Masahiro Inoue
+     * @since 2025-08-08
+     */
+    private fun quoteIdentifier(identifier: String): String =
+        D_QUOTE + validateIdentifier(identifier).replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
+
 }

@@ -18,9 +18,19 @@ import org.junit.jupiter.params.provider.CsvSource
 /**
  * ## ConditionBuilder テスト
  * ### BaseConditionBuilder の DSL public メソッドを ConditionBuilder 経由で検証する
+  * @author Masahiro Inoue
+  * @since 2026-05-18
  */
 class BaseConditionBuilderTest {
 
+    /**
+     * 「testKPropertyValueDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param value 追加する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("KProperty1 の値比較 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, value={1}, expected={2}")
     @CsvSource(
@@ -74,6 +84,15 @@ class BaseConditionBuilderTest {
         assertEquals(listOf(value), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testColumnRefValueDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param refString 列参照を表す文字列。
+     * @param value 追加する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef の値比較 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, ref={1}, value={2}, expected={3}")
     @CsvSource(
@@ -129,6 +148,15 @@ class BaseConditionBuilderTest {
         assertEquals(listOf(value), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testColumnRefColumnDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param lhsRefString lhsRefStringとして使用する値。
+     * @param rhsRefString rhsRefStringとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef 同士の比較 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, lhs={1}, rhs={2}, expected={3}")
     @CsvSource(
@@ -175,6 +203,14 @@ class BaseConditionBuilderTest {
         assertEquals(expected, state.singleSql())
     }
 
+    /**
+     * 「testKPropertyListDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param valueCount valueCountとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("KProperty1 の IN / NOT IN DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, count={1}, expected={2}")
     @CsvSource(
@@ -201,6 +237,14 @@ class BaseConditionBuilderTest {
         assertEquals(values, state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testColumnRefListDsl」の条件における期待動作を検証する。
+     * @param refString 列参照を表す文字列。
+     * @param valueCount valueCountとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef の IN DSL を検証する")
     @ParameterizedTest(name = "[{index}] ref={0}, count={1}, expected={2}")
     @CsvSource(
@@ -225,6 +269,15 @@ class BaseConditionBuilderTest {
         assertEquals(values, state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testKPropertyBetweenDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param start startとして使用する値。
+     * @param end endとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("KProperty1 の BETWEEN DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, start={1}, end={2}, expected={3}")
     @CsvSource(
@@ -251,6 +304,16 @@ class BaseConditionBuilderTest {
         assertEquals(listOf(start, end), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testColumnRefBetweenDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param refString 列参照を表す文字列。
+     * @param start startとして使用する値。
+     * @param end endとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef の BETWEEN DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, ref={1}, start={2}, end={3}, expected={4}")
     @CsvSource(
@@ -279,6 +342,14 @@ class BaseConditionBuilderTest {
         assertEquals(listOf(start, end), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testKPropertyNullDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param propertyString プロパティ参照を表す文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("KProperty1 の NULL 判定 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, property={1}, expected={2}")
     @CsvSource(
@@ -309,6 +380,14 @@ class BaseConditionBuilderTest {
         assertEquals(emptyList<Any?>(), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testColumnRefNullDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param refString 列参照を表す文字列。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef の NULL 判定 DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, ref={1}, expected={2}")
     @CsvSource(
@@ -339,6 +418,14 @@ class BaseConditionBuilderTest {
         assertEquals(emptyList<Any?>(), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testFreeTextDsl」の条件における期待動作を検証する。
+     * @param conditionText conditionTextとして使用する値。
+     * @param value 追加する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("自由条件 DSL を検証する")
     @ParameterizedTest(name = "[{index}] condition={0}, value={1}, expected={2}")
     @CsvSource(
@@ -357,6 +444,13 @@ class BaseConditionBuilderTest {
         assertEquals(listOf(value), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testFreeTextErrorDsl」の条件における期待動作を検証する。
+     * @param conditionText conditionTextとして使用する値。
+     * @param value 追加する値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("自由条件 DSL のプレースホルダー数不一致を検証する")
     @ParameterizedTest(name = "[{index}] condition={0}, value={1}")
     @CsvSource(
@@ -373,6 +467,13 @@ class BaseConditionBuilderTest {
         }
     }
 
+    /**
+     * 「testExistsDsl」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param expectedOperator expectedOperatorとして使用する値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("EXISTS / NOT EXISTS DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
     @CsvSource(
@@ -400,6 +501,13 @@ class BaseConditionBuilderTest {
         assertEquals(emptyList<Any?>(), state.valueHolder.bindValues)
     }
 
+    /**
+     * 「testExistsDsl_withSubQueryBindValues」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param expectedOperator expectedOperatorとして使用する値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("EXISTS / NOT EXISTS DSL はサブクエリの bindValues を引き継ぐ")
     @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
     @CsvSource(
@@ -436,6 +544,13 @@ class BaseConditionBuilderTest {
         )
     }
 
+    /**
+     * 「testKPropertyInSelectDsl_withSubQueryBindValues」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param expectedOperator expectedOperatorとして使用する値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("KProperty1 の IN SELECT / NOT IN SELECT DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
     @CsvSource(
@@ -472,6 +587,13 @@ class BaseConditionBuilderTest {
         )
     }
 
+    /**
+     * 「testColumnRefInSelectDsl_withSubQueryBindValues」の条件における期待動作を検証する。
+     * @param methodName methodNameとして使用する値。
+     * @param expectedOperator expectedOperatorとして使用する値。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @DisplayName("ColumnRef の IN SELECT / NOT IN SELECT DSL を検証する")
     @ParameterizedTest(name = "[{index}] method={0}, operator={1}")
     @CsvSource(
@@ -509,6 +631,11 @@ class BaseConditionBuilderTest {
         )
     }
 
+    /**
+     * 「testSubQueryDsl_addsBindValuesInConditionOrder」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     @Test
     fun testSubQueryDsl_addsBindValuesInConditionOrder() {
         val subQuery = createEmployeeIdSubQuery()
@@ -538,6 +665,12 @@ class BaseConditionBuilderTest {
         )
     }
 
+    /**
+     * 従業員IDを抽出するサブクエリを生成する。
+     * @return 処理結果。
+     * @author Masahiro Inoue
+     * @since 2026-05-18
+     */
     private fun createEmployeeIdSubQuery(): Select<EmployeeEntityIdSelection> =
         Select(EmployeeEntityIdSelection::class)
             .where {

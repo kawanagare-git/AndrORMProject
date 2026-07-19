@@ -9,6 +9,11 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.ComprehensiveEntity
 import java.time.LocalDate
 import java.time.LocalDateTime
 
+/**
+ * Entityメタ情報またはSQL生成の検証に使用するテスト用TestAllEntity。
+ * @author Masahiro Inoue
+ * @since 2025-12-11
+ */
 @Projections(
     [
         Projection(

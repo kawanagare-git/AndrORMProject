@@ -23,6 +23,8 @@ class MigrationDefaultValueValidator : LoggerLike by logger {
      * ### MigrationDefaultが付与された全プロパティを共通SQL既定値規則で検証する
      * @param classDecl 検証対象Entity
      * @return 検証OKの場合 true
+     * @author Masahiro Inoue
+     * @since 2026-07-18
      */
     fun validate(classDecl: KSClassDeclaration): Boolean {
         var hasError = false
@@ -53,6 +55,8 @@ class MigrationDefaultValueValidator : LoggerLike by logger {
     /**
      * ## MigrationDefault値取得
      * @return アノテーション値。未指定の場合は null
+     * @author Masahiro Inoue
+     * @since 2026-07-18
      */
     private fun KSPropertyDeclaration.migrationDefaultValue(): String? =
         annotations.firstOrNull { annotation ->
@@ -66,6 +70,8 @@ class MigrationDefaultValueValidator : LoggerLike by logger {
     /**
      * ## プロパティ型名取得
      * @return nullableを除いた完全修飾型名
+     * @author Masahiro Inoue
+     * @since 2026-07-18
      */
     private fun KSPropertyDeclaration.typeName(): String =
         type.resolve().declaration.qualifiedName?.asString()

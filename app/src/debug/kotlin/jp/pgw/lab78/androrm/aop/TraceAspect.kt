@@ -30,6 +30,12 @@ import java.util.logging.Logger
 @Aspect
 class TraceAspect {
 
+    /**
+     * AOPログ出力で共有する定数とロガーを保持する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-05-07
+     */
     companion object {
         /** スタックトレース表示行数 */
         private const val MAX_STACK_TRACE_LINES = 10
@@ -207,6 +213,9 @@ class TraceAspect {
      * @param logPhase ログ出力のフェーズ
      * @param className クラス名
      * @param methodName メソッド名
+     * @return ログフェーズ、クラス名、メソッド名を連結したログメッセージ
+     * @author Masahiro Inoue
+     * @since 2026-05-07
      */
     private fun generateLogMessage(
         logPhase: LogPhase, className: String, methodName: String

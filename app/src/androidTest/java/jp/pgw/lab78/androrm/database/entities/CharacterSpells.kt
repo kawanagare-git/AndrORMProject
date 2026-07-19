@@ -11,6 +11,12 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
+/**
+ * ## キャラクタ習得魔法テーブルEntity
+ * ### キャラクタと習得済み魔法の対応を定義する
+ * @author Masahiro Inoue
+ * @since 2026-06-14
+ */
 @Projections(
     [
         Projection(

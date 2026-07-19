@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.detekt
 
 import io.gitlab.arturbosch.detekt.api.*
-import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.invalidPropertyReference
-import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.Companion.logDebug
+import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.invalidPropertyReference
+import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.logDebug
 import jp.pgw.lab78.androrm.detekt.AndrOrmEntityRefRule.ExtractEntity.*
 import jp.pgw.lab78.androrm.detekt.log.AndrOrmLogger
 import org.jetbrains.kotlin.psi.*
@@ -55,6 +55,11 @@ class AndrOrmEntityRefRule(
         FromEntity(0),
         JoinedEntity(1);
 
+        /**
+         * ## 文字列化
+         *  @author Masahiro Inoue
+         *  @since 2025-11-30
+         */
         override fun toString() = this.name.replaceFirstChar { it.lowercaseChar() }
 
     }
@@ -71,6 +76,13 @@ class AndrOrmEntityRefRule(
         debt = Debt.TWENTY_MINS
     )
 
+    /**
+     * ## Kotlin ファイル訪問
+     * ### 基底クラスのファイル訪問処理を実行し、解析対象のファイル名をログへ記録する。
+     * @param file 解析対象の Kotlin ファイル
+     * @author Masahiro Inoue
+     * @since 2025-11-30
+     */
     override fun visitKtFile(file: KtFile) {
         super.visitKtFile(file)
         AndrOrmLogger.log.info("[AndrOrmEntityRefRule] visitKtFile: ${file.name}")
@@ -260,6 +272,13 @@ class AndrOrmEntityRefRule(
         lambda.bodyExpression?.accept(
             object : KtTreeVisitorVoid() {
 
+                /**
+                 * ## Callable 参照式の検査
+                 * ### ラムダ内の Entity プロパティ参照を許可された Entity と照合し、違反を重複なく報告する。
+                 * @param expression 検査対象の Callable 参照式
+                 * @author Masahiro Inoue
+                 * @since 2025-11-30
+                 */
                 override fun visitCallableReferenceExpression(expression: KtCallableReferenceExpression) {
                     super.visitCallableReferenceExpression(expression)
 

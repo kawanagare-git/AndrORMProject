@@ -22,6 +22,12 @@ import jp.pgw.lab78.shared.library.Utils.isNull
  * @since 2026-04-17
  */
 class ProjectionArgumentParser() : LoggerLike by logger {
+    /**
+     * ## Projection引数解析用定数
+     * ### アノテーション引数名と既定値を保持する
+     * @author Masahiro Inoue
+     * @since 2026-04-17
+     */
     companion object {
         /** @Projection の変数名定義（entityNameExtend） */
         private const val EXTEND_NAME = "entityNameExtend"

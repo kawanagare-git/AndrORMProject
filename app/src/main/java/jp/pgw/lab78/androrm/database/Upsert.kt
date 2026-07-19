@@ -161,6 +161,8 @@ class Upsert<T : UpsertEntity>(
      * ### UPSERT の DO UPDATE 実行条件を指定する
      * @param block 検索条件
      * @return 自身のインスタンス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
      */
     fun where(block: ConditionBuilder.() -> Unit): Upsert<T> =
         whereDelegate.where(block)

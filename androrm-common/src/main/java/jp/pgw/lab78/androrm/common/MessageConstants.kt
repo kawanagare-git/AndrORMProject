@@ -39,7 +39,7 @@ object MessageConstants {
     const val AE00003 =
         "Duplicate table alias '%s' was detected. " +
                 "tableName='%s'. " +
-                "Use a different alias with table(..., alias = \"...\")."
+                """Use a different alias with table(..., alias = "...")."""
 
     /**
      * ## AE00004
@@ -303,6 +303,14 @@ object MessageConstants {
      */
     const val AE00036 =
         "セーブポイントの解放に失敗しました。name=%s"
+
+    /**
+     * ## AE00037
+     * ### SQL 識別子が空白だけ、または NUL 文字を含む場合
+     *
+     * 第1引数: 不正な SQL 識別子
+     */
+    const val AE00037 = "Invalid SQL identifier: %s"
 
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。

@@ -5,10 +5,25 @@ import jp.pgw.lab78.androrm.database.entities.delete.TestAllEntityDelete
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
+/**
+ * WhereClauseDelegateの動作を検証するテストクラス。
+ * @author Masahiro Inoue
+ * @since 2026-05-27
+ */
 class WhereClauseDelegateTest {
 
+    /**
+     * 句デリゲートのテストで所有者として使用する補助クラス。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     private class TestOwner
 
+    /**
+     * 「testBuildClause_empty」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testBuildClause_empty() {
         val owner = TestOwner()
@@ -23,6 +38,11 @@ class WhereClauseDelegateTest {
         assertEquals("", target.buildClause())
     }
 
+    /**
+     * 「testWhere_buildConditionAndBindValues」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testWhere_buildConditionAndBindValues() {
         var changed = false
@@ -56,6 +76,11 @@ class WhereClauseDelegateTest {
         )
     }
 
+    /**
+     * 「testWhere_multiConditions」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testWhere_multiConditions() {
         val owner = TestOwner()
@@ -83,6 +108,11 @@ class WhereClauseDelegateTest {
         )
     }
 
+    /**
+     * 「testWhere_twice_throwsIllegalStateException」の条件における期待動作を検証する。
+     * @author Masahiro Inoue
+     * @since 2026-05-27
+     */
     @Test
     fun testWhere_twice_throwsIllegalStateException() {
         val owner = TestOwner()

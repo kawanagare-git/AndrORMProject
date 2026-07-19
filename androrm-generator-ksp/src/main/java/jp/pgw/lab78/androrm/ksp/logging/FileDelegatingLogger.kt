@@ -17,6 +17,13 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 
+/**
+ * ## ファイル委譲ロガークラス
+ * ### 各ログレベルのメッセージを指定されたファイルへ同期して出力する
+ * @param logFilePath ログの出力先パス
+ * @author Masahiro Inoue
+ * @since 2026-03-10
+ */
 class FileDelegatingLogger(
     private val logFilePath: Path
 ) : LoggerLike, AutoCloseable {

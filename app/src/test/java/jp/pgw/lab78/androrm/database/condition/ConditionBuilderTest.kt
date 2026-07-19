@@ -10,9 +10,18 @@ import org.junit.jupiter.params.provider.CsvSource
 /**
  * ## ConditionBuilder テスト
  * ### BaseConditionBuilder の DSL public メソッドを ConditionBuilder 経由で検証する
+  * @author Masahiro Inoue
+  * @since 2026-05-14
  */
 class ConditionBuilderTest {
 
+    /**
+     * 「testLogicalDsl」の条件における期待動作を検証する。
+     * @param logicalOperator logicalOperatorとして使用する値。
+     * @param expected 期待値。
+     * @author Masahiro Inoue
+     * @since 2026-05-14
+     */
     @DisplayName("論理条件 DSL を検証する")
     @ParameterizedTest(name = "[{index}] operator={0}, expected={1}")
     @CsvSource(

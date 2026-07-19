@@ -6,6 +6,12 @@ import jp.pgw.lab78.androrm.common.Constants.TERTIARY_DELIMITER
 import jp.pgw.lab78.androrm.common.logging.LogLevel.*
 import jp.pgw.lab78.androrm.ksp.logging.LogUtils.toSingleLineLogString
 
+/**
+ * ## 標準ログメッセージ生成オブジェクト
+ * ### KSPログのレベル、呼び出し元および本文を統一形式へ整形する
+ * @author Masahiro Inoue
+ * @since 2026-05-01
+ */
 object DefaultLogMessageGenerator {
     /**
      * ## インフォメーションログメッセージ生成
