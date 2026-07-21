@@ -312,9 +312,15 @@ object MessageConstants {
      */
     const val AE00037 = "Invalid SQL identifier: %s"
 
+    /**
+     * ## AE00038
+     * ### DeleteでWHERE条件またはdeleteAllが指定されていない場合
+     */
+    const val AE00038 = "Delete requires a WHERE condition or deleteAll()."
+
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
-     * 現時点の app/src/main には Warning 用メッセージは見当たらない。
+     * 現時点の app/src/main には Warning 用メッセージは用途無。
      */
 
     /**

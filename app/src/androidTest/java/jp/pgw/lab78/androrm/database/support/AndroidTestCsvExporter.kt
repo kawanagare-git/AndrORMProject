@@ -174,6 +174,60 @@ object AndroidTestCsvExporter {
     }
 
     /**
+     * ## SELECT Map結果 CSV 出力
+     * ### executeSelectAsMapListのカラム順と値を維持してCSVへ出力する
+     * @param context Context
+     * @param stepName 実行済みテストメソッド名
+     * @param resultName 出力ファイル名。拡張子なし
+     * @param rows SELECT結果
+     * @return 出力先Uri
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    fun exportSelectMapResultToDownload(
+        context: Context,
+        stepName: String,
+        resultName: String,
+        rows: List<Map<String, Any?>>,
+    ): Uri {
+        val uri = createCsvUri(
+            context = context,
+            stepName = stepName,
+            tableName = resultName,
+        )
+        val columns = rows.firstOrNull()?.keys?.toList().orEmpty()
+        val outputStream = context.contentResolver.openOutputStream(uri)
+            ?: error("Failed to open SELECT Map result CSV output stream.")
+
+        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
+            writer.appendLine(columns.joinToString(COMMA) { column -> escapeCsv(column) })
+            rows.forEach { row ->
+                writer.appendLine(
+                    columns.joinToString(COMMA) { column ->
+                        escapeCsv(selectValueToString(row[column]))
+                    }
+                )
+            }
+        }
+
+        return uri
+    }
+
+    /**
+     * ## SELECT値文字列化
+     * ### nullとByteArrayを含むMap値をCSV出力用文字列へ変換する
+     * @param value SELECT結果値
+     * @return CSV出力用文字列
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    private fun selectValueToString(value: Any?): String = when (value) {
+        null -> ""
+        is ByteArray -> value.toHexString()
+        else -> value.toString()
+    }
+
+    /**
      * ## SELECT Entity 結果 CSV 出力
      * ### executeSelectAsEntityList の結果を CSV へ出力する
      * @param context Context

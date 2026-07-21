@@ -110,11 +110,6 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
     /** ビルドフラグ */
     protected var isBuild: Boolean = false
 
-    /** クエリ格納 */
-    protected lateinit var query: String
-    val queryString: String
-        get() = query
-
     /**
      * ## 結合尾テーブル収集
      * ### 外部結合に指定されたテーブル情報を収集する

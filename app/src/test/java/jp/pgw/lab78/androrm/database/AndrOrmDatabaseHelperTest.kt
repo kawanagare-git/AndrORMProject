@@ -5,11 +5,12 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteException
 import android.database.sqlite.SQLiteStatement
+import android.os.SystemClock
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00020
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00020
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
@@ -44,6 +45,19 @@ import jp.pgw.lab78.androrm.database.entities.define.EmployeeEntity as EmployeeT
  * @since 2026-05-31
  */
 class AndrOrmDatabaseHelperTest {
+
+    private fun <T> withMockedElapsedRealtimeNanos(
+        start: Long = 1_000L,
+        end: Long = 1_500L,
+        block: () -> T,
+    ): T =
+        Mockito.mockStatic(SystemClock::class.java).use { systemClock ->
+            systemClock.`when`<Long> {
+                SystemClock.elapsedRealtimeNanos()
+            }.thenReturn(start, end)
+
+            block()
+        }
 
     /**
      * Entity間でインデックス名が重複した場合にDDL実行前に例外となることを検証する。
@@ -244,7 +258,9 @@ class AndrOrmDatabaseHelperTest {
 
         assertTrue(actual.message.orEmpty().contains("TestUpgradeMissingDefaultEntity"))
         assertTrue(actual.message.orEmpty().contains("score"))
-        assertTrue(actual.message.orEmpty().contains("非nullableカラム追加時に @MigrationDefault が必要"))
+        assertTrue(
+            actual.message.orEmpty().contains("非nullableカラム追加時に @MigrationDefault が必要")
+        )
     }
 
     /**
@@ -358,7 +374,9 @@ class AndrOrmDatabaseHelperTest {
             query = sql,
         )
 
-        val actual = helper.executeDml(query)
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeDml(query)
+        }
 
         assertEquals(1, actual)
         Mockito.verify(db).compileStatement(sql)
@@ -395,7 +413,7 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(statement.executeUpdateDelete()).thenReturn(1)
 
         val query = TestQueryBuilderLikeWithBindValues(
-            query = sql,
+            queryString = sql,
             bindValues = listOf(
                 "川流",
                 birthday,
@@ -406,7 +424,9 @@ class AndrOrmDatabaseHelperTest {
             ),
         )
 
-        val actual = helper.executeDml(query)
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeDml(query)
+        }
 
         assertEquals(1, actual)
         Mockito.verify(db).compileStatement(sql)
@@ -444,9 +464,12 @@ class AndrOrmDatabaseHelperTest {
         ).thenReturn(statement)
         Mockito.`when`(statement.executeUpdateDelete()).thenReturn(1)
 
-        val actual = helper.executeDml(sql, listOf(null, 100L))
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeDml(sql, listOf(null, 100L))
+        }
 
         assertEquals(1, actual)
+        assertEquals(500L, helper.queryExecutionTime)
         Mockito.verify(statement).bindNull(1)
         Mockito.verify(statement).bindLong(2, 100L)
         Mockito.verify(statement).executeUpdateDelete()
@@ -478,9 +501,12 @@ class AndrOrmDatabaseHelperTest {
         ).thenReturn(statement)
         Mockito.`when`(statement.executeUpdateDelete()).thenReturn(1)
 
-        val actual = helper.executeDml(sql, listOf(binary, 100L))
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeDml(sql, listOf(binary, 100L))
+        }
 
         assertEquals(1, actual)
+        assertEquals(500L, helper.queryExecutionTime)
         Mockito.verify(statement).bindBlob(1, binary)
         Mockito.verify(statement).bindLong(2, 100L)
         Mockito.verify(statement).executeUpdateDelete()
@@ -657,7 +683,9 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(cursor.getDouble(2)).thenReturn(98.25, 88.5)
         Mockito.`when`(cursor.getString(3)).thenReturn("初回", "二回目")
 
-        val actual = helper.executeSelectAsMapList(sql)
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeSelectAsMapList(sql)
+        }
 
         assertEquals(
             listOf(
@@ -738,7 +766,10 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(cursor.getLong(6)).thenReturn(50_000L)
         Mockito.`when`(cursor.getDouble(7)).thenReturn(50_000.0)
 
-        val actual = helper.executeSelectAsMapList(select)
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeSelectAsMapList(select)
+        }
+
         assertEquals(
             listOf(
                 linkedMapOf(
@@ -819,8 +850,9 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(cursor.getLong(6)).thenReturn(50_000L, 55_000L)
         Mockito.`when`(cursor.getDouble(7)).thenReturn(50_000.0, 52_500.0)
 
-        val actual: List<Map<String, SelectEntity?>> =
+        val actual = withMockedElapsedRealtimeNanos {
             helper.executeSelectAsEntityList(query = select)
+        }
 
         assertEquals(
             listOf(
@@ -947,8 +979,9 @@ class AndrOrmDatabaseHelperTest {
         Mockito.`when`(cursor.getLong(0)).thenReturn(1L)
         Mockito.`when`(cursor.getBlob(1)).thenReturn(binary)
 
-        val actual = helper.executeSelectAsMapList(sql)
-
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeSelectAsMapList(sql)
+        }
         assertEquals(1L, actual[0]["ID"])
         assertArrayEquals(binary, actual[0]["MEMO"] as ByteArray)
         Mockito.verify(cursor).close()
@@ -1064,8 +1097,10 @@ class AndrOrmDatabaseHelperTest {
             "PG-B",
         )
 
-        val actual: List<Map<String, SelectEntity?>> =
+        val actual = withMockedElapsedRealtimeNanos {
             helper.executeSelectAsEntityList(query = select)
+        }
+
         assertEquals(
             listOf(
                 mapOf(
@@ -1148,7 +1183,7 @@ class AndrOrmDatabaseHelperTest {
      * @since 2026-05-31
      */
     private class TestQueryBuilderLikeWithBindValues(
-        private val query: String,
+        private val queryString: String,
         bindValues: List<Any?>,
     ) : QueryWithBindValues(),
         QueryBuilderLike<TableDefinitionEntity> {
@@ -1164,7 +1199,7 @@ class AndrOrmDatabaseHelperTest {
          * @author Masahiro Inoue
          * @since 2026-05-31
          */
-        override fun build(): String = query
+        override fun build(): String = queryString
     }
 
     /**

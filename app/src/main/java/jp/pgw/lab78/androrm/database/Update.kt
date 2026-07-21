@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.Constants
+import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.database.SupportFunction
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
@@ -47,6 +48,9 @@ class Update<T : UpdateEntity>(
         )
     )
 
+    /** 全件対象 */
+    private var isAllRecords: Boolean = false
+
     /** テーブル名 */
     private val tableName = targetTable.entityClass.getTableName()
 
@@ -70,9 +74,6 @@ class Update<T : UpdateEntity>(
 
     /** ビルド済みフラグ */
     private var isBuild = false
-
-    /** クエリ */
-    private lateinit var query: String
 
     /** WHERE 句生成委譲 */
     private val whereDelegate =
@@ -242,7 +243,7 @@ class Update<T : UpdateEntity>(
      * @since 2026-05-25
      */
     fun where(block: ConditionBuilder.() -> Unit): Update<T> =
-        whereDelegate.where(block)
+        whereDelegate.where(block).also { isAllRecords = false }
 
     /**
      * ## WHERE 条件指定の検証
@@ -253,8 +254,8 @@ class Update<T : UpdateEntity>(
      * @since 2026-05-25
      */
     fun updateAll(): Update<T> {
-        isBuild = true
-        require(whereDelegate.hasCondition) { MessageConstants.AE00013 }
+        isAllRecords = true
+        isBuild = false
         return this
     }
 
@@ -264,10 +265,12 @@ class Update<T : UpdateEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-25
      */
-    protected override fun additionalBindValues(): List<Any?> = buildList {
-        addAll(joinDelegate.bindValues)
-        addAll(whereDelegate.bindValues)
-    }
+    override fun additionalBindValues(): List<Any?> =
+        if (isAllRecords) {
+            joinDelegate.bindValues
+        } else {
+            joinDelegate.bindValues + whereDelegate.bindValues
+        }
 
     /**
      * ## update 文生成
@@ -276,26 +279,27 @@ class Update<T : UpdateEntity>(
      * @since 2026-05-25
      */
     override fun build(): String {
-        if (!isBuild) {
+        return if (isBuild) {
+            query
+        } else {
             require(setAssignments.isNotEmpty()) { MessageConstants.AE00014 }
-            require(whereDelegate.hasCondition) { MessageConstants.AE00013 }
+            require(isAllRecords || whereDelegate.hasCondition) { MessageConstants.AE00013 }
             clearBindValues()
-            addBindValues(setBindValues)
             val targetTableExpression =
                 if (tableAlias.isBlank()) {
                     tableName
                 } else {
                     "$tableName as $tableAlias"
                 }
-            val setClause = setAssignments.joinToString(", ") { (columnName, expression) ->
-                "$columnName = $expression"
-            }
-            query = buildString {
+            val setClause =
+                setAssignments.joinToString(", ") { (columnName, expression) ->
+                    "$columnName = $expression"
+                }
+            buildString {
                 append("update ")
                 append(targetTableExpression)
                 append(" set ")
                 append(setClause)
-
                 if (fromClause.isNotBlank()) {
                     append(" ")
                     append(fromClause)
@@ -305,16 +309,26 @@ class Update<T : UpdateEntity>(
                     append(" ")
                     append(joinClause)
                 }
-                val whereClause = whereDelegate.buildClause()
-                if (whereClause.isNotBlank()) {
-                    append(" ")
-                    append(whereClause)
-                }
-            }.replace(DmlConstant.MULTI_SPACE_REGEX, Constants.SPACE)
-                .trim()
-            isBuild = true
-        }
-        return query
+                append(" ")
+                append(
+                    if (isAllRecords) {
+                        EMPTY_STRING
+                    } else {
+                        whereDelegate.buildClause()
+                    }
+                )
+            }
+        }.replace(
+            DmlConstant.MULTI_SPACE_REGEX,
+            Constants.SPACE,
+        ).trim()
+            .also {
+                addBindValues(setBindValues)
+                // queryを完成させてからビルド済みにする
+                isBuild = true
+                query = it
+            }
+
     }
 
     /**

@@ -1,6 +1,8 @@
 package jp.pgw.lab78.androrm.database
 
+import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.SPACE
+import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.DeleteEntity
 import jp.pgw.lab78.androrm.common.logging.LogLevel.TRACE
@@ -29,6 +31,9 @@ class Delete<T : DeleteEntity>(
     /** テーブル名：クラス名をテーブル名（大文字）に変換 */
     val tableName = entityClass.getTableName()
 
+    /** 全件対象 */
+    private var isAllRecords: Boolean = false
+
     /** ビルドフラグ */
     private var isBuild = false
 
@@ -51,7 +56,7 @@ class Delete<T : DeleteEntity>(
      * @since 2026-05-24
      */
     fun where(block: ConditionBuilder.() -> Unit): Delete<T> =
-        whereDelegate.where(block)
+        whereDelegate.where(block).also { isAllRecords = false }
 
     /**
      * WHERE句で保持されたバインド値を返す。
@@ -60,8 +65,12 @@ class Delete<T : DeleteEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-24
      */
-    protected override fun additionalBindValues(): List<Any?> =
-        whereDelegate.bindValues
+    override fun additionalBindValues(): List<Any?> =
+        if (isAllRecords) {
+            emptyList()
+        } else {
+            whereDelegate.bindValues
+        }
 
     /**
      * 条件を指定しない全件削除を明示的に許可する。
@@ -69,8 +78,15 @@ class Delete<T : DeleteEntity>(
      * @author Masahiro Inoue
      * @since 2026-05-24
      */
-    fun deleteAll() {
-        isBuild = true
+    /**
+     * ## 全件削除指定
+     * ### WHERE条件を使用せず、全レコードを削除対象とする
+     */
+    fun deleteAll(): Delete<T> {
+        isAllRecords = true
+        // 更新対象範囲が変更されたため、生成済みSQLを無効化する
+        isBuild = false
+        return this
     }
 
     /**
@@ -81,15 +97,23 @@ class Delete<T : DeleteEntity>(
      * @since 2026-05-24
      */
     override fun build(): String {
-        val query = StringBuilder("delete from $tableName")
-        if (!isBuild) {
-            isBuild = true
-            val whereClause = whereDelegate.buildClause()
-            query.append(" $whereClause")
+        return if (isBuild) {
+            query
+        } else {
+            require(isAllRecords || whereDelegate.hasCondition) {
+                MessageConstants.AE00038
+            }
+            clearBindValues()
+            "delete from $tableName ${
+                if (isAllRecords) EMPTY_STRING else whereDelegate.buildClause()
+            }"
                 .replace(DmlConstant.MULTI_SPACE_REGEX, SPACE)
                 .trim()
+                .also {
+                    // queryを完成させてからビルド済みにする
+                    query = it
+                    isBuild = true
+                }
         }
-        return query.toString()
     }
-
 }

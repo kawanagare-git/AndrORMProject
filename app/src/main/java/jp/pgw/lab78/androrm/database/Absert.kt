@@ -57,9 +57,6 @@ class Absert<T : AbsertEntity>(
     /** ビルドフラグ */
     private var isBuild: Boolean = false
 
-    /** クエリ格納 */
-    private lateinit var query: String
-
     /**
      * ## エンティティ追加
      * ### Absert 対象 Entity を1件追加する

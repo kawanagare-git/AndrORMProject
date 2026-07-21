@@ -75,9 +75,6 @@ class Upsert<T : UpsertEntity>(
             isBuild = false
         }
 
-    /** クエリ格納 */
-    private lateinit var query: String
-
     /**
      * ## エンティティ追加
      * ### Upsert 対象 Entity を1件追加する

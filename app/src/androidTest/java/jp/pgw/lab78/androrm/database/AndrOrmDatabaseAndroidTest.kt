@@ -21,13 +21,18 @@ import jp.pgw.lab78.androrm.database.entities.absert.CharacterEquipAbsert
 import jp.pgw.lab78.androrm.database.entities.delete.*
 import jp.pgw.lab78.androrm.database.entities.insert.*
 import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.CUMULATIVE_CHARACTER_COUNT
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.CUMULATIVE_DATA_STEP
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.CUMULATIVE_MAX_LEVEL
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.CUMULATIVE_STATUS_COUNT_PER_LEVEL
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.SeedUpsertData
+import jp.pgw.lab78.androrm.database.entities.resource.AndroidTestSeedData.Step21AbsertData
 import jp.pgw.lab78.androrm.database.entities.select.*
 import jp.pgw.lab78.androrm.database.entities.update.*
 import jp.pgw.lab78.androrm.database.entities.upsert.*
 import jp.pgw.lab78.androrm.database.interfaces.plus
 import jp.pgw.lab78.androrm.database.queryparts.JoinType
 import jp.pgw.lab78.androrm.database.queryparts.OnConflictClauseBuilder
-import jp.pgw.lab78.androrm.database.queryparts.UpsertSetClauseBuilder
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.support.AndroidTestCsvExporter
 import org.junit.*
@@ -58,29 +63,17 @@ class AndrOrmDatabaseAndroidTest {
         /** ログ出力有効フラグ */
         private const val LOGGING_ENABLED_PROPERTY = "androrm.logging.enabled"
 
-        /** 更新・Upsert 対象割合 */
-        private const val UPDATE_TARGET_PERCENT = 30
-
-        /** SQLite の旧バインド変数上限 999 を超えない Upsert 件数 */
-        private const val UPSERT_BATCH_SIZE = 100
-
-        /** step19で各テーブルへ追加を試行する件数 */
-        private const val SAVEPOINT_INSERT_COUNT = 10
-
-        /** step19のマスタ登録後に作成するsavepoint名 */
-        private const val AFTER_MASTER_INSERT_SAVEPOINT = "STEP19_AFTER_MASTER_INSERT"
-
-        /** step19用アイテム主キー基準値 */
-        private const val SAVEPOINT_ITEM_PK_BASE = 300_000
-
-        /** step19用魔法主キー基準値 */
-        private const val SAVEPOINT_MAGIC_ID_BASE = 400_000
-
-        /** step19用キャラクタ主キー基準値 */
-        private const val SAVEPOINT_CHARACTER_PK_BASE = 500_000
-
         /** DML 系実行時カウント */
         private var actualCount = 0L
+
+        /** UPSERTを分割実行する1バッチの件数 */
+        private const val UPSERT_BATCH_SIZE = 100
+
+        /** step19でマスタ登録後に作成するsavepoint名 */
+        private const val AFTER_MASTER_INSERT_SAVEPOINT = "STEP19_AFTER_MASTER_INSERT"
+
+        /** step21でマスタ登録後に作成するsavepoint名 */
+        private const val AFTER_MASTER_ABSERT_SAVEPOINT = "AFTER_MASTER_ABSERT"
 
         private var testStep: String = EMPTY_STRING
         private var verifyStep: String = EMPTY_STRING
@@ -103,7 +96,8 @@ class AndrOrmDatabaseAndroidTest {
         private var preAbsertKeysByTable: Map<String, Set<List<String?>>> = emptyMap()
 
         /** step21実行前のテーブル別全行スナップショット */
-        private var preAbsertRowsByTable: Map<String, Map<List<String?>, List<String?>>> = emptyMap()
+        private var preAbsertRowsByTable: Map<String, Map<List<String?>, List<String?>>> =
+            emptyMap()
 
         /** step21で投入するテーブル別キー集合 */
         private var inputAbsertKeysByTable: Map<String, Set<List<String?>>> = emptyMap()
@@ -113,6 +107,33 @@ class AndrOrmDatabaseAndroidTest {
 
         /** step21のsavepoint実行結果 */
         private var absertSavepointResult: AndrOrmDatabaseHelper.SavepointResult<*>? = null
+
+        /** step23実行前のCHARACTER_STATUS件数 */
+        private var preCumulativeStatusRowCount = 0L
+
+        /** step23のUPSERT投入データ */
+        private var cumulativeStatusData: List<CharacterStatusV2Upsert> = emptyList()
+
+        /** step23のUPSERT処理件数 */
+        private var cumulativeUpsertAffectedRows = 0
+
+        /** step25のCHARACTER_STATUS単体集計結果 */
+        private var cumulativeStatusResult: List<Map<String, Any?>> = emptyList()
+
+        /** step25のLEFT JOIN集計結果 */
+        private var cumulativeJoinResult: List<Map<String, Any?>> = emptyList()
+
+        /** step25のCHARACTER_STATUS単体集計SQL */
+        private var cumulativeStatusQuery = EMPTY_STRING
+
+        /** step25のLEFT JOIN集計SQL */
+        private var cumulativeJoinQuery = EMPTY_STRING
+
+        /** step25のCHARACTER_STATUS単体集計バインド値 */
+        private var cumulativeStatusBindValues: List<Any?> = emptyList()
+
+        /** step25のLEFT JOIN集計バインド値 */
+        private var cumulativeJoinBindValues: List<Any?> = emptyList()
 
         private var isUpgrade = false
         private var version = if (isUpgrade) 2 else 1
@@ -168,7 +189,7 @@ class AndrOrmDatabaseAndroidTest {
                 CharacterStaticInfoV1::class,
                 ItemMaster::class,
                 SpellsMaster::class,
-                CharacterStatus::class,
+                CharacterStatusV1::class,
                 CharacterPossessions::class,
                 CharacterEquip::class,
                 WeaponMastery::class,
@@ -178,7 +199,7 @@ class AndrOrmDatabaseAndroidTest {
                 CharacterStaticInfoV2::class,
                 ItemMaster::class,
                 SpellsMaster::class,
-                CharacterStatus::class,
+                CharacterStatusV2::class,
                 CharacterPossessions::class,
                 CharacterEquip::class,
                 WeaponMastery::class,
@@ -202,38 +223,49 @@ class AndrOrmDatabaseAndroidTest {
     var currentTableDefinitions = tableDefinitions[index]
 
     /**
-     * ## step19投入データ
-     * ### savepoint前後へ投入する8テーブル分のInsertEntityを保持する
+     * ## ステータス累計キー
+     * ### characterPkとstatusTypeを累計結果の識別キーとして保持する
      * @author Masahiro Inoue
-     * @since 2026-06-16
+     * @since 2026-07-20
      */
-    private data class Step19InsertData(
-        val itemMasterList: List<ItemMasterInsert>,
-        val magicTypeMasteryList: List<MagicTypeMasteryInsert>,
-        val spellsMasterList: List<SpellsMasterInsert>,
-        val characterEquipList: List<CharacterEquipInsert>,
-        val characterSpellsList: List<CharacterSpellsInsert>,
-        val characterStaticInfoList: List<CharacterStaticInfoV2Insert>,
-        val characterStatusList: List<CharacterStatusInsert>,
-        val characterPossessionsList: List<CharacterPossessionsInsert>,
+    private data class CumulativeStatusKey(
+        val characterPk: Int,
+        val statusType: String,
     )
 
     /**
-     * ## step21投入データ
-     * ### step03由来とstep19由来を結合した9テーブル分のAbsert対象を保持する
+     * ## step23ステータス行キー
+     * ### characterPk、level、statusTypeを投入行の識別キーとして保持する
      * @author Masahiro Inoue
-     * @since 2026-06-16
+     * @since 2026-07-20
      */
-    private data class Step21AbsertData(
-        val characterStaticInfoList: List<CharacterStaticInfoV2Insert>,
-        val itemMasterList: List<ItemMasterInsert>,
-        val spellsMasterList: List<SpellsMasterInsert>,
-        val characterStatusList: List<CharacterStatusInsert>,
-        val characterPossessionsList: List<CharacterPossessionsInsert>,
-        val characterEquipList: List<CharacterEquipInsert>,
-        val weaponMasteryList: List<WeaponMasteryInsert>,
-        val magicTypeMasteryList: List<MagicTypeMasteryInsert>,
-        val characterSpellsList: List<CharacterSpellsInsert>,
+    private data class CumulativeStatusRowKey(
+        val characterPk: Int,
+        val level: Int,
+        val statusType: String,
+    )
+
+    /**
+     * ## ステータス累計値
+     * ### level最大値とvalue累計を保持する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    private data class CumulativeStatusValue(
+        val maxLevel: Int,
+        val totalValue: Long,
+    )
+
+    /**
+     * ## LEFT JOIN累計キー
+     * ### characterPk、characterName、statusTypeを結合集計結果の識別キーとして保持する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    private data class CumulativeJoinKey(
+        val characterPk: Int,
+        val characterName: String,
+        val statusType: String,
     )
 
     /**
@@ -403,7 +435,7 @@ class AndrOrmDatabaseAndroidTest {
     fun step07_upsertSeedData() {
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
-            actualCount = upsertData(helper).toLong()
+            actualCount = upsertData(helper, testStep).toLong()
         }
     }
 
@@ -448,7 +480,7 @@ class AndrOrmDatabaseAndroidTest {
     fun step09_absertSeedData() {
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
         databaseHelper.use { helper ->
-            actualCount = absertData(helper).toLong()
+            actualCount = absertData(helper, testStep).toLong()
         }
     }
 
@@ -539,7 +571,7 @@ class AndrOrmDatabaseAndroidTest {
         deleteTargetStep(databaseHelper, "step03")
         refreshTableRowCounts(databaseHelper)
         databaseHelper.use { helper ->
-            actualCount = deleteData(helper).toLong()
+            actualCount = deleteData(helper, "step03")
         }
     }
 
@@ -594,7 +626,7 @@ class AndrOrmDatabaseAndroidTest {
             existsSelectResult = helper.transaction {
                 helper.executeSelectAsEntityList(selectExists)
             }
-            existsSelectQuery = selectExists.queryString
+            existsSelectQuery = selectExists.query
             existsSelectBindValues = selectExists.bindValues.toList()
             AndroidTestCsvExporter.exportSelectEntityResultToDownload(
                 context = InstrumentationRegistry.getInstrumentation().targetContext,
@@ -603,7 +635,7 @@ class AndrOrmDatabaseAndroidTest {
                 rows = existsSelectResult,
             )
             actualCount = existsSelectResult.size.toLong()
-            Log.d(testStep, selectExists.queryString)
+            Log.d(testStep, selectExists.query)
             Log.d(testStep, selectExists.bindValues.joinToString())
         }
     }
@@ -705,7 +737,6 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step19_insertWithSavepointRollback() {
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
-        val insertData = createSavepointInsertData()
         savepointRollbackException = null
 
         databaseHelper.use { helper ->
@@ -714,44 +745,36 @@ class AndrOrmDatabaseAndroidTest {
                 tableName to getTableRows(helper.readableDatabase, tableName)
             }
 
-            helper.transaction {
-                insertAll(databaseHelper, ItemMasterInsert::class, insertData.itemMasterList)
+            val insertData = AndroidTestSeedData.createSavepointInsertData(testStep)
+            val savepointResult = helper.transaction {
+                insertAll(helper, ItemMasterInsert::class, insertData.itemMasterList)
                 insertAll(
-                    databaseHelper,
+                    helper,
                     MagicTypeMasteryInsert::class,
                     insertData.magicTypeMasteryList,
                 )
-                insertAll(databaseHelper, SpellsMasterInsert::class, insertData.spellsMasterList)
-                val savepointResult =
-                    databaseHelper.savepoint(AFTER_MASTER_INSERT_SAVEPOINT) {
-                        insertAll(
-                            databaseHelper,
-                            CharacterEquipInsert::class,
-                            insertData.characterEquipList,
-                        )
-                        insertAll(
-                            databaseHelper,
-                            CharacterSpellsInsert::class,
-                            insertData.characterSpellsList,
-                        )
-                        insertAll(
-                            databaseHelper,
-                            CharacterStaticInfoV2Insert::class,
-                            insertData.characterStaticInfoList,
-                        )
-                        insertAll(
-                            databaseHelper,
-                            CharacterStatusInsert::class,
-                            insertData.characterStatusList,
-                        )
-                        insertAll(
-                            databaseHelper,
-                            CharacterPossessionsInsert::class,
-                            insertData.characterPossessionsList,
-                        )
-                    }
-                savepointRollbackException = savepointResult.failure as? SQLiteConstraintException
+                insertAll(helper, SpellsMasterInsert::class, insertData.spellsMasterList)
+                helper.savepoint(AFTER_MASTER_INSERT_SAVEPOINT) {
+                    insertAll(helper, CharacterEquipInsert::class, insertData.characterEquipList)
+                    insertAll(helper, CharacterSpellsInsert::class, insertData.characterSpellsList)
+                    insertAll(
+                        helper,
+                        CharacterStaticInfoV2Insert::class,
+                        insertData.characterStaticInfoList,
+                    )
+                    insertAll(
+                        helper,
+                        CharacterStatusV2Insert::class,
+                        insertData.characterStatusList,
+                    )
+                    insertAll(
+                        helper,
+                        CharacterPossessionsInsert::class,
+                        insertData.characterPossessionsList,
+                    )
+                }
             }
+            savepointRollbackException = savepointResult.failure as? SQLiteConstraintException
         }
     }
 
@@ -770,7 +793,7 @@ class AndrOrmDatabaseAndroidTest {
             CharacterEquip::class.getTableName() to 0L,
             CharacterSpells::class.getTableName() to 0L,
             CharacterStaticInfoV2::class.getTableName() to 0L,
-            CharacterStatus::class.getTableName() to 0L,
+            CharacterStatusV2::class.getTableName() to 0L,
             CharacterPossessions::class.getTableName() to 0L,
             WeaponMastery::class.getTableName() to 0L,
         )
@@ -791,9 +814,7 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step21_absertCombinedDataWithSavepoint() {
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
-        val absertData = createStep21AbsertData()
         val keyColumnsByTable = absertKeyColumnsByTable()
-        val affectedRows = mutableMapOf<String, Long>()
 
         databaseHelper.use { helper ->
             preAbsertKeysByTable = keyColumnsByTable.mapValues { (tableName, columns) ->
@@ -802,60 +823,67 @@ class AndrOrmDatabaseAndroidTest {
             preAbsertRowsByTable = keyColumnsByTable.mapValues { (tableName, columns) ->
                 getTableRowsByKey(helper.readableDatabase, tableName, columns)
             }
-            inputAbsertKeysByTable = createInputAbsertKeysByTable(absertData)
-
-            helper.transaction {
+            val data = AndroidTestSeedData.createStep21AbsertData(testStep)
+            val affectedRows = mutableMapOf<String, Long>()
+            val savepointResult = helper.transaction {
                 affectedRows[ItemMaster::class.getTableName()] = absertAll(
-                    helper, ItemMasterInsert::class, absertData.itemMasterList,
+                    helper, ItemMasterInsert::class, data.itemMasterList,
                 ) { key(ItemMasterInsert::itemPk) }
                 affectedRows[MagicTypeMastery::class.getTableName()] = absertAll(
-                    helper, MagicTypeMasteryInsert::class, absertData.magicTypeMasteryList,
+                    helper, MagicTypeMasteryInsert::class, data.magicTypeMasteryList,
                 ) {
                     key(MagicTypeMasteryInsert::characterPk)
                     key(MagicTypeMasteryInsert::magicTypeMastery)
                 }
                 affectedRows[SpellsMaster::class.getTableName()] = absertAll(
-                    helper, SpellsMasterInsert::class, absertData.spellsMasterList,
+                    helper, SpellsMasterInsert::class, data.spellsMasterList,
                 ) { key(SpellsMasterInsert::magicId) }
 
-                absertSavepointResult = helper.savepoint("AFTER_MASTER_ABSERT") {
+                helper.savepoint(AFTER_MASTER_ABSERT_SAVEPOINT) {
                     affectedRows[CharacterEquip::class.getTableName()] = absertAll(
-                        helper, CharacterEquipInsert::class, absertData.characterEquipList,
+                        helper, CharacterEquipInsert::class, data.characterEquipList,
                     ) {
                         key(CharacterEquipInsert::characterPk)
                         key(CharacterEquipInsert::equipSlot)
                     }
                     affectedRows[CharacterSpells::class.getTableName()] = absertAll(
-                        helper, CharacterSpellsInsert::class, absertData.characterSpellsList,
+                        helper, CharacterSpellsInsert::class, data.characterSpellsList,
                     ) {
                         key(CharacterSpellsInsert::characterPk)
                         key(CharacterSpellsInsert::magicId)
                     }
                     affectedRows[CharacterStaticInfoV2::class.getTableName()] = absertAll(
-                        helper, CharacterStaticInfoV2Insert::class, absertData.characterStaticInfoList,
+                        helper,
+                        CharacterStaticInfoV2Insert::class,
+                        data.characterStaticInfoList,
                     ) { key(CharacterStaticInfoV2Insert::characterPk) }
-                    affectedRows[CharacterStatus::class.getTableName()] = absertAll(
-                        helper, CharacterStatusInsert::class, absertData.characterStatusList,
+                    affectedRows[CharacterStatusV2::class.getTableName()] = absertAll(
+                        helper, CharacterStatusV2Insert::class, data.characterStatusList,
                     ) {
-                        key(CharacterStatusInsert::characterPk)
-                        key(CharacterStatusInsert::statusType)
+                        key(CharacterStatusV2Insert::characterPk)
+                        key(CharacterStatusV2Insert::level)
+                        key(CharacterStatusV2Insert::statusType)
                     }
                     affectedRows[CharacterPossessions::class.getTableName()] = absertAll(
-                        helper, CharacterPossessionsInsert::class, absertData.characterPossessionsList,
+                        helper,
+                        CharacterPossessionsInsert::class,
+                        data.characterPossessionsList,
                     ) {
                         key(CharacterPossessionsInsert::characterPk)
                         key(CharacterPossessionsInsert::itemPk)
                     }
                     affectedRows[WeaponMastery::class.getTableName()] = absertAll(
-                        helper, WeaponMasteryInsert::class, absertData.weaponMasteryList,
+                        helper, WeaponMasteryInsert::class, data.weaponMasteryList,
                     ) {
                         key(WeaponMasteryInsert::characterPk)
                         key(WeaponMasteryInsert::weaponTypeId)
                     }
                 }
             }
+            inputAbsertKeysByTable = createInputAbsertKeysByTable(data)
+            absertAffectedRowsByTable = affectedRows.toMap()
+            absertSavepointResult = savepointResult
         }
-        absertAffectedRowsByTable = affectedRows.toMap()
     }
 
     /**
@@ -867,16 +895,19 @@ class AndrOrmDatabaseAndroidTest {
     @Test
     fun step22_verifyCombinedAbsert() {
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
-        assertTrue("step21のsavepoint処理が失敗しています。", absertSavepointResult?.isSuccess == true)
+        assertTrue(
+            "step21のsavepoint処理が失敗しています。",
+            absertSavepointResult?.isSuccess == true
+        )
 
         databaseHelper.use { helper ->
             absertKeyColumnsByTable().forEach { (tableName, columns) ->
                 val expectedKeys = preAbsertKeysByTable.getValue(tableName) +
-                    inputAbsertKeysByTable.getValue(tableName)
+                        inputAbsertKeysByTable.getValue(tableName)
                 val actualKeys = getTableKeySet(helper.readableDatabase, tableName, columns)
                 val expectedAddedCount =
                     (inputAbsertKeysByTable.getValue(tableName) -
-                        preAbsertKeysByTable.getValue(tableName)).size.toLong()
+                            preAbsertKeysByTable.getValue(tableName)).size.toLong()
                 assertEquals("$tableName のキー集合が不正です。", expectedKeys, actualKeys)
                 assertEquals(
                     "$tableName のAbsert追加件数が不正です。",
@@ -896,6 +927,684 @@ class AndrOrmDatabaseAndroidTest {
             }
         }
     }
+
+    /**
+     * ## step23 累計検証用ステータスUPSERT
+     * ### 既存5キャラクターへlevel 1～10、各level 3種類のステータスを一括UPSERTする
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Test
+    fun step23_upsertCumulativeStatusData() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            preCumulativeStatusRowCount = getTableRows(
+                helper.readableDatabase,
+                CharacterStatusV2::class.getTableName(),
+            )
+            cumulativeStatusData = AndroidTestSeedData.createCumulativeStatusData(
+                LocalDateTime.now(),
+            )
+            val upsert = Upsert(CharacterStatusV2Upsert::class)
+                .onConflict {
+                    key(CharacterStatusV2Upsert::characterPk)
+                    key(CharacterStatusV2Upsert::level)
+                    key(CharacterStatusV2Upsert::statusType)
+                }
+                .set {
+                    CharacterStatusV2Upsert::value assign
+                            excluded(CharacterStatusV2Upsert::value)
+                    CharacterStatusV2Upsert::updateMethod assign
+                            excluded(CharacterStatusV2Upsert::updateMethod)
+                    CharacterStatusV2Upsert::updateTime assign
+                            excluded(CharacterStatusV2Upsert::updateTime)
+                }
+                .addEntities(cumulativeStatusData)
+            cumulativeUpsertAffectedRows = helper.transaction {
+                helper.executeDml(upsert)
+            }
+        }
+    }
+
+    /**
+     * ## step24 累計検証用ステータス確認
+     * ### step23の処理件数、追加件数、複合キー、level別件数および値を検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Test
+    fun step24_verifyCumulativeStatusData() {
+        val expectedRowCount =
+            CUMULATIVE_CHARACTER_COUNT * CUMULATIVE_MAX_LEVEL * CUMULATIVE_STATUS_COUNT_PER_LEVEL
+        val expectedConflictCount = CUMULATIVE_CHARACTER_COUNT * CUMULATIVE_STATUS_COUNT_PER_LEVEL
+        val expectedRows = cumulativeStatusData.associate { entity ->
+            CumulativeStatusRowKey(
+                entity.characterPk,
+                entity.level,
+                entity.statusType
+            ) to entity.value
+        }
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            val select = Select(Step23CharacterStatusDetail::class).where {
+                Step23CharacterStatusDetail::updateMethod eq CUMULATIVE_DATA_STEP
+            }
+            val actualRows = helper.executeSelectAsMapList(select)
+            val actualValues = actualRows.associate { row ->
+                CumulativeStatusRowKey(
+                    characterPk = (row.getValue("CS23D_CHARACTER_PK") as Number).toInt(),
+                    level = (row.getValue("CS23D_LEVEL") as Number).toInt(),
+                    statusType = row.getValue("CS23D_STATUS_TYPE") as String,
+                ) to (row.getValue("CS23D_VALUE") as Number).toInt()
+            }
+            val actualCountByCharacterAndLevel = actualValues.keys
+                .groupingBy { key -> key.characterPk to key.level }
+                .eachCount()
+            val actualTotalCount = getTableRows(
+                helper.readableDatabase,
+                CharacterStatusV2::class.getTableName(),
+            )
+
+            assertEquals(
+                "step23のUPSERT処理件数が不正です。",
+                expectedRowCount,
+                cumulativeUpsertAffectedRows
+            )
+            assertEquals("step23対象行数が不正です。", expectedRowCount, actualRows.size)
+            assertEquals("step23の複合キーまたは値が不正です。", expectedRows, actualValues)
+            assertTrue(
+                "characterPk・levelごとのステータス件数が3件ではありません。",
+                actualCountByCharacterAndLevel.values.all { count ->
+                    count == CUMULATIVE_STATUS_COUNT_PER_LEVEL
+                },
+            )
+            assertEquals(
+                "step23の新規追加件数が不正です。",
+                preCumulativeStatusRowCount + expectedRowCount - expectedConflictCount,
+                actualTotalCount,
+            )
+        }
+    }
+
+    /**
+     * ## step25 ステータス累計SELECT
+     * ### CHARACTER_STATUS単体とCHARACTER_STATIC_INFOへのLEFT JOINでlevel最大値とvalue累計を取得する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Test
+    fun step25_selectCumulativeStatus() {
+        val cumulativeCharacterPks = AndroidTestSeedData.cumulativeCharacterPks()
+        val statusSelect = Select(Step25CharacterStatusAggregate::class)
+            .where {
+                Step25CharacterStatusAggregate::updateMethod eq CUMULATIVE_DATA_STEP
+            }
+            .having {
+                Step25CharacterStatusAggregate::updateMethod eq CUMULATIVE_DATA_STEP
+            }
+            .order {
+                Step25CharacterStatusAggregate::characterPk.asc
+                Step25CharacterStatusAggregate::statusType.asc
+            }
+        val staticInfo = TableRef(Step25CharacterStaticInfo::class, "CSI23")
+        val joinedStatus = TableRef(Step25JoinedCharacterStatusAggregate::class, "CS23J")
+        val joinSelect = Select(staticInfo)
+            .join(JoinType.LEFT, joinedStatus) {
+                staticInfo[Step25CharacterStaticInfo::characterPk] eq
+                        joinedStatus[Step25JoinedCharacterStatusAggregate::characterPk]
+                joinedStatus[Step25JoinedCharacterStatusAggregate::updateMethod] eq CUMULATIVE_DATA_STEP
+            }
+            .where {
+                staticInfo[Step25CharacterStaticInfo::characterPk] inList cumulativeCharacterPks
+            }
+            .having {
+                joinedStatus[Step25JoinedCharacterStatusAggregate::updateMethod] eq
+                        CUMULATIVE_DATA_STEP
+            }
+            .order {
+                Step25CharacterStaticInfo::characterPk.asc
+                Step25JoinedCharacterStatusAggregate::statusType.asc
+            }
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            cumulativeStatusResult = helper.executeSelectAsMapList(statusSelect)
+            cumulativeJoinResult = helper.executeSelectAsMapList(joinSelect)
+            cumulativeStatusQuery = statusSelect.query
+            cumulativeJoinQuery = joinSelect.query
+            cumulativeStatusBindValues = statusSelect.bindValues.toList()
+            cumulativeJoinBindValues = joinSelect.bindValues.toList()
+
+            AndroidTestCsvExporter.exportSelectMapResultToDownload(
+                context = context,
+                stepName = testName.methodName,
+                resultName = "select_cumulative_CHARACTER_STATUS",
+                rows = cumulativeStatusResult,
+            )
+            AndroidTestCsvExporter.exportSelectMapResultToDownload(
+                context = context,
+                stepName = testName.methodName,
+                resultName = "select_cumulative_CSI_CS",
+                rows = cumulativeJoinResult,
+            )
+        }
+    }
+
+    /**
+     * ## step26 ステータス累計検証
+     * ### 単体集計とLEFT JOIN集計の結果、生成SQLおよびバインド値順を検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Test
+    fun step26_verifyCumulativeStatus() {
+        val expectedStatusValues = expectedCumulativeStatusValues()
+        val actualStatusValues = cumulativeStatusResult.associate { row ->
+            CumulativeStatusKey(
+                characterPk = (row.getValue("CS23_CHARACTER_PK") as Number).toInt(),
+                statusType = row.getValue("CS23_STATUS_TYPE") as String,
+            ) to CumulativeStatusValue(
+                maxLevel = (row.getValue("CS23_MAX_LEVEL") as Number).toInt(),
+                totalValue = (row.getValue("CS23_TOTAL_VALUE") as Number).toLong(),
+            )
+        }
+        val characterNames = AndroidTestSeedData.characterStaticInfoList
+            .take(CUMULATIVE_CHARACTER_COUNT)
+            .associate { entity -> entity.characterPk to entity.characterName }
+        val expectedJoinValues = expectedStatusValues.mapKeys { (key) ->
+            CumulativeJoinKey(
+                characterPk = key.characterPk,
+                characterName = characterNames.getValue(key.characterPk),
+                statusType = key.statusType,
+            )
+        }
+        val actualJoinValues = cumulativeJoinResult.associate { row ->
+            CumulativeJoinKey(
+                characterPk = (row.getValue("CSI23_CHARACTER_PK") as Number).toInt(),
+                characterName = row.getValue("CSI23_CHARACTER_NAME") as String,
+                statusType = row.getValue("CS23J_STATUS_TYPE") as String,
+            ) to CumulativeStatusValue(
+                maxLevel = (row.getValue("CS23J_MAX_LEVEL") as Number).toInt(),
+                totalValue = (row.getValue("CS23J_TOTAL_VALUE") as Number).toLong(),
+            )
+        }
+        val expectedCharacterPks = AndroidTestSeedData.cumulativeCharacterPks()
+
+        assertEquals("CHARACTER_STATUS単体の累計件数が不正です。", 50, actualStatusValues.size)
+        assertEquals(
+            "CHARACTER_STATUS単体の累計が不正です。",
+            expectedStatusValues,
+            actualStatusValues
+        )
+        assertEquals("LEFT JOINの累計件数が不正です。", 50, actualJoinValues.size)
+        assertEquals("LEFT JOINの累計が不正です。", expectedJoinValues, actualJoinValues)
+        assertEquals(
+            "select CS23.CHARACTER_PK as CS23_CHARACTER_PK, " +
+                    "CS23.STATUS_TYPE as CS23_STATUS_TYPE, " +
+                    "max(CS23.LEVEL) as CS23_MAX_LEVEL, " +
+                    "sum(CS23.VALUE) as CS23_TOTAL_VALUE " +
+                    "from CHARACTER_STATUS CS23 " +
+                    "where CS23.UPDATE_METHOD = ? " +
+                    "group by CS23.CHARACTER_PK, CS23.STATUS_TYPE " +
+                    "having CS23.UPDATE_METHOD = ? " +
+                    "order by CS23.CHARACTER_PK asc nulls first, CS23.STATUS_TYPE asc nulls first",
+            cumulativeStatusQuery,
+        )
+        assertEquals(
+            listOf(CUMULATIVE_DATA_STEP, CUMULATIVE_DATA_STEP),
+            cumulativeStatusBindValues,
+        )
+        assertEquals(
+            "select CSI23.CHARACTER_PK as CSI23_CHARACTER_PK, " +
+                    "CSI23.CHARACTER_NAME as CSI23_CHARACTER_NAME, " +
+                    "CS23J.STATUS_TYPE as CS23J_STATUS_TYPE, " +
+                    "max(CS23J.LEVEL) as CS23J_MAX_LEVEL, " +
+                    "sum(CS23J.VALUE) as CS23J_TOTAL_VALUE " +
+                    "from CHARACTER_STATIC_INFO CSI23 " +
+                    "left join CHARACTER_STATUS CS23J on " +
+                    "CSI23.CHARACTER_PK = CS23J.CHARACTER_PK AND CS23J.UPDATE_METHOD = ? " +
+                    "where CSI23.CHARACTER_PK in (?, ?, ?, ?, ?) " +
+                    "group by CSI23.CHARACTER_PK, CSI23.CHARACTER_NAME, CS23J.STATUS_TYPE " +
+                    "having CS23J.UPDATE_METHOD = ? " +
+                    "order by CSI23.CHARACTER_PK asc nulls first, CS23J.STATUS_TYPE asc nulls first",
+            cumulativeJoinQuery,
+        )
+        assertEquals(
+            listOf(CUMULATIVE_DATA_STEP) + expectedCharacterPks + CUMULATIVE_DATA_STEP,
+            cumulativeJoinBindValues,
+        )
+    }
+
+    /**
+     * ## SeedData投入
+     * ### SeedDataが生成したEntityからInsertを構築し、9テーブルへ投入する
+     * @param databaseHelper DB操作ヘルパー
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun insertSeedData(databaseHelper: AndrOrmDatabaseHelper) {
+        val data = AndroidTestSeedData.createInsertData(testStep)
+        insertAll(databaseHelper, CharacterStaticInfoV1Insert::class, data.staticInfoEntities)
+        insertAll(databaseHelper, ItemMasterInsert::class, data.itemEntities)
+        insertAll(databaseHelper, SpellsMasterInsert::class, data.spellMasterEntities)
+        insertAll(databaseHelper, CharacterStatusV1Insert::class, data.statusEntities)
+        insertAll(databaseHelper, CharacterPossessionsInsert::class, data.possessionEntities)
+        insertAll(databaseHelper, CharacterEquipInsert::class, data.equipEntities)
+        insertAll(databaseHelper, WeaponMasteryInsert::class, data.weaponMasteryEntities)
+        insertAll(databaseHelper, MagicTypeMasteryInsert::class, data.magicMasteryEntities)
+        insertAll(databaseHelper, CharacterSpellsInsert::class, data.characterSpellEntities)
+    }
+
+    /**
+     * ## UPDATEデータ実行
+     * ### 各テーブルの対象行を一つのトランザクションで更新する
+     * @param databaseHelper DB操作ヘルパー
+     * @param testStep 更新元として記録するテストStep
+     * @return 全UPDATEの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun updateData(
+        databaseHelper: AndrOrmDatabaseHelper,
+        testStep: String,
+    ): Int {
+        val updateTime = LocalDateTime.now()
+        val data = AndroidTestSeedData.createUpdateData(testStep, updateTime)
+        val characterStatus = TableRef(CharacterStatusV1Update::class, "CS")
+        val updateList: List<Update<*>> = listOf(
+            Update(CharacterStaticInfoV1UpdateAudit::class).set {
+                CharacterStaticInfoV1UpdateAudit::updateMethod assign testStep
+                CharacterStaticInfoV1UpdateAudit::updateTime assign updateTime
+            }.where {
+                CharacterStaticInfoV1UpdateAudit::characterPk inList data.characterPks
+            },
+            Update(characterStatus).set {
+                CharacterStatusV1Update::value becomes
+                        characterStatus[CharacterStatusV1Update::value] + 5
+                CharacterStatusV1Update::updateMethod assign testStep
+                CharacterStatusV1Update::updateTime assign updateTime
+            }.where { characterStatus[CharacterStatusV1Update::statusType] eq "INT" },
+            Update(characterStatus).set {
+                CharacterStatusV1Update::value becomes
+                        characterStatus[CharacterStatusV1Update::value] + 3
+                CharacterStatusV1Update::updateMethod assign testStep
+                CharacterStatusV1Update::updateTime assign updateTime
+            }.where { characterStatus[CharacterStatusV1Update::statusType] eq "VIT" },
+            Update(ItemMasterUpdateEffect::class).set(data.itemEffect).where {
+                ItemMasterUpdateEffect::mainEffect eq "MP"
+                ItemMasterUpdateEffect::subEffect.isNull(Unit)
+            },
+            Update(ItemMasterUpdateEquip::class)
+                .set(data.itemEquip)
+                .where { ItemMasterUpdateEquip::itemType eq 6 },
+            Update(ItemMasterUpdateAudit::class).set {
+                ItemMasterUpdateAudit::updateMethod assign testStep
+                ItemMasterUpdateAudit::updateTime assign updateTime
+            }.where { ItemMasterUpdateAudit::itemPk inList data.additionalItemPks },
+            Select(SpellsMasterId::class).where {
+                SpellsMasterId::magicTypeId between 3 and 5
+                SpellsMasterId::subEffect isNull Unit
+            }.let { subQuery ->
+                Update(SpellsMasterUpdate::class).set {
+                    SpellsMasterUpdate::mainEffect assign "nihil"
+                    SpellsMasterUpdate::subEffect assign "all status"
+                    SpellsMasterUpdate::updateMethod assign testStep
+                    SpellsMasterUpdate::updateTime assign updateTime
+                }.where { SpellsMasterUpdate::magicId inSelect subQuery }
+            },
+            Update(SpellsMasterUpdate::class).set {
+                SpellsMasterUpdate::updateMethod assign testStep
+                SpellsMasterUpdate::updateTime assign updateTime
+            }.where { SpellsMasterUpdate::magicId inList data.additionalMagicIds },
+            Update(CharacterPossessionsUpdateAudit::class).set {
+                CharacterPossessionsUpdateAudit::updateMethod assign testStep
+                CharacterPossessionsUpdateAudit::updateTime assign updateTime
+            }.where {
+                CharacterPossessionsUpdateAudit::characterPk inList data.characterPks
+            },
+            run {
+                val itemPk = "11567"
+                val possessions = TableRef(CharacterPossessionsBase::class, "CPB")
+                Update(CharacterEquipUpdateAudit::class)
+                    .set {
+                        CharacterEquipUpdateAudit::itemPk becomes itemPk
+                        CharacterEquipUpdateAudit::updateMethod assign testStep
+                        CharacterEquipUpdateAudit::updateTime assign updateTime
+                    }.where {
+                        CharacterEquipUpdateAudit::characterPk inList data.characterPks
+                        CharacterEquipUpdateAudit::equipSlot eq 2
+                        exists(possessions) {
+                            possessions[CharacterPossessionsBase::itemPk] eq itemPk
+                        }
+                    }
+            },
+            Update(WeaponMasteryUpdateAudit::class).set {
+                WeaponMasteryUpdateAudit::updateMethod assign testStep
+                WeaponMasteryUpdateAudit::updateTime assign updateTime
+            }.where {
+                WeaponMasteryUpdateAudit::characterPk inList data.weaponMasteryCharacterPks
+            },
+            Update(MagicTypeMasteryUpdateAudit::class).set {
+                MagicTypeMasteryUpdateAudit::updateMethod assign testStep
+                MagicTypeMasteryUpdateAudit::updateTime assign updateTime
+            }.where {
+                MagicTypeMasteryUpdateAudit::characterPk inList data.magicTypeMasteryCharacterPks
+            },
+            Update(CharacterSpellsUpdateAudit::class).set {
+                CharacterSpellsUpdateAudit::updateMethod assign testStep
+                CharacterSpellsUpdateAudit::updateTime assign updateTime
+            }.where {
+                CharacterSpellsUpdateAudit::characterPk inList data.characterPks
+            },
+        )
+        return databaseHelper.transaction {
+            updateList.sumOf { update ->
+                databaseHelper.executeDml(update).also {
+                    Log.d(testStep, update.query)
+                    Log.d(testStep, update.bindValues.toString())
+                }
+            }
+        }
+    }
+
+    /**
+     * ## UPSERTデータ実行
+     * ### SeedDataが生成したEntityからUpsertを構築し、9テーブルへ投入する
+     * @param databaseHelper DB操作ヘルパー
+     * @param testStep 更新元として記録するテストStep
+     * @return 全UPSERTの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun upsertData(
+        databaseHelper: AndrOrmDatabaseHelper,
+        testStep: String,
+    ): Int {
+        val data = AndroidTestSeedData.createUpsertData(testStep, LocalDateTime.now())
+        return databaseHelper.transaction {
+            executeUpsertData(databaseHelper, data)
+        }
+    }
+
+    /**
+     * ## 全テーブルUPSERT実行
+     * ### 生成済みの9テーブル分のEntityを順番にUPSERTする
+     * @param databaseHelper DB操作ヘルパー
+     * @param data 9テーブル分のUPSERT Entity
+     * @return 全UPSERTの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun executeUpsertData(
+        databaseHelper: AndrOrmDatabaseHelper,
+        data: SeedUpsertData,
+    ): Int {
+        val upsertList = listOf(
+            Upsert(CharacterStaticInfoV1Upsert::class)
+                .addEntities(data.staticInfoEntities)
+                .onConflict {
+                    key(CharacterStaticInfoV1Upsert::characterPk)
+                }
+                .set {
+                    CharacterStaticInfoV1Upsert::userId assign excluded(CharacterStaticInfoV1Upsert::userId)
+                    CharacterStaticInfoV1Upsert::characterNo assign
+                            excluded(CharacterStaticInfoV1Upsert::characterNo)
+                    CharacterStaticInfoV1Upsert::characterName assign
+                            excluded(CharacterStaticInfoV1Upsert::characterName)
+                    CharacterStaticInfoV1Upsert::updateMethod assign
+                            excluded(CharacterStaticInfoV1Upsert::updateMethod)
+                    CharacterStaticInfoV1Upsert::updateTime assign
+                            excluded(CharacterStaticInfoV1Upsert::updateTime)
+                },
+            Upsert(ItemMasterUpsert::class)
+                .addEntities(data.itemEntities)
+                .onConflict {
+                    key(ItemMasterUpsert::itemPk)
+                }
+                .set {
+                    ItemMasterUpsert::itemType assign excluded(ItemMasterUpsert::itemType)
+                    ItemMasterUpsert::itemName assign excluded(ItemMasterUpsert::itemName)
+                    ItemMasterUpsert::mainEffect assign excluded(ItemMasterUpsert::mainEffect)
+                    ItemMasterUpsert::subEffect assign excluded(ItemMasterUpsert::subEffect)
+                    ItemMasterUpsert::equipableSlot assign excluded(ItemMasterUpsert::equipableSlot)
+                    ItemMasterUpsert::updateMethod assign excluded(ItemMasterUpsert::updateMethod)
+                    ItemMasterUpsert::updateTime assign excluded(ItemMasterUpsert::updateTime)
+                },
+            Upsert(SpellsMasterUpsert::class)
+                .addEntities(data.spellMasterEntities)
+                .onConflict {
+                    key(SpellsMasterUpsert::magicId)
+                }
+                .set {
+                    SpellsMasterUpsert::magicTypeId assign excluded(SpellsMasterUpsert::magicTypeId)
+                    SpellsMasterUpsert::magicName assign excluded(SpellsMasterUpsert::magicName)
+                    SpellsMasterUpsert::mainEffect assign excluded(SpellsMasterUpsert::mainEffect)
+                    SpellsMasterUpsert::subEffect assign excluded(SpellsMasterUpsert::subEffect)
+                    SpellsMasterUpsert::updateMethod assign excluded(SpellsMasterUpsert::updateMethod)
+                    SpellsMasterUpsert::updateTime assign excluded(SpellsMasterUpsert::updateTime)
+                },
+            Upsert(CharacterStatusV1Upsert::class)
+                .addEntities(data.statusEntities)
+                .onConflict {
+                    key(CharacterStatusV1Upsert::characterPk)
+                    key(CharacterStatusV1Upsert::statusType)
+                }
+                .set {
+                    CharacterStatusV1Upsert::value assign excluded(CharacterStatusV1Upsert::value)
+                    CharacterStatusV1Upsert::updateMethod assign excluded(CharacterStatusV1Upsert::updateMethod)
+                    CharacterStatusV1Upsert::updateTime assign excluded(CharacterStatusV1Upsert::updateTime)
+                },
+            Upsert(CharacterPossessionsUpsert::class)
+                .addEntities(data.possessionEntities)
+                .onConflict {
+                    key(CharacterPossessionsUpsert::characterPk)
+                    key(CharacterPossessionsUpsert::itemPk)
+                }
+                .set {
+                    CharacterPossessionsUpsert::itemStatus assign
+                            excluded(CharacterPossessionsUpsert::itemStatus)
+                    CharacterPossessionsUpsert::updateMethod assign
+                            excluded(CharacterPossessionsUpsert::updateMethod)
+                    CharacterPossessionsUpsert::updateTime assign
+                            excluded(CharacterPossessionsUpsert::updateTime)
+                },
+            Upsert(CharacterEquipUpsert::class)
+                .addEntities(data.equipEntities)
+                .onConflict {
+                    key(CharacterEquipUpsert::characterPk)
+                    key(CharacterEquipUpsert::equipSlot)
+                }
+                .set {
+                    CharacterEquipUpsert::itemPk assign excluded(CharacterEquipUpsert::itemPk)
+                    CharacterEquipUpsert::updateMethod assign excluded(CharacterEquipUpsert::updateMethod)
+                    CharacterEquipUpsert::updateTime assign excluded(CharacterEquipUpsert::updateTime)
+                },
+            Upsert(WeaponMasteryUpsert::class)
+                .addEntities(data.weaponMasteryEntities)
+                .onConflict {
+                    key(WeaponMasteryUpsert::characterPk)
+                    key(WeaponMasteryUpsert::weaponTypeId)
+                }
+                .set {
+                    WeaponMasteryUpsert::mastery assign excluded(WeaponMasteryUpsert::mastery)
+                    WeaponMasteryUpsert::updateMethod assign excluded(WeaponMasteryUpsert::updateMethod)
+                    WeaponMasteryUpsert::updateTime assign excluded(WeaponMasteryUpsert::updateTime)
+                },
+            Upsert(MagicTypeMasteryUpsert::class)
+                .addEntities(data.magicMasteryEntities)
+                .onConflict {
+                    key(MagicTypeMasteryUpsert::characterPk)
+                    key(MagicTypeMasteryUpsert::magicTypeMastery)
+                }
+                .set {
+                    MagicTypeMasteryUpsert::mastery assign excluded(MagicTypeMasteryUpsert::mastery)
+                    MagicTypeMasteryUpsert::updateMethod assign excluded(MagicTypeMasteryUpsert::updateMethod)
+                    MagicTypeMasteryUpsert::updateTime assign excluded(MagicTypeMasteryUpsert::updateTime)
+                },
+            Upsert(CharacterSpellsUpsert::class)
+                .addEntities(data.characterSpellEntities)
+                .onConflict {
+                    key(CharacterSpellsUpsert::characterPk)
+                    key(CharacterSpellsUpsert::magicId)
+                }
+                .set {
+                    CharacterSpellsUpsert::updateMethod assign excluded(CharacterSpellsUpsert::updateMethod)
+                    CharacterSpellsUpsert::updateTime assign excluded(CharacterSpellsUpsert::updateTime)
+                },
+        )
+        return databaseHelper.transaction {
+            upsertList.sumOf { upsert ->
+                databaseHelper.executeDml(upsert).also {
+                    Log.d(testStep, upsert.query)
+                    Log.d(testStep, upsert.bindValues.toString())
+                }
+            }
+        }
+    }
+
+    /**
+     * ## ABSERTデータ実行
+     * ### 装備データを複合競合キー付きでABSERTする
+     * @param databaseHelper DB操作ヘルパー
+     * @param testStep 作成元として記録するテストStep
+     * @return ABSERTの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun absertData(
+        databaseHelper: AndrOrmDatabaseHelper,
+        testStep: String,
+    ): Int {
+        val entities = AndroidTestSeedData.createAbsertData(testStep)
+        return databaseHelper.transaction {
+            entities.sumOf { entity ->
+                val absert =
+                    Absert(CharacterEquipAbsert::class)
+                        .onConflict {
+                            key(CharacterEquipAbsert::characterPk)
+                            key(CharacterEquipAbsert::equipSlot)
+                        }.addEntity(entity)
+                databaseHelper.executeDml(absert).also {
+                    Log.d(Companion.testStep, absert.query)
+                    Log.d(Companion.testStep, absert.bindValues.toString())
+                }
+            }
+        }
+    }
+
+    /**
+     * ## DELETEデータ実行
+     * ### 全対象テーブルから指定Stepで更新された行を削除する
+     * @param databaseHelper DB操作ヘルパー
+     * @param targetStep 削除対象の更新元Step
+     * @return 全DELETEの影響行数
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun deleteData(
+        databaseHelper: AndrOrmDatabaseHelper,
+        targetStep: String,
+    ): Long {
+        val deleteStatements = listOf(
+            Delete(CharacterEquipDelete::class).where {
+                CharacterEquipDelete::updateMethod eq targetStep
+            },
+            Delete(CharacterPossessionsDelete::class).where {
+                CharacterPossessionsDelete::updateMethod eq targetStep
+            },
+            Delete(CharacterSpellsDelete::class).where {
+                CharacterSpellsDelete::updateMethod eq targetStep
+            },
+            Delete(CharacterStaticInfoV1Delete::class).where {
+                CharacterStaticInfoV1Delete::updateMethod eq targetStep
+            },
+            Delete(CharacterStatusV1Delete::class).where {
+                CharacterStatusV1Delete::updateMethod eq targetStep
+            },
+            Delete(ItemMasterDelete::class).where {
+                ItemMasterDelete::updateMethod eq targetStep
+            },
+            Delete(MagicTypeMasteryDelete::class).where {
+                MagicTypeMasteryDelete::updateMethod eq targetStep
+            },
+            Delete(SpellsMasterDelete::class).where {
+                SpellsMasterDelete::updateMethod eq targetStep
+            },
+            Delete(WeaponMasteryDelete::class).where {
+                WeaponMasteryDelete::updateMethod eq targetStep
+            },
+        )
+        return databaseHelper.transaction {
+            deleteStatements.sumOf { delete ->
+                databaseHelper.executeDml(delete).also {
+                    Log.d(testStep, delete.query)
+                    Log.d(testStep, delete.bindValues.joinToString())
+                }
+            }
+        }.toLong()
+    }
+
+    /**
+     * ## Insert一括実行
+     * ### InsertEntityのリストをまとめて投入する
+     * @param databaseHelper DB操作ヘルパー
+     * @param entityClass InsertEntityクラス
+     * @param entities 投入Entityリスト
+     * @author Masahiro Inoue
+     * @since 2026-06-16
+     */
+    private fun <T : InsertEntity> insertAll(
+        databaseHelper: AndrOrmDatabaseHelper,
+        entityClass: KClass<out T>,
+        entities: List<T>,
+    ) {
+        val insert = Insert(entityClass)
+        insert.addEntities(entities)
+        databaseHelper.executeDml(insert)
+            .also {
+                Log.d(testStep, insert.query)
+                Log.d(testStep, insert.bindValues.toString())
+            }
+    }
+
+    /**
+     * ## Absert一括実行
+     * ### 結合済みEntity一覧を1つのAbsert文として実行する
+     * @param databaseHelper DB操作ヘルパー
+     * @param entityClass Absert対象Entityクラス
+     * @param entities 結合済みEntity一覧
+     * @param onConflict 競合判定キー定義
+     * @return 実登録件数
+     * @author Masahiro Inoue
+     * @since 2026-07-18
+     */
+    private fun <T : AbsertEntity> absertAll(
+        databaseHelper: AndrOrmDatabaseHelper,
+        entityClass: KClass<out T>,
+        entities: List<T>,
+        onConflict: OnConflictClauseBuilder<T>.() -> Unit,
+    ): Long = databaseHelper.executeDml(
+        Absert(entityClass).onConflict(onConflict).addEntities(entities),
+    ).toLong()
+
+    /**
+     * ## 累計期待値生成
+     * ### step23投入データからcharacterPk・statusType単位の最大levelとvalue合計を算出する
+     * @return 累計キー別の期待値
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    private fun expectedCumulativeStatusValues(): Map<CumulativeStatusKey, CumulativeStatusValue> =
+        cumulativeStatusData
+            .groupBy { entity -> CumulativeStatusKey(entity.characterPk, entity.statusType) }
+            .mapValues { (_, entities) ->
+                CumulativeStatusValue(
+                    maxLevel = entities.maxOf { entity -> entity.level },
+                    totalValue = entities.sumOf { entity -> entity.value.toLong() },
+                )
+            }
 
     /**
      * ## DB Helper 生成
@@ -969,211 +1678,6 @@ class AndrOrmDatabaseAndroidTest {
     }
 
     /**
-     * ## SAVEPOINT用投入データ生成
-     * ### 既存キー範囲と重複しない10件を各テーブル用に生成し、所持品の10件目だけ複合キーを1件目と重複させる
-     * @return savepoint前後に投入するInsertEntity一覧
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun createSavepointInsertData(): Step19InsertData {
-        val existingCharacterPks = AndroidTestSeedData.characterStaticInfoList
-            .take(SAVEPOINT_INSERT_COUNT)
-            .map { entity -> entity.characterPk }
-        val itemMasterList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            ItemMasterInsert(
-                itemPk = SAVEPOINT_ITEM_PK_BASE + index,
-                itemType = 100 + index,
-                itemName = "STEP19_ITEM_%02d".format(index),
-                mainEffect = "STEP19_MAIN_$index",
-                subEffect = if (index % 2 == 0) "STEP19_SUB_$index" else null,
-                equipableSlot = 2 + (index - 1) % 4,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val magicTypeMasteryList = existingCharacterPks.mapIndexed { index, characterPk ->
-            MagicTypeMasteryInsert(
-                characterPk = characterPk,
-                magicTypeMastery = 100 + index,
-                mastery = 10 + index,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val spellsMasterList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            SpellsMasterInsert(
-                magicId = SAVEPOINT_MAGIC_ID_BASE + index,
-                magicTypeId = 100 + index,
-                magicName = "STEP19_MAGIC_%02d".format(index),
-                mainEffect = "STEP19_MAGIC_MAIN_$index",
-                subEffect = if (index % 2 == 0) "STEP19_MAGIC_SUB_$index" else null,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val characterEquipList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            CharacterEquipInsert(
-                characterPk = SAVEPOINT_CHARACTER_PK_BASE + index,
-                equipSlot = 2,
-                itemPk = SAVEPOINT_ITEM_PK_BASE + index,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val characterSpellsList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            CharacterSpellsInsert(
-                characterPk = SAVEPOINT_CHARACTER_PK_BASE + index,
-                magicId = SAVEPOINT_MAGIC_ID_BASE + index,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val characterStaticInfoList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            CharacterStaticInfoV2Insert(
-                characterPk = SAVEPOINT_CHARACTER_PK_BASE + index,
-                userId = "STEP19_USER_%02d".format(index),
-                characterNo = 1,
-                characterName = "STEP19_CHARACTER_%02d".format(index),
-                createMethod = testStep,
-                mainElement = 1 + (index - 1) % 6,
-                updateMethod = testStep,
-            )
-        }
-        val characterStatusList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            CharacterStatusInsert(
-                characterPk = SAVEPOINT_CHARACTER_PK_BASE + index,
-                statusType = "STEP19_STATUS",
-                value = 1_000 + index,
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        val characterPossessionsList = (1..SAVEPOINT_INSERT_COUNT).map { index ->
-            val uniqueKeyIndex = if (index == SAVEPOINT_INSERT_COUNT) 1 else index
-            CharacterPossessionsInsert(
-                characterPk = SAVEPOINT_CHARACTER_PK_BASE + uniqueKeyIndex,
-                itemPk = SAVEPOINT_ITEM_PK_BASE + uniqueKeyIndex,
-                itemStatus = if (index == SAVEPOINT_INSERT_COUNT) {
-                    "UNIQUE_KEY_CONFLICT"
-                } else {
-                    "STEP19_HOLD_$index"
-                },
-                createMethod = testStep,
-                updateMethod = testStep,
-            )
-        }
-        return Step19InsertData(
-            itemMasterList = itemMasterList,
-            magicTypeMasteryList = magicTypeMasteryList,
-            spellsMasterList = spellsMasterList,
-            characterEquipList = characterEquipList,
-            characterSpellsList = characterSpellsList,
-            characterStaticInfoList = characterStaticInfoList,
-            characterStatusList = characterStatusList,
-            characterPossessionsList = characterPossessionsList,
-        )
-    }
-
-    /**
-     * ## step21用Absertデータ生成
-     * ### step03由来とstep19由来のEntityをテーブル別に結合する
-     * @return テーブル別の一括Absert対象
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun createStep21AbsertData(): Step21AbsertData {
-        val savepointData = createSavepointInsertData()
-        return Step21AbsertData(
-            characterStaticInfoList = AndroidTestSeedData.characterStaticInfoList.map { entity ->
-                CharacterStaticInfoV2Insert(
-                    characterPk = entity.characterPk,
-                    userId = entity.userId,
-                    characterNo = entity.characterNo,
-                    characterName = entity.characterName,
-                    createMethod = "step03",
-                    mainElement = 1,
-                    updateMethod = "step03",
-                )
-            } + savepointData.characterStaticInfoList,
-            itemMasterList = AndroidTestSeedData.itemMasterList.map { entity ->
-                ItemMasterInsert(
-                    itemPk = entity.itemPk,
-                    itemType = entity.itemType,
-                    itemName = entity.itemName,
-                    mainEffect = entity.mainEffect,
-                    subEffect = entity.subEffect,
-                    equipableSlot = entity.equipableSlot,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.itemMasterList,
-            spellsMasterList = AndroidTestSeedData.spellsMasterList.map { entity ->
-                SpellsMasterInsert(
-                    magicId = entity.magicId,
-                    magicTypeId = entity.magicTypeId,
-                    magicName = entity.magicName,
-                    mainEffect = entity.mainEffect,
-                    subEffect = entity.subEffect,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.spellsMasterList,
-            characterStatusList = AndroidTestSeedData.characterStatusList.map { entity ->
-                CharacterStatusInsert(
-                    characterPk = entity.characterPk,
-                    statusType = entity.statusType,
-                    value = entity.value,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.characterStatusList,
-            characterPossessionsList = AndroidTestSeedData.characterPossessionsList.map { entity ->
-                CharacterPossessionsInsert(
-                    characterPk = entity.characterPk,
-                    itemPk = entity.itemPk,
-                    itemStatus = entity.itemStatus,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.characterPossessionsList,
-            characterEquipList = AndroidTestSeedData.characterEquipList.map { entity ->
-                CharacterEquipInsert(
-                    characterPk = entity.characterPk,
-                    equipSlot = entity.equipSlot,
-                    itemPk = entity.itemPk!!,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.characterEquipList,
-            weaponMasteryList = AndroidTestSeedData.weaponMasteryList.map { entity ->
-                WeaponMasteryInsert(
-                    characterPk = entity.characterPk,
-                    weaponTypeId = entity.weaponTypeId,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            },
-            magicTypeMasteryList = AndroidTestSeedData.magicTypeMasteryList.map { entity ->
-                MagicTypeMasteryInsert(
-                    characterPk = entity.characterPk,
-                    magicTypeMastery = entity.magicTypeMastery,
-                    mastery = entity.mastery,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.magicTypeMasteryList,
-            characterSpellsList = AndroidTestSeedData.characterSpellsList.map { entity ->
-                CharacterSpellsInsert(
-                    characterPk = entity.characterPk,
-                    magicId = entity.magicId,
-                    createMethod = "step03",
-                    updateMethod = "step03",
-                )
-            } + savepointData.characterSpellsList,
-        )
-    }
-
-    /**
      * ## Absert競合キー定義
      * ### step21対象全テーブルの競合判定カラムを返す
      * @return テーブル名と競合判定カラム名の対応
@@ -1184,7 +1688,7 @@ class AndrOrmDatabaseAndroidTest {
         CharacterStaticInfoV2::class.getTableName() to listOf("CHARACTER_PK"),
         ItemMaster::class.getTableName() to listOf("ITEM_PK"),
         SpellsMaster::class.getTableName() to listOf("MAGIC_ID"),
-        CharacterStatus::class.getTableName() to listOf("CHARACTER_PK", "STATUS_TYPE"),
+        CharacterStatusV2::class.getTableName() to listOf("CHARACTER_PK", "LEVEL", "STATUS_TYPE"),
         CharacterPossessions::class.getTableName() to listOf("CHARACTER_PK", "ITEM_PK"),
         CharacterEquip::class.getTableName() to listOf("CHARACTER_PK", "EQUIP_SLOT"),
         WeaponMastery::class.getTableName() to listOf("CHARACTER_PK", "WEAPON_TYPE_ID"),
@@ -1212,8 +1716,8 @@ class AndrOrmDatabaseAndroidTest {
         SpellsMaster::class.getTableName() to data.spellsMasterList.map { entity ->
             listOf(entity.magicId.toString())
         }.toSet(),
-        CharacterStatus::class.getTableName() to data.characterStatusList.map { entity ->
-            listOf(entity.characterPk.toString(), entity.statusType)
+        CharacterStatusV2::class.getTableName() to data.characterStatusList.map { entity ->
+            listOf(entity.characterPk.toString(), entity.level.toString(), entity.statusType)
         }.toSet(),
         CharacterPossessions::class.getTableName() to data.characterPossessionsList.map { entity ->
             listOf(entity.characterPk.toString(), entity.itemPk.toString())
@@ -1275,765 +1779,16 @@ class AndrOrmDatabaseAndroidTest {
         "select * from $tableName",
         emptyArray<String>(),
     ).use { cursor ->
-        val keyColumnIndexes = keyColumns.map { columnName -> cursor.getColumnIndexOrThrow(columnName) }
+        val keyColumnIndexes =
+            keyColumns.map { columnName -> cursor.getColumnIndexOrThrow(columnName) }
         buildMap {
             while (cursor.moveToNext()) {
                 val key = keyColumnIndexes.map { columnIndex -> cursor.getString(columnIndex) }
-                val row = (0 until cursor.columnCount).map { columnIndex -> cursor.getString(columnIndex) }
+                val row =
+                    (0 until cursor.columnCount).map { columnIndex -> cursor.getString(columnIndex) }
                 put(key, row)
             }
         }
-    }
-
-    /**
-     * ## Absert一括実行
-     * ### 結合済みEntity一覧を1つのAbsert文として実行する
-     * @param databaseHelper DB Helper
-     * @param entityClass Absert対象Entityクラス
-     * @param entities 結合済みEntity一覧
-     * @param onConflict 競合判定キー定義
-     * @return 実登録件数
-     * @author Masahiro Inoue
-     * @since 2026-07-18
-     */
-    private fun <T : AbsertEntity> absertAll(
-        databaseHelper: AndrOrmDatabaseHelper,
-        entityClass: KClass<out T>,
-        entities: List<T>,
-        onConflict: OnConflictClauseBuilder<T>.() -> Unit,
-    ): Long {
-        val absert = Absert(entityClass).onConflict(onConflict).addEntities(entities)
-        return databaseHelper.executeDml(absert).toLong()
-    }
-
-    /**
-     * ## SeedData 投入
-     * ### テーブル別に InsertEntity へ変換して投入する
-     * @param databaseHelper DB Helper
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun insertSeedData(
-        databaseHelper: AndrOrmDatabaseHelper,
-    ) {
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = CharacterStaticInfoV1Insert::class,
-            entities = AndroidTestSeedData.characterStaticInfoList.map { entity ->
-                CharacterStaticInfoV1Insert(
-                    characterPk = entity.characterPk,
-                    userId = entity.userId,
-                    characterNo = entity.characterNo,
-                    characterName = entity.characterName,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = ItemMasterInsert::class,
-            entities = AndroidTestSeedData.itemMasterList.map { entity ->
-                ItemMasterInsert(
-                    itemPk = entity.itemPk,
-                    itemType = entity.itemType,
-                    itemName = entity.itemName,
-                    mainEffect = entity.mainEffect,
-                    subEffect = entity.subEffect,
-                    equipableSlot = entity.equipableSlot,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = SpellsMasterInsert::class,
-            entities = AndroidTestSeedData.spellsMasterList.map { entity ->
-                SpellsMasterInsert(
-                    magicId = entity.magicId,
-                    magicTypeId = entity.magicTypeId,
-                    magicName = entity.magicName,
-                    mainEffect = entity.mainEffect,
-                    subEffect = entity.subEffect,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = CharacterStatusInsert::class,
-            entities = AndroidTestSeedData.characterStatusList.map { entity ->
-                CharacterStatusInsert(
-                    characterPk = entity.characterPk,
-                    statusType = entity.statusType,
-                    value = entity.value,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = CharacterPossessionsInsert::class,
-            entities = AndroidTestSeedData.characterPossessionsList.map { entity ->
-                CharacterPossessionsInsert(
-                    characterPk = entity.characterPk,
-                    itemPk = entity.itemPk,
-                    itemStatus = entity.itemStatus,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = CharacterEquipInsert::class,
-            entities = AndroidTestSeedData.characterEquipList.map { entity ->
-                CharacterEquipInsert(
-                    characterPk = entity.characterPk,
-                    equipSlot = entity.equipSlot,
-                    itemPk = entity.itemPk!!,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = WeaponMasteryInsert::class,
-            entities = AndroidTestSeedData.weaponMasteryList.map { entity ->
-                WeaponMasteryInsert(
-                    characterPk = entity.characterPk,
-                    weaponTypeId = entity.weaponTypeId,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = MagicTypeMasteryInsert::class,
-            entities = AndroidTestSeedData.magicTypeMasteryList.map { entity ->
-                MagicTypeMasteryInsert(
-                    characterPk = entity.characterPk,
-                    magicTypeMastery = entity.magicTypeMastery,
-                    mastery = entity.mastery,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-
-        insertAll(
-            databaseHelper = databaseHelper,
-            entityClass = CharacterSpellsInsert::class,
-            entities = AndroidTestSeedData.characterSpellsList.map { entity ->
-                CharacterSpellsInsert(
-                    characterPk = entity.characterPk,
-                    magicId = entity.magicId,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                )
-            },
-        )
-    }
-
-    /**
-     * ## 更新対象セグメント取得
-     * ### リストを30%単位で分割し、指定位置の対象データを取得する
-     * @param segmentIndex 0: step05、1: step07
-     * @return 指定位置に対応する更新対象リスト
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun <T> List<T>.targetSegment(segmentIndex: Int): List<T> {
-        val targetCount = size * UPDATE_TARGET_PERCENT / 100
-        return drop(targetCount * segmentIndex).take(targetCount)
-    }
-
-    /**
-     * ## ITEM_MASTER更新対象取得
-     * @return UPDATE対象とするアイテム一覧
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun itemMasterUpdateTargets(): List<ItemMaster> {
-        val targetCount = AndroidTestSeedData.itemMasterList.size * UPDATE_TARGET_PERCENT / 100
-        val existingTargets = AndroidTestSeedData.itemMasterList.filter { entity ->
-            (entity.mainEffect == "MP" && entity.subEffect == null) || entity.itemType == 6
-        }
-        val existingItemPks = existingTargets.map { entity -> entity.itemPk }.toSet()
-        val additionalTargets =
-            AndroidTestSeedData.itemMasterList.filter { entity -> entity.itemPk !in existingItemPks }
-                .take((targetCount - existingTargets.size).coerceAtLeast(0))
-        return existingTargets + additionalTargets
-    }
-
-    /**
-     * ## SPELLS_MASTER更新対象取得
-     * @return UPDATE対象とする魔法一覧
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun spellsMasterUpdateTargets(): List<SpellsMaster> {
-        val targetCount = AndroidTestSeedData.spellsMasterList.size * UPDATE_TARGET_PERCENT / 100
-        val existingTargets = AndroidTestSeedData.spellsMasterList.filter { entity ->
-            entity.magicTypeId in 3..5 && entity.subEffect == null
-        }
-        val existingMagicIds = existingTargets.map { entity -> entity.magicId }.toSet()
-        val additionalTargets =
-            AndroidTestSeedData.spellsMasterList.filter { entity -> entity.magicId !in existingMagicIds }
-                .take((targetCount - existingTargets.size).coerceAtLeast(0))
-        return existingTargets + additionalTargets
-    }
-
-    /**
-     * ## UPDATEデータ実行
-     * ### 各テーブルの対象行を一つのトランザクションで更新する
-     * @param databaseHelper DB操作ヘルパー
-     * @param testStep 更新元として記録するテストStep
-     * @return 全UPDATEの影響行数
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun updateData(
-        databaseHelper: AndrOrmDatabaseHelper,
-        testStep: String,
-    ): Int {
-        val updateTime = LocalDateTime.now()
-        val updateCharacterPks =
-            AndroidTestSeedData.characterStaticInfoList.targetSegment(segmentIndex = 0)
-                .map { entity -> entity.characterPk }
-        val updateWeaponMasteryCharacterPks =
-            AndroidTestSeedData.weaponMasteryList.targetSegment(segmentIndex = 0)
-                .map { entity -> entity.characterPk }
-        val updateMagicTypeMasteryCharacterPks =
-            AndroidTestSeedData.magicTypeMasteryList.targetSegment(segmentIndex = 0)
-                .map { entity -> entity.characterPk }
-
-        val updateCharacterStaticInfo = Update(CharacterStaticInfoV1UpdateAudit::class).set {
-            CharacterStaticInfoV1UpdateAudit::updateMethod assign testStep
-            CharacterStaticInfoV1UpdateAudit::updateTime assign updateTime
-        }.where {
-            CharacterStaticInfoV1UpdateAudit::characterPk inList updateCharacterPks
-        }
-
-        val charStatus = TableRef(CharacterStatusUpdate::class, "CS")
-        val updateStr = Update(charStatus).set {
-            CharacterStatusUpdate::value becomes charStatus[CharacterStatusUpdate::value] + 10
-            CharacterStatusUpdate::updateMethod assign testStep
-            CharacterStatusUpdate::updateTime assign updateTime
-        }.where { charStatus[CharacterStatusUpdate::statusType] eq "STR" }
-        val updateInt = Update(charStatus).set {
-            CharacterStatusUpdate::value becomes charStatus[CharacterStatusUpdate::value] + 5
-            CharacterStatusUpdate::updateMethod assign testStep
-            CharacterStatusUpdate::updateTime assign updateTime
-        }.where { charStatus[CharacterStatusUpdate::statusType] eq "INT" }
-        val updateVit = Update(charStatus).set {
-            CharacterStatusUpdate::value becomes charStatus[CharacterStatusUpdate::value] + 3
-            CharacterStatusUpdate::updateMethod assign testStep
-            CharacterStatusUpdate::updateTime assign updateTime
-        }.where { charStatus[CharacterStatusUpdate::statusType] eq "VIT" }
-
-        val setItemMEff = ItemMasterUpdateEffect(
-            mainEffect = "STR",
-            subEffect = "HP",
-            updateMethod = testStep,
-            updateTime = updateTime,
-        )
-        val updateItemEffect = Update(ItemMasterUpdateEffect::class).set(setItemMEff).where {
-            ItemMasterUpdateEffect::mainEffect eq "MP"
-            ItemMasterUpdateEffect::subEffect.isNull(Unit)
-        }
-        val setItemMEqu = ItemMasterUpdateEquip(
-            itemType = 3,
-            equipableSlot = 4,
-            updateMethod = testStep,
-            updateTime = updateTime,
-        )
-        val updateItemEquip = Update(ItemMasterUpdateEquip::class).set(setItemMEqu)
-            .where { ItemMasterUpdateEquip::itemType eq 6 }
-        val existingUpdateItemPks = AndroidTestSeedData.itemMasterList.filter { entity ->
-            (entity.mainEffect == "MP" && entity.subEffect == null) || entity.itemType == 6
-        }.map { entity -> entity.itemPk }.toSet()
-        val additionalUpdateItemPks =
-            itemMasterUpdateTargets().filter { entity -> entity.itemPk !in existingUpdateItemPks }
-                .map { entity -> entity.itemPk }
-        val updateAdditionalItems = Update(ItemMasterUpdateAudit::class).set {
-            ItemMasterUpdateAudit::updateMethod assign testStep
-            ItemMasterUpdateAudit::updateTime assign updateTime
-        }.where { ItemMasterUpdateAudit::itemPk inList additionalUpdateItemPks }
-
-        val selectSpell = Select(SpellsMasterId::class).where {
-            SpellsMasterId::magicTypeId between 3 and 5
-            SpellsMasterId::subEffect isNull Unit
-        }
-        val updateSpells = Update(SpellsMasterUpdate::class).set {
-            SpellsMasterUpdate::mainEffect assign "nihil"
-            SpellsMasterUpdate::subEffect assign "all status"
-            SpellsMasterUpdate::updateMethod assign testStep
-            SpellsMasterUpdate::updateTime assign updateTime
-        }.where { SpellsMasterUpdate::magicId inSelect selectSpell }
-        val existingUpdateMagicIds = AndroidTestSeedData.spellsMasterList.filter { entity ->
-            entity.magicTypeId in 3..5 && entity.subEffect == null
-        }.map { entity -> entity.magicId }.toSet()
-        val additionalUpdateMagicIds =
-            spellsMasterUpdateTargets().filter { entity -> entity.magicId !in existingUpdateMagicIds }
-                .map { entity -> entity.magicId }
-        val updateAdditionalSpells = Update(SpellsMasterUpdate::class).set {
-            SpellsMasterUpdate::updateMethod assign testStep
-            SpellsMasterUpdate::updateTime assign updateTime
-        }.where { SpellsMasterUpdate::magicId inList additionalUpdateMagicIds }
-
-        val updateCharacterPossessions = Update(CharacterPossessionsUpdateAudit::class).set {
-            CharacterPossessionsUpdateAudit::updateMethod assign testStep
-            CharacterPossessionsUpdateAudit::updateTime assign updateTime
-        }.where {
-            CharacterPossessionsUpdateAudit::characterPk inList updateCharacterPks
-        }
-        val setItem = "11567"
-        val cbb = TableRef(CharacterPossessionsBase::class, "CPB")
-        val updateCharacterEquip =
-            Update(CharacterEquipUpdateAudit::class)
-                .set {
-                    CharacterEquipUpdateAudit::itemPk becomes setItem
-                    CharacterEquipUpdateAudit::updateMethod assign testStep
-                    CharacterEquipUpdateAudit::updateTime assign updateTime
-                }.where {
-                    CharacterEquipUpdateAudit::characterPk inList updateCharacterPks
-                    CharacterEquipUpdateAudit::equipSlot eq 2
-                    exists(cbb) {
-                        cbb[CharacterPossessionsBase::itemPk] eq setItem
-                    }
-                }
-        val updateWeaponMastery = Update(WeaponMasteryUpdateAudit::class).set {
-            WeaponMasteryUpdateAudit::updateMethod assign testStep
-            WeaponMasteryUpdateAudit::updateTime assign updateTime
-        }.where {
-            WeaponMasteryUpdateAudit::characterPk inList updateWeaponMasteryCharacterPks
-        }
-        val updateMagicTypeMastery = Update(MagicTypeMasteryUpdateAudit::class).set {
-            MagicTypeMasteryUpdateAudit::updateMethod assign testStep
-            MagicTypeMasteryUpdateAudit::updateTime assign updateTime
-        }.where {
-            MagicTypeMasteryUpdateAudit::characterPk inList updateMagicTypeMasteryCharacterPks
-        }
-        val updateCharacterSpells = Update(CharacterSpellsUpdateAudit::class).set {
-            CharacterSpellsUpdateAudit::updateMethod assign testStep
-            CharacterSpellsUpdateAudit::updateTime assign updateTime
-        }.where {
-            CharacterSpellsUpdateAudit::characterPk inList updateCharacterPks
-        }
-
-        return databaseHelper.transaction {
-            var count = 0
-            count += databaseHelper.executeDml(updateCharacterStaticInfo)
-            count += databaseHelper.executeDml(updateStr)
-            count += databaseHelper.executeDml(updateInt)
-            count += databaseHelper.executeDml(updateVit)
-            count += databaseHelper.executeDml(updateItemEffect)
-            count += databaseHelper.executeDml(updateItemEquip)
-            count += databaseHelper.executeDml(updateAdditionalItems)
-            count += databaseHelper.executeDml(updateSpells)
-            count += databaseHelper.executeDml(updateAdditionalSpells)
-            count += databaseHelper.executeDml(updateCharacterPossessions)
-            count += databaseHelper.executeDml(updateCharacterEquip)
-            count += databaseHelper.executeDml(updateWeaponMastery)
-            count += databaseHelper.executeDml(updateMagicTypeMastery)
-            count += databaseHelper.executeDml(updateCharacterSpells)
-            count
-        }
-    }
-
-    /**
-     * ## Upsert 分割実行
-     * ### SQLite のバインド変数上限を超えない件数に分割して実行する
-     * @param databaseHelper DB操作ヘルパー
-     * @param entityClass Upsert対象Entityクラス
-     * @param entities 登録するEntity一覧
-     * @param onConflict 競合キー設定
-     * @param set 競合時の更新設定
-     * @return 全バッチの影響行数
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun <T : UpsertEntity> executeUpsertInBatches(
-        databaseHelper: AndrOrmDatabaseHelper,
-        entityClass: KClass<out T>,
-        entities: List<T>,
-        onConflict: OnConflictClauseBuilder<T>.() -> Unit,
-        set: UpsertSetClauseBuilder<T>.() -> Unit,
-    ): Int {
-        var count = 0
-        entities.chunked(UPSERT_BATCH_SIZE).forEach { batch ->
-            val upsert = Upsert(entityClass).onConflict(onConflict).set(set).addEntities(batch)
-            count += databaseHelper.executeDml(upsert)
-        }
-        return count
-    }
-
-    /**
-     * ## UPSERTデータ実行
-     * ### 各テーブルの対象データを一つのトランザクションでUPSERTする
-     * @param databaseHelper DB操作ヘルパー
-     * @return 全UPSERTの影響行数
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun upsertData(
-        databaseHelper: AndrOrmDatabaseHelper,
-    ): Int {
-        val updateTime = LocalDateTime.now()
-        val upsertCharacterPks =
-            AndroidTestSeedData.characterStaticInfoList.targetSegment(segmentIndex = 1)
-                .map { entity -> entity.characterPk }.toSet()
-        val updatedItemPks = itemMasterUpdateTargets().map { entity -> entity.itemPk }.toSet()
-        val upsertItemTargets =
-            AndroidTestSeedData.itemMasterList.filter { entity -> entity.itemPk !in updatedItemPks }
-                .take(AndroidTestSeedData.itemMasterList.size * UPDATE_TARGET_PERCENT / 100)
-        val updatedMagicIds = spellsMasterUpdateTargets().map { entity -> entity.magicId }.toSet()
-        val upsertSpellsMasterTargets =
-            AndroidTestSeedData.spellsMasterList.filter { entity -> entity.magicId !in updatedMagicIds }
-                .take(AndroidTestSeedData.spellsMasterList.size * UPDATE_TARGET_PERCENT / 100)
-        val upsertStatusTypes = setOf("HP", "MP", "SP")
-
-        val characterStaticInfoList =
-            AndroidTestSeedData.characterStaticInfoList.filter { entity -> entity.characterPk in upsertCharacterPks }
-                .map { entity ->
-                    CharacterStaticInfoV1Upsert(
-                        characterPk = entity.characterPk,
-                        userId = entity.userId,
-                        characterNo = entity.characterNo,
-                        characterName = entity.characterName,
-                        createMethod = testStep,
-                        updateMethod = testStep,
-                        updateTime = updateTime,
-                    )
-                }
-        val itemMasterList = upsertItemTargets.map { entity ->
-            ItemMasterUpsert(
-                itemPk = entity.itemPk,
-                itemType = entity.itemType,
-                itemName = entity.itemName,
-                mainEffect = entity.mainEffect,
-                subEffect = entity.subEffect,
-                equipableSlot = entity.equipableSlot,
-                createMethod = testStep,
-                updateMethod = testStep,
-                updateTime = updateTime,
-            )
-        }
-        val spellsMasterList = upsertSpellsMasterTargets.map { entity ->
-            SpellsMasterUpsert(
-                magicId = entity.magicId,
-                magicTypeId = entity.magicTypeId,
-                magicName = entity.magicName,
-                mainEffect = entity.mainEffect,
-                subEffect = entity.subEffect,
-                createMethod = testStep,
-                updateMethod = testStep,
-                updateTime = updateTime,
-            )
-        }
-        val characterStatusList =
-            AndroidTestSeedData.characterStatusList.filter { entity -> entity.statusType in upsertStatusTypes }
-                .map { entity ->
-                    CharacterStatusUpsert(
-                        characterPk = entity.characterPk,
-                        statusType = entity.statusType,
-                        value = entity.value,
-                        createMethod = testStep,
-                        updateMethod = testStep,
-                        updateTime = updateTime,
-                    )
-                }
-        val characterPossessionsList =
-            AndroidTestSeedData.characterPossessionsList.filter { entity -> entity.characterPk in upsertCharacterPks }
-                .map { entity ->
-                    CharacterPossessionsUpsert(
-                        characterPk = entity.characterPk,
-                        itemPk = entity.itemPk,
-                        itemStatus = entity.itemStatus,
-                        createMethod = testStep,
-                        updateMethod = testStep,
-                        updateTime = updateTime,
-                    )
-                }
-        val characterEquipList =
-            AndroidTestSeedData.characterEquipList.filter { entity -> entity.characterPk in upsertCharacterPks }
-                .map { entity ->
-                    CharacterEquipUpsert(
-                        characterPk = entity.characterPk,
-                        equipSlot = entity.equipSlot,
-                        itemPk = entity.itemPk,
-                        createMethod = testStep,
-                        updateMethod = testStep,
-                        updateTime = updateTime,
-                    )
-                }
-        val weaponMasteryList =
-            AndroidTestSeedData.weaponMasteryList.targetSegment(segmentIndex = 1).map { entity ->
-                WeaponMasteryUpsert(
-                    characterPk = entity.characterPk,
-                    weaponTypeId = entity.weaponTypeId,
-                    mastery = entity.mastery,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                    updateTime = updateTime,
-                )
-            }
-        val magicTypeMasteryList =
-            AndroidTestSeedData.magicTypeMasteryList.targetSegment(segmentIndex = 1).map { entity ->
-                MagicTypeMasteryUpsert(
-                    characterPk = entity.characterPk,
-                    magicTypeMastery = entity.magicTypeMastery,
-                    mastery = entity.mastery,
-                    createMethod = testStep,
-                    updateMethod = testStep,
-                    updateTime = updateTime,
-                )
-            }
-        val characterSpellsList =
-            AndroidTestSeedData.characterSpellsList.filter { entity -> entity.characterPk in upsertCharacterPks }
-                .map { entity ->
-                    CharacterSpellsUpsert(
-                        characterPk = entity.characterPk,
-                        magicId = entity.magicId,
-                        createMethod = testStep,
-                        updateMethod = testStep,
-                        updateTime = updateTime,
-                    )
-                }
-
-        return databaseHelper.transaction {
-            var count = 0
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = CharacterStaticInfoV1Upsert::class,
-                entities = characterStaticInfoList,
-                onConflict = {
-                    key(CharacterStaticInfoV1Upsert::characterPk)
-                },
-                set = {
-                    CharacterStaticInfoV1Upsert::userId assign excluded(CharacterStaticInfoV1Upsert::userId)
-                    CharacterStaticInfoV1Upsert::characterNo assign excluded(
-                        CharacterStaticInfoV1Upsert::characterNo
-                    )
-                    CharacterStaticInfoV1Upsert::characterName assign excluded(
-                        CharacterStaticInfoV1Upsert::characterName
-                    )
-                    CharacterStaticInfoV1Upsert::updateMethod assign excluded(
-                        CharacterStaticInfoV1Upsert::updateMethod
-                    )
-                    CharacterStaticInfoV1Upsert::updateTime assign excluded(
-                        CharacterStaticInfoV1Upsert::updateTime
-                    )
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = ItemMasterUpsert::class,
-                entities = itemMasterList,
-                onConflict = {
-                    key(ItemMasterUpsert::itemPk)
-                },
-                set = {
-                    ItemMasterUpsert::itemType assign excluded(ItemMasterUpsert::itemType)
-                    ItemMasterUpsert::itemName assign excluded(ItemMasterUpsert::itemName)
-                    ItemMasterUpsert::mainEffect assign excluded(ItemMasterUpsert::mainEffect)
-                    ItemMasterUpsert::subEffect assign excluded(ItemMasterUpsert::subEffect)
-                    ItemMasterUpsert::equipableSlot assign excluded(ItemMasterUpsert::equipableSlot)
-                    ItemMasterUpsert::updateMethod assign excluded(ItemMasterUpsert::updateMethod)
-                    ItemMasterUpsert::updateTime assign excluded(ItemMasterUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = SpellsMasterUpsert::class,
-                entities = spellsMasterList,
-                onConflict = {
-                    key(SpellsMasterUpsert::magicId)
-                },
-                set = {
-                    SpellsMasterUpsert::magicTypeId assign excluded(SpellsMasterUpsert::magicTypeId)
-                    SpellsMasterUpsert::magicName assign excluded(SpellsMasterUpsert::magicName)
-                    SpellsMasterUpsert::mainEffect assign excluded(SpellsMasterUpsert::mainEffect)
-                    SpellsMasterUpsert::subEffect assign excluded(SpellsMasterUpsert::subEffect)
-                    SpellsMasterUpsert::updateMethod assign excluded(SpellsMasterUpsert::updateMethod)
-                    SpellsMasterUpsert::updateTime assign excluded(SpellsMasterUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = CharacterStatusUpsert::class,
-                entities = characterStatusList,
-                onConflict = {
-                    key(CharacterStatusUpsert::characterPk)
-                    key(CharacterStatusUpsert::statusType)
-                },
-                set = {
-                    CharacterStatusUpsert::value assign excluded(CharacterStatusUpsert::value)
-                    CharacterStatusUpsert::updateMethod assign excluded(CharacterStatusUpsert::updateMethod)
-                    CharacterStatusUpsert::updateTime assign excluded(CharacterStatusUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = CharacterPossessionsUpsert::class,
-                entities = characterPossessionsList,
-                onConflict = {
-                    key(CharacterPossessionsUpsert::characterPk)
-                    key(CharacterPossessionsUpsert::itemPk)
-                },
-                set = {
-                    CharacterPossessionsUpsert::itemStatus assign excluded(
-                        CharacterPossessionsUpsert::itemStatus
-                    )
-                    CharacterPossessionsUpsert::updateMethod assign excluded(
-                        CharacterPossessionsUpsert::updateMethod
-                    )
-                    CharacterPossessionsUpsert::updateTime assign excluded(
-                        CharacterPossessionsUpsert::updateTime
-                    )
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = CharacterEquipUpsert::class,
-                entities = characterEquipList,
-                onConflict = {
-                    key(CharacterEquipUpsert::characterPk)
-                    key(CharacterEquipUpsert::equipSlot)
-                },
-                set = {
-                    CharacterEquipUpsert::itemPk assign excluded(CharacterEquipUpsert::itemPk)
-                    CharacterEquipUpsert::updateMethod assign excluded(CharacterEquipUpsert::updateMethod)
-                    CharacterEquipUpsert::updateTime assign excluded(CharacterEquipUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = WeaponMasteryUpsert::class,
-                entities = weaponMasteryList,
-                onConflict = {
-                    key(WeaponMasteryUpsert::characterPk)
-                    key(WeaponMasteryUpsert::weaponTypeId)
-                },
-                set = {
-                    WeaponMasteryUpsert::mastery assign excluded(WeaponMasteryUpsert::mastery)
-                    WeaponMasteryUpsert::updateMethod assign excluded(WeaponMasteryUpsert::updateMethod)
-                    WeaponMasteryUpsert::updateTime assign excluded(WeaponMasteryUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = MagicTypeMasteryUpsert::class,
-                entities = magicTypeMasteryList,
-                onConflict = {
-                    key(MagicTypeMasteryUpsert::characterPk)
-                    key(MagicTypeMasteryUpsert::magicTypeMastery)
-                },
-                set = {
-                    MagicTypeMasteryUpsert::mastery assign excluded(MagicTypeMasteryUpsert::mastery)
-                    MagicTypeMasteryUpsert::updateMethod assign excluded(MagicTypeMasteryUpsert::updateMethod)
-                    MagicTypeMasteryUpsert::updateTime assign excluded(MagicTypeMasteryUpsert::updateTime)
-                },
-            )
-            count += executeUpsertInBatches(
-                databaseHelper = databaseHelper,
-                entityClass = CharacterSpellsUpsert::class,
-                entities = characterSpellsList,
-                onConflict = {
-                    key(CharacterSpellsUpsert::characterPk)
-                    key(CharacterSpellsUpsert::magicId)
-                },
-                set = {
-                    CharacterSpellsUpsert::updateMethod assign excluded(CharacterSpellsUpsert::updateMethod)
-                    CharacterSpellsUpsert::updateTime assign excluded(CharacterSpellsUpsert::updateTime)
-                },
-            )
-            count
-        }
-    }
-
-    /**
-     * ## ABSERTデータ実行
-     * ### 装備データを複合競合キー付きでABSERTする
-     * @param databaseHelper DB操作ヘルパー
-     * @return ABSERTの影響行数
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun absertData(
-        databaseHelper: AndrOrmDatabaseHelper,
-    ): Long {
-        val absertSeedDataList = listOf(
-            CharacterEquipAbsert(
-                characterPk = 77274,
-                equipSlot = 4,
-                itemPk = 11637,
-                createMethod = testStep,
-                createTime = LocalDateTime.now(),
-                updateMethod = testStep,
-                updateTime = LocalDateTime.now()
-            ),
-            CharacterEquipAbsert(
-                characterPk = 77274,
-                equipSlot = 5,
-                itemPk = 11638,
-                createMethod = testStep,
-                createTime = LocalDateTime.now(),
-                updateMethod = testStep,
-                updateTime = LocalDateTime.now()
-            ),
-            CharacterEquipAbsert(
-                characterPk = 77274,
-                equipSlot = 6,
-                itemPk = 11639,
-                createMethod = testStep,
-                createTime = LocalDateTime.now(),
-                updateMethod = testStep,
-                updateTime = LocalDateTime.now()
-            ),
-            CharacterEquipAbsert(
-                characterPk = 77274,
-                equipSlot = 7,
-                itemPk = null,
-                createMethod = testStep,
-                createTime = LocalDateTime.now(),
-                updateMethod = testStep,
-                updateTime = LocalDateTime.now()
-            ),
-            CharacterEquipAbsert(
-                characterPk = 77274,
-                equipSlot = 8,
-                itemPk = 10060,
-                createMethod = testStep,
-                createTime = LocalDateTime.now(),
-                updateMethod = testStep,
-                updateTime = LocalDateTime.now()
-            ),
-        )
-        actualCount = 0
-        databaseHelper.transaction {
-            absertSeedDataList.forEach { _ ->
-                val absert = Absert(CharacterEquipAbsert::class).onConflict {
-                    key(CharacterEquipAbsert::characterPk)
-                    key(CharacterEquipAbsert::equipSlot)
-                }.addEntities(absertSeedDataList)
-                actualCount = databaseHelper.executeDml(absert).toLong()
-            }
-        }
-        return actualCount
     }
 
     /**
@@ -2060,7 +1815,7 @@ class AndrOrmDatabaseAndroidTest {
         return databaseHelper.transaction {
             databaseHelper.executeSelectAsEntityList(selectJoin)
         }.also {
-            Log.d(testStep, selectJoin.queryString)
+            Log.d(testStep, selectJoin.query)
             Log.d(testStep, selectJoin.bindValues.joinToString())
         }
     }
@@ -2099,59 +1854,9 @@ class AndrOrmDatabaseAndroidTest {
         return databaseHelper.transaction {
             databaseHelper.executeSelectAsEntityList(selectJoin)
         }.also {
-            Log.d(testStep, selectJoin.queryString)
+            Log.d(testStep, selectJoin.query)
             Log.d(testStep, selectJoin.bindValues.joinToString())
         }
-    }
-
-    /**
-     * ## DELETEデータ実行
-     * ### 全対象テーブルからstep03で更新された行を削除する
-     * @param databaseHelper DB操作ヘルパー
-     * @return 全DELETEの影響行数
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun deleteData(
-        databaseHelper: AndrOrmDatabaseHelper,
-    ): Long {
-        actualCount = 0
-        val deleteTables = listOf(
-            Delete(CharacterEquipDelete::class).where { CharacterEquipDelete::updateMethod eq "step03" },
-            Delete(CharacterPossessionsDelete::class).where { CharacterPossessionsDelete::updateMethod eq "step03" },
-            Delete(CharacterSpellsDelete::class).where { CharacterSpellsDelete::updateMethod eq "step03" },
-            Delete(CharacterStaticInfoV1Delete::class).where { CharacterStaticInfoV1Delete::updateMethod eq "step03" },
-            Delete(CharacterStatusDelete::class).where { CharacterStatusDelete::updateMethod eq "step03" },
-            Delete(ItemMasterDelete::class).where { ItemMasterDelete::updateMethod eq "step03" },
-            Delete(MagicTypeMasteryDelete::class).where { MagicTypeMasteryDelete::updateMethod eq "step03" },
-            Delete(SpellsMasterDelete::class).where { SpellsMasterDelete::updateMethod eq "step03" },
-            Delete(WeaponMasteryDelete::class).where { WeaponMasteryDelete::updateMethod eq "step03" },
-        )
-        databaseHelper.transaction {
-            deleteTables.forEach {
-                actualCount += databaseHelper.executeDml(it)
-            }
-        }
-        return actualCount
-    }
-
-    /**
-     * ## Insert 一括実行
-     * ### InsertEntity のリストをまとめて投入する
-     * @param databaseHelper DB Helper
-     * @param entityClass InsertEntity クラス
-     * @param entities 投入 Entity リスト
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun <T : InsertEntity> insertAll(
-        databaseHelper: AndrOrmDatabaseHelper,
-        entityClass: KClass<out T>,
-        entities: List<T>,
-    ) {
-        val insert = Insert(entityClass)
-        insert.addEntities(entities)
-        databaseHelper.executeDml(insert)
     }
 
     /**
@@ -2388,6 +2093,71 @@ class AndrOrmDatabaseAndroidTest {
      */
     private fun quoteString(str: String): String =
         D_QUOTE + str.replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
+
+    /**
+     * ## step23ステータス明細SELECT Entity
+     * ### step23でUPSERTした複合キーと値を取得する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Table("CHARACTER_STATUS", "CS23D")
+    data class Step23CharacterStatusDetail(
+        val characterPk: Int,
+        val level: Int,
+        val statusType: String,
+        val value: Int,
+        val updateMethod: String,
+    ) : SelectEntity
+
+    /**
+     * ## CHARACTER_STATUS単体累計SELECT Entity
+     * ### characterPk・statusType単位の最大levelとvalue合計を取得する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Table("CHARACTER_STATUS", "CS23")
+    data class Step25CharacterStatusAggregate(
+        val characterPk: Int,
+        val statusType: String,
+        @Function(columnFunction = ColumnFunction.MAX, args = ["level"], alias = "MAX_LEVEL")
+        val maxLevel: Int,
+        @Function(columnFunction = ColumnFunction.SUM, args = ["value"], alias = "TOTAL_VALUE")
+        val totalValue: Long,
+        @Column(hideFromSelect = true) val level: Int = 0,
+        @Column(hideFromSelect = true) val value: Int = 0,
+        @Column(hideFromSelect = true) val updateMethod: String = EMPTY_STRING,
+    ) : SelectEntity
+
+    /**
+     * ## LEFT JOIN元キャラクターSELECT Entity
+     * ### 累計結果へcharacterPkとcharacterNameを付加する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Table("CHARACTER_STATIC_INFO", "CSI23")
+    data class Step25CharacterStaticInfo(
+        val characterPk: Int,
+        val characterName: String,
+    ) : SelectEntity
+
+    /**
+     * ## LEFT JOIN先ステータス累計SELECT Entity
+     * ### statusType単位の最大levelとvalue合計を取得する
+     * @author Masahiro Inoue
+     * @since 2026-07-20
+     */
+    @Table("CHARACTER_STATUS", "CS23J")
+    data class Step25JoinedCharacterStatusAggregate(
+        val statusType: String,
+        @Function(columnFunction = ColumnFunction.MAX, args = ["level"], alias = "MAX_LEVEL")
+        val maxLevel: Int,
+        @Function(columnFunction = ColumnFunction.SUM, args = ["value"], alias = "TOTAL_VALUE")
+        val totalValue: Long,
+        @Column(hideFromSelect = true) val characterPk: Int = 0,
+        @Column(hideFromSelect = true) val level: Int = 0,
+        @Column(hideFromSelect = true) val value: Int = 0,
+        @Column(hideFromSelect = true) val updateMethod: String = EMPTY_STRING,
+    ) : SelectEntity
 
     /**
      * ## 削除件数取得Entityインターフェース

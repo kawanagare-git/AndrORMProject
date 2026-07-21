@@ -4,10 +4,7 @@ import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum.*
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.annotation.Projections
-import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.Index
-import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
-import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.*
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import java.time.LocalDateTime
 
@@ -24,6 +21,7 @@ import java.time.LocalDateTime
             aliasExtend = "DTA",
             properties = [
                 ColumnProjection("characterPk"),
+                ColumnProjection("level"),
                 ColumnProjection("statusType"),
                 ColumnProjection("value"),
                 ColumnProjection("createMethod"),
@@ -68,6 +66,7 @@ import java.time.LocalDateTime
             aliasExtend = "UPS",
             properties = [
                 ColumnProjection("characterPk"),
+                ColumnProjection("level"),
                 ColumnProjection("statusType"),
                 ColumnProjection("value"),
                 ColumnProjection("createMethod"),
@@ -86,11 +85,14 @@ import java.time.LocalDateTime
         ),
     ]
 )
-@Table
+@Table(name = "CHARACTER_STATUS")
 @Index(properties = ["characterPk"])
-data class CharacterStatus(
+data class CharacterStatusV2(
     @PrimaryKey
     val characterPk: Int,
+    @PrimaryKey
+    @MigrationDefault("1")
+    val level: Int,
     @PrimaryKey
     val statusType: String,
     val value: Int,

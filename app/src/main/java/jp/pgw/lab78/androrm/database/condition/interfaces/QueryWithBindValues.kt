@@ -11,6 +11,10 @@ package jp.pgw.lab78.androrm.database.condition.interfaces
  * @since 2026-01-12
  */
 abstract class QueryWithBindValues {
+    /** クエリ格納 */
+    lateinit var query: String
+        protected set
+
     /** バインド変数リスト（実体） */
     private val _bindValues: MutableList<Any?> = mutableListOf()
     val bindValues: List<Any?>

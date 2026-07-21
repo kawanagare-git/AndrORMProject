@@ -68,9 +68,6 @@ class Insert<T : InsertEntity>(
     /** ビルドフラグ */
     private var isBuild: Boolean = false
 
-    /** クエリ格納 */
-    private lateinit var query: String
-
     /** エンティティ一覧 */
     private var entities: MutableList<T> = mutableListOf()
 

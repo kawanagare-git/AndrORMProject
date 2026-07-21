@@ -4,6 +4,8 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.os.SystemClock
+import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
@@ -40,6 +42,7 @@ import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.io.Closeable
 import java.util.concurrent.FutureTask
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty1
@@ -90,6 +93,10 @@ open class AndrOrmDatabaseHelper(
      * ### resolveColumnMappings() の指定を反映した後、実際のデータ転送用マッピングの生成に使用する
      */
     private lateinit var preparedColumnMappings: MutableMap<KClass<out TableDefinitionEntity>, List<Pair<String, String>>>
+
+    /** クエリ実行時間（ナノ秒単位） */
+    var queryExecutionTime: Long = 0L
+        private set
 
     /**
      * ## SAVEPOINT 実行結果
@@ -298,7 +305,12 @@ open class AndrOrmDatabaseHelper(
                 DataConvertedMap[value!!::class]!!.toBind(statement, bindIndex, value)
             }
         }
-        return statement.executeUpdateDelete()
+        val start = SystemClock.elapsedRealtimeNanos()
+        try {
+            return statement.executeUpdateDelete()
+        } finally {
+            queryExecutionTime = SystemClock.elapsedRealtimeNanos() - start
+        }
     }
 
     /**
@@ -354,10 +366,16 @@ open class AndrOrmDatabaseHelper(
     fun executeSelectAsMapList(
         query: String,
         bindValues: List<*> = emptyList<Any>(),
-    ): List<Map<String, Any?>> =
-        executeSelectAsCursor(query, bindValues).use { cursor ->
-            cursor.toMapList()
+    ): List<Map<String, Any?>> {
+        val start = SystemClock.elapsedRealtimeNanos()
+        try {
+            return executeSelectAsCursor(query, bindValues).use { cursor ->
+                cursor.toMapList()
+            }
+        } finally {
+            queryExecutionTime = SystemClock.elapsedRealtimeNanos() - start
         }
+    }
 
     /**
      * ## SELECT 実行
@@ -379,8 +397,9 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-06-03
      */
-    fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor =
-        readableDatabase.rawQuery(query, bindValues.toSelectionArgs())
+    fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor {
+        return readableDatabase.rawQuery(query, bindValues.toSelectionArgs())
+    }
 
     /**
      * ## トランザクション実行
@@ -565,7 +584,7 @@ open class AndrOrmDatabaseHelper(
     }
 
     /** 自動生成する SAVEPOINT 名の連番 */
-    private var savepointSequence = 0L
+    private var savepointSequence: AtomicLong = AtomicLong(0L)
 
     /**
      * ## SAVEPOINT 名生成
@@ -579,11 +598,11 @@ open class AndrOrmDatabaseHelper(
         val specifiedName = marker?.toString()?.trim()
 
         if (specifiedName.isNullOrEmpty()) {
-            savepointSequence++
+            savepointSequence.addAndGet(1)
             return "androrm_savepoint_$savepointSequence"
         }
 
-        return specifiedName
+        return "$D_QUOTE${specifiedName}$D_QUOTE"
     }
 
     /**
