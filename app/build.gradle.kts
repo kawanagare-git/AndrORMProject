@@ -119,6 +119,11 @@ dependencies {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 }
+// ＜androrm-runtime/build.gradle.kts＞
+dependencies {
+    implementation(project(":androrm-runtime"))
+    ksp(project(":androrm-generator-ksp"))
+}
 
 //// AndrORM の detekt ルール
 // ==========================================================
