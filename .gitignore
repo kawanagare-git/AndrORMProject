@@ -1,16 +1,54 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# =========================================================
+# Gradle
+# =========================================================
+.gradle/
+**/build/
+
+# =========================================================
+# Android local environment
+# =========================================================
 local.properties
+**/captures/
+**/.externalNativeBuild/
+**/.cxx/
+
+# =========================================================
+# Android Studio / IntelliJ IDEA
+# =========================================================
+.idea/
+*.iml
+
+# =========================================================
+# OS generated files
+# =========================================================
+.DS_Store
+Thumbs.db
+
+# =========================================================
+# Logs and lock files
+# =========================================================
+**/logs/
+*.log
+*.log.*
+*.lck
+
+# =========================================================
+# Local investigation results
+# =========================================================
+*結果.txt
+*--stacktrace*.txt
+*javap*.txt
+deps_detektPlugins.txt
+gradle_test_log.txt
+ksp_error.log
+build.gradle_JUnit5用.kts
+
+# =========================================================
+# Android Test generated CSV files
+# =========================================================
+app/src/androidTest/resources/entitiesCsv/
+
+# =========================================================
+# Personal scratch files
+# =========================================================
 /アノテーション組み込みPretes案.kt
