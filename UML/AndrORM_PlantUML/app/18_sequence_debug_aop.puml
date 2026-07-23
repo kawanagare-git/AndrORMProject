@@ -1,0 +1,44 @@
+@startuml
+title app debug AOPログ シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor Caller
+participant TraceAspect
+participant "対象メソッド" as Target
+participant LogScope
+participant "java.util.logging.Logger" as Logger
+
+Caller -> TraceAspect : @InfoLog / @TraceLogメソッド呼出し
+TraceAspect -> TraceAspect : MethodSignatureと注釈確認
+TraceAspect -> LogScope : APP.create(TRACE)
+LogScope --> TraceAspect : Logger
+TraceAspect -> Logger : ENTERED
+opt @TraceLog
+  TraceAspect -> Logger : args
+end
+TraceAspect -> Target : proceed()
+alt 正常
+  Target --> TraceAspect : result
+  opt @TraceLog
+    TraceAspect -> Logger : return
+  end
+  TraceAspect -> Logger : EXITING
+  TraceAspect --> Caller : result
+else 例外
+  Target --> TraceAspect : Throwable
+  TraceAspect -> Logger : THROWING + stack trace
+  TraceAspect --> Caller : rethrow
+end
+
+@enduml

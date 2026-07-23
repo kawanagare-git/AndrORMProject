@@ -1,0 +1,56 @@
+@startuml
+title app トランザクション・SAVEPOINTタイミング図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+robust "Transaction" as TX
+concise "Savepoint point1" as SP1
+concise "DB処理" as Work
+concise "SQLite lock" as Lock
+
+@0
+TX is Idle
+SP1 is None
+Work is Idle
+Lock is Free
+
+@10
+TX is Active
+Lock is Held
+Work is DB1
+
+@20
+SP1 is Active
+Work is DB2
+
+@30
+Work is Exception
+SP1 is RollbackTo
+
+@40
+SP1 is Released
+Work is Continued
+
+@50
+Work is DB3
+
+@60
+TX is Commit
+Lock is Held
+
+@70
+TX is Idle
+SP1 is None
+Work is Idle
+Lock is Free
+
+@enduml

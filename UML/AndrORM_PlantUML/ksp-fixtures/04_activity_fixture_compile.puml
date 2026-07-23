@@ -1,0 +1,34 @@
+@startuml
+title ksp-fixtures コンパイル検証アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+:異常系fixtureを選択;
+:KSP付きコンパイルを実行;
+:ProjectionとEntityMetaを解析;
+if (期待種別?) then (ERROR)
+  if (コンパイル失敗か?) then (はい)
+    :期待メッセージを照合;
+  else (いいえ)
+    :テスト失敗;
+  endif
+else (WARNING)
+  if (コンパイル成功か?) then (はい)
+    :警告メッセージを照合;
+  else (いいえ)
+    :テスト失敗;
+  endif
+endif
+stop
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+title androrm-detekt-rules 詳細クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+interface RuleSetProvider
+abstract class Rule
+
+class AndrOrmRuleSetProvider {
+  +instance(config): RuleSet
+}
+class AndrOrmEntityRefRule {
+  +visitKtFile(file)
+  +visitDotQualifiedExpression(expression)
+}
+class AndrOrmDuplicateTableNameRule {
+  +visitKtFile(file)
+}
+object AndrOrmDetektMessages
+object AndrOrmLogger
+
+enum ExtractEntity
+class SelectChainContext
+class TableDefinition
+class EnglishLevelFormatter
+enum DetektLogLevel
+
+RuleSetProvider <|.. AndrOrmRuleSetProvider
+Rule <|-- AndrOrmEntityRefRule
+Rule <|-- AndrOrmDuplicateTableNameRule
+AndrOrmRuleSetProvider --> AndrOrmEntityRefRule
+AndrOrmRuleSetProvider --> AndrOrmDuplicateTableNameRule
+
+AndrOrmEntityRefRule *-- ExtractEntity
+AndrOrmEntityRefRule *-- SelectChainContext
+AndrOrmDuplicateTableNameRule *-- TableDefinition
+AndrOrmEntityRefRule ..> AndrOrmDetektMessages
+AndrOrmDuplicateTableNameRule ..> AndrOrmDetektMessages
+AndrOrmEntityRefRule ..> AndrOrmLogger
+AndrOrmDuplicateTableNameRule ..> AndrOrmLogger
+AndrOrmLogger *-- EnglishLevelFormatter
+AndrOrmLogger *-- DetektLogLevel
+
+@enduml

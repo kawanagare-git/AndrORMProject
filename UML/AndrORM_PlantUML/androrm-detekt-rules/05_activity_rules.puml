@@ -1,0 +1,37 @@
+@startuml
+title androrm-detekt-rules 解析アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+:KtFileを受け取る;
+fork
+  :Select呼出しチェーンを探索;
+  if (Selectを検出?) then (はい)
+    :主Entityを抽出;
+    :joinされたEntityを追加;
+    :対象Lambda内の::propertyを収集;
+    if (参照元Entityが許可集合外?) then (はい)
+      :invalidPropertyReferenceを報告;
+    endif
+  endif
+fork again
+  :source root(java/kotlin)を特定;
+  :同一source setのKotlinファイルを走査;
+  :TableDefinitionEntityと@Table名を収集;
+  if (table名重複?) then (はい)
+    :後続定義へduplicateTableNameを報告;
+  endif
+end fork
+stop
+
+@enduml

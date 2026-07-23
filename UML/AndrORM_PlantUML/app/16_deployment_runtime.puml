@@ -1,0 +1,34 @@
+@startuml
+title app 実行時配置図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+node "Android Process" {
+  artifact "Application classes" as Client
+  artifact "Generated Entity classes" as Entities
+  component "AndrORM app module" as Runtime
+  component "TraceAspect\n(debug build)" as Aspect
+  component "Android SQLiteOpenHelper" as HelperApi
+  component "SQLiteDatabase / SQLiteStatement" as SQLiteApi
+  database "application.db" as DB
+  folder "files/log" as Log
+}
+
+Client --> Entities
+Client --> Runtime
+Runtime --> HelperApi
+HelperApi --> SQLiteApi
+SQLiteApi --> DB
+Aspect ..> Client : @InfoLog / @TraceLog interception
+Aspect --> Log
+
+@enduml

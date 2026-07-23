@@ -1,0 +1,28 @@
+@startuml
+title shared-library 値種別判定アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+:判定対象を受け取る;
+if (null判定?) then (はい)
+  :対象 == nullを返す;
+elseif (not null判定か?) then (not null)
+  :対象 != nullを返す;
+elseif (Unit判定か?) then (Unit)
+  :対象 === Unitを返す;
+else (void判定)
+  :Java void / Void型か判定;
+endif
+stop
+
+@enduml

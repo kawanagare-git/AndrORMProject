@@ -1,0 +1,35 @@
+@startuml
+title test-support ユースケース図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+left to right direction
+actor "JUnit5 ParameterizedTest" as JUnit
+actor "テスト作成者" as Dev
+
+rectangle "test-support" {
+  usecase "CSV文字列をListへ変換する" as U1
+  usecase "CSV文字列を2次元Listへ変換する" as U2
+  usecase "型を推定してAny値へ変換する" as U3
+  usecase "エスケープされた区切りを処理する" as U4
+}
+
+Dev --> U1
+Dev --> U2
+JUnit --> U1
+JUnit --> U2
+U1 .> U3 : <<include>>
+U2 .> U3 : <<include>>
+U1 .> U4 : <<include>>
+U2 .> U4 : <<include>>
+
+@enduml

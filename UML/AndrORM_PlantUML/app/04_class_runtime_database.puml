@@ -1,0 +1,89 @@
+@startuml
+title app DB実行・メタ情報クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+class AndrOrmDatabaseHelper {
+  +queryExecutionTime: Long
+  +onCreate(db)
+  +onUpgrade(db, oldVersion, newVersion)
+  #migrateDatabase(db, newVersion)
+  +executeDml(builder): Int
+  +executeDml(sql, bindValues): Int
+  +executeSelectAsEntityList(select)
+  +executeSelectAsMapList(select)
+  +executeSelectAsCursor(select)
+  +transaction(block)
+  +savepoint(marker, block): SavepointResult
+  #resolveColumnMappings()
+}
+class "SavepointResult<T>" as SavepointResult
+class NotCreatedSavepointException
+class FailureRollbackException
+class FailureReleaseException
+class Savepoint <<private>>
+enum SavepointState {
+  ACTIVE
+  ROLLED_BACK
+  BROKEN
+  RELEASED
+}
+class EntityResultTarget <<private>>
+
+class RuntimeEntityMetaFactory {
+  +create(entityClass): EntityMeta
+}
+object EntityManager {
+  +getTableDefinition()
+  +getEntityDefinition()
+  +createSelectColumnTargetsTask()
+  +formatValue()
+}
+class "EntityManager.TableDefinition<T>" as TableDefinition
+class "EntityManager.EntityDefinition<T>" as EntityDefinition
+class "EntityManager.SelectColumnTarget" as SelectColumnTarget
+class "EntityManager.DataConverter<T>" as DataConverter
+
+class Create
+class Select
+class Insert
+interface QueryBuilderLike
+class QueryWithBindValues
+
+AndrOrmDatabaseHelper o-- SavepointResult
+AndrOrmDatabaseHelper *-- Savepoint
+Savepoint *-- SavepointState
+AndrOrmDatabaseHelper ..> EntityResultTarget
+AndrOrmDatabaseHelper ..> Create : onCreate / migrate
+AndrOrmDatabaseHelper ..> Insert : migration INSERT SELECT
+AndrOrmDatabaseHelper ..> Select : query execution
+AndrOrmDatabaseHelper ..> QueryBuilderLike
+AndrOrmDatabaseHelper ..> QueryWithBindValues
+AndrOrmDatabaseHelper ..> EntityManager
+
+RuntimeEntityMetaFactory ..> EntityManager
+EntityManager *-- TableDefinition
+EntityManager *-- EntityDefinition
+EntityManager *-- SelectColumnTarget
+EntityManager *-- DataConverter
+
+NotCreatedSavepointException --|> RuntimeException
+FailureRollbackException --|> RuntimeException
+FailureReleaseException --|> RuntimeException
+
+note bottom of AndrOrmDatabaseHelper
+Android SQLiteOpenHelperを継承。
+DB作成、移行、SQL実行、
+トランザクションを集約。
+end note
+
+@enduml

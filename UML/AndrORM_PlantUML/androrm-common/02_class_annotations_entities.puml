@@ -1,0 +1,69 @@
+@startuml
+title androrm-common 注釈・Entity契約クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+annotation Table
+annotation Column
+annotation PrimaryKey
+annotation Index
+annotation Unique
+annotation ColumnOldName
+annotation MigrationDefault
+annotation Function
+
+annotation Projection
+annotation Projections
+annotation ColumnProjection
+annotation FunctionProjection
+annotation EntityPackageInfo
+enum ReturnHint
+enum DMLInterfaceEnum
+
+interface Entity
+interface TableDefinitionEntity
+interface SelectEntity
+interface InsertEntity
+interface UpdateEntity
+interface UpsertEntity
+interface AbsertEntity
+interface DeleteEntity
+interface ComprehensiveEntity
+
+Entity <|-- TableDefinitionEntity
+TableDefinitionEntity <|-- SelectEntity
+TableDefinitionEntity <|-- InsertEntity
+TableDefinitionEntity <|-- UpdateEntity
+TableDefinitionEntity <|-- UpsertEntity
+TableDefinitionEntity <|-- AbsertEntity
+TableDefinitionEntity <|-- DeleteEntity
+
+SelectEntity <|-- ComprehensiveEntity
+InsertEntity <|-- ComprehensiveEntity
+UpdateEntity <|-- ComprehensiveEntity
+UpsertEntity <|-- ComprehensiveEntity
+
+Projections o-- Projection
+Projection o-- ColumnProjection
+Projection o-- FunctionProjection
+Projection ..> DMLInterfaceEnum
+FunctionProjection --> ReturnHint
+
+Table ..> TableDefinitionEntity : annotates
+Column ..> Entity : property annotation
+PrimaryKey ..> Column
+Index ..> Table
+Unique ..> Table
+ColumnOldName ..> Column
+MigrationDefault ..> Column
+
+@enduml

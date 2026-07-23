@@ -1,0 +1,68 @@
+@startuml
+title AndrORM ビルド・実行タイミング図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+concise "Gradle" as Gradle
+concise "KSP" as KSP
+concise "Kotlin Compile" as Kotlin
+concise "Android Runtime" as Runtime
+concise "SQLite" as SQLite
+
+@0
+Gradle is Idle
+KSP is Idle
+Kotlin is Idle
+Runtime is Idle
+SQLite is Idle
+
+@10
+Gradle is Configuration
+
+@20
+Gradle is KSPTask
+KSP is SymbolScan
+
+@30
+KSP is Validation
+
+@40
+KSP is SourceGeneration
+
+@50
+KSP is Finished
+Gradle is CompileTask
+Kotlin is Compile
+
+@70
+Kotlin is Finished
+Gradle is TestTask
+
+@90
+Gradle is Finished
+
+@110
+Runtime is BuildQuery
+
+@120
+Runtime is Execute
+SQLite is Running
+
+@130
+SQLite is Result
+Runtime is ConvertResult
+
+@140
+Runtime is Idle
+SQLite is Idle
+
+@enduml

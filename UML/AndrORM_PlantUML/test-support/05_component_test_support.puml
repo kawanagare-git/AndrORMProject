@@ -1,0 +1,36 @@
+@startuml
+title test-support コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "AnyListConverter" as L1
+component "Any2dListConverter" as L2
+component "CsvTokenParser" as Parser
+component "JUnit Jupiter Params" as JUnit
+component "app Unit Tests" as AppTests
+component "common Unit Tests" as CommonTests
+
+JUnit --> L1
+JUnit --> L2
+L1 --> Parser
+L2 --> Parser
+AppTests --> L1
+AppTests --> L2
+CommonTests --> L1
+CommonTests --> L2
+
+note bottom
+test-supportはsettings.gradle.ktsの
+独立projectではなく、Gradle sourceSetで共有される。
+end note
+
+@enduml

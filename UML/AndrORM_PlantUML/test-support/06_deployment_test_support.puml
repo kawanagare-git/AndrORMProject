@@ -1,0 +1,27 @@
+@startuml
+title test-support 配置図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+node "Gradle Test JVM" {
+  artifact "app test classes" as AppTests
+  artifact "androrm-common test classes" as CommonTests
+  artifact "test-support source compiled into test classpath" as Support
+  component "JUnit Platform" as JUnit
+}
+
+Support --> AppTests
+Support --> CommonTests
+JUnit --> AppTests
+JUnit --> CommonTests
+
+@enduml

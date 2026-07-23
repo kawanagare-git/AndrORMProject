@@ -284,7 +284,6 @@ class Update<T : UpdateEntity>(
         } else {
             require(setAssignments.isNotEmpty()) { MessageConstants.AE00014 }
             require(isAllRecords || whereDelegate.hasCondition) { MessageConstants.AE00013 }
-            clearBindValues()
             val targetTableExpression =
                 if (tableAlias.isBlank()) {
                     tableName
@@ -317,18 +316,17 @@ class Update<T : UpdateEntity>(
                         whereDelegate.buildClause()
                     }
                 )
-            }
-        }.replace(
-            DmlConstant.MULTI_SPACE_REGEX,
-            Constants.SPACE,
-        ).trim()
-            .also {
-                addBindValues(setBindValues)
-                // queryを完成させてからビルド済みにする
-                isBuild = true
-                query = it
-            }
-
+            }.replace(
+                DmlConstant.MULTI_SPACE_REGEX,
+                Constants.SPACE,
+            ).trim()
+        }.also {
+            clearBindValues()
+            addBindValues(setBindValues)
+            // queryを完成させてからビルド済みにする
+            isBuild = true
+            query = it
+        }
     }
 
     /**

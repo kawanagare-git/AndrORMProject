@@ -1,0 +1,51 @@
+@startuml
+title app SELECT生成・実行シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor Client
+participant "Select<T>" as Select
+participant BaseSelect
+participant JoinClauseDelegate as Join
+participant WhereClauseDelegate as Where
+participant OrderDsl as Order
+participant RuntimeEntityMetaFactory as MetaFactory
+participant AndrOrmDatabaseHelper as Helper
+database SQLite
+
+Client -> Select : Select(Entity::class)
+Select -> BaseSelect : initialize()
+BaseSelect -> MetaFactory : create(Entity)
+MetaFactory --> BaseSelect : EntityMeta
+Client -> Select : join / where / having / order / limit
+Select -> Join : join(...)
+Select -> Where : where(...)
+Select -> Order : order block
+Client -> Helper : executeSelectAsEntityList(select)
+Helper -> Select : build()
+Select -> BaseSelect : build()
+BaseSelect -> Join : buildClause()
+Join --> BaseSelect : JOIN SQL + bindValues
+BaseSelect -> Where : buildClause()
+Where --> BaseSelect : WHERE SQL + bindValues
+BaseSelect --> Select : SQL
+Select --> Helper : SQL
+Helper -> Select : bindValues
+Helper -> SQLite : rawQuery(SQL, args)
+SQLite --> Helper : Cursor
+Helper -> Helper : Cursor -> Map
+Helper -> MetaFactory : Entity復元情報
+Helper -> Helper : Map -> Entity\n外部結合null判定
+Helper --> Client : List<Map<alias, Entity?>>
+
+@enduml

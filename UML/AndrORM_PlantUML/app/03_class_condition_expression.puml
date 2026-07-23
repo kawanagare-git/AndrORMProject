@@ -1,0 +1,104 @@
+@startuml
+title app 条件DSL・式クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+interface ConditionBuilderLike
+interface "LogicalConditionSupportLike<T>" as LogicalSupport
+interface OrderBuilderLike
+interface QueryStructureLike
+interface "SelectBody<T,R>" as SelectBody
+interface SqlExpression {
+  +build(valueHolder): String
+}
+interface FunctionBuilderLike
+interface JoinConditionModel
+
+abstract class "BaseConditionBuilder<B>" as BaseConditionBuilder
+class "BaseConditionBuilder.BetweenBuilder<T>" as DslBetweenBuilder
+class "BaseConditionBuilder.ColumnRefBetweenBuilder<T>" as DslColumnRefBetweenBuilder
+class ConditionBuilder
+class HavingConditionBuilder
+class "LogicalConditionDelegate<T>" as LogicalDelegate
+
+abstract class Condition
+abstract class Compare
+class "Compare.Value" as CompareValue
+class Between
+class "BetweenBuilder(condition)" as SealedBetweenBuilder
+class InSelect
+class NotInSelect
+class Exists
+class NotExists
+class IsNull
+class IsNotNull
+class FreeText
+class GroupByColumn
+class LogicalCondition
+class Order
+
+class "ColumnRef<E,V>" as ColumnRef
+class "TableRef<E>" as TableRef
+class ColumnExpression
+class ValueExpression
+class RawExpression
+class BinaryExpression
+enum SqlArithmeticOperator
+enum ComparisonOperator
+class FunctionBuilder
+enum AggregateFunction
+class ExistsSelect
+
+ConditionBuilderLike <|.. BaseConditionBuilder
+LogicalSupport <|.. BaseConditionBuilder
+BaseConditionBuilder *-- DslBetweenBuilder
+BaseConditionBuilder *-- DslColumnRefBetweenBuilder
+BaseConditionBuilder <|-- ConditionBuilder
+BaseConditionBuilder <|-- HavingConditionBuilder
+LogicalSupport <|.. LogicalDelegate
+
+Condition <|-- Compare
+Compare <|-- CompareValue
+Compare <|-- Between
+Compare <|-- SealedBetweenBuilder
+Compare <|-- InSelect
+Compare <|-- NotInSelect
+Condition <|-- Exists
+Condition <|-- NotExists
+Condition <|-- IsNull
+Condition <|-- IsNotNull
+Condition <|-- FreeText
+Condition <|-- GroupByColumn
+Condition <|-- LogicalCondition
+
+SqlExpression <|.. ColumnExpression
+SqlExpression <|.. ValueExpression
+SqlExpression <|.. RawExpression
+SqlExpression <|.. BinaryExpression
+SqlExpression <|.. ColumnRef
+FunctionBuilderLike <|.. FunctionBuilder
+
+TableRef --> ColumnRef : get()/column()
+BinaryExpression o-- SqlExpression : left/right
+FunctionBuilder o-- SqlExpression : args
+CompareValue o-- ColumnRef
+Between o-- ColumnRef
+InSelect o-- ExistsSelect
+NotInSelect o-- ExistsSelect
+LogicalCondition o-- Condition : children
+Order o-- ColumnRef
+
+BaseConditionBuilder ..> Condition : buildList()
+BaseConditionBuilder ..> ExistsSelect
+LogicalDelegate --> BaseConditionBuilder
+
+@enduml

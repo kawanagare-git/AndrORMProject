@@ -1,0 +1,49 @@
+@startuml
+title app コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "Public SQL Builder API" as API {
+  component Create
+  component Select
+  component Insert
+  component Update
+  component Delete
+  component Upsert
+  component Absert
+}
+component "Condition DSL" as DSL
+component "Expression / Function" as Expr
+component "Query Parts" as Parts
+component "Runtime Metadata" as Meta
+component "Entity Conversion" as Convert
+component "Database Helper" as Helper
+component "Debug AOP" as AOP
+component "androrm-common" as Common
+component "shared-library" as Shared
+component "Android SQLite API" as AndroidSQLite
+
+API --> DSL
+API --> Expr
+API --> Parts
+API --> Meta
+Helper --> API
+Helper --> Convert
+Helper --> Meta
+Helper --> AndroidSQLite
+Meta --> Common
+Convert --> Common
+API --> Common
+AOP --> Common
+AOP --> Shared
+
+@enduml

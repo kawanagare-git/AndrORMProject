@@ -1,0 +1,22 @@
+@startuml
+title shared-library クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+object Utils {
+  +Any?.isNull(): Boolean
+  +Any?.isNotNull(): Boolean
+  +Any?.isUnit(): Boolean
+  +Class<*>.isVoid(): Boolean
+}
+
+@enduml

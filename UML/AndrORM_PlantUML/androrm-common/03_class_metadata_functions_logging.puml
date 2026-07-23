@@ -1,0 +1,70 @@
+@startuml
+title androrm-common メタ情報・関数・ログ クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+class EntityMeta
+class PropertyMeta
+class EntityMetaValidationResult {
+  +errors: List<String>
+  +warnings: List<String>
+}
+class EntityMetaValidator {
+  +validate(meta): EntityMetaValidationResult
+}
+EntityMeta o-- PropertyMeta
+EntityMetaValidator ..> EntityMeta
+EntityMetaValidator --> EntityMetaValidationResult
+
+interface "SqlFunction<E>" as SqlFunction {
+  +getReturnType(args): KClass
+  +build(args): String
+}
+enum ArgumentArity
+enum ColumnFunction
+enum SqlAggregateFunction
+enum SqlScalarFunction
+SqlFunction <|.. ColumnFunction
+SqlFunction <|.. SqlAggregateFunction
+SqlFunction <|.. SqlScalarFunction
+ColumnFunction --> ArgumentArity
+SqlAggregateFunction --> ColumnFunction : delegates
+SqlScalarFunction --> ColumnFunction : delegates
+
+enum SqlDefaultValueType
+object SqlDefaultValueValidator {
+  +isValid(type, value, nullable): Boolean
+  +normalize(type, value): String
+}
+SqlDefaultValueValidator --> SqlDefaultValueType
+
+interface AndrOrmLoggerLike
+interface LoggerLike
+enum LogLevel
+enum LogScope
+class EnglishLevelFormatter
+annotation InfoLog
+annotation TraceLog
+
+AndrOrmLoggerLike <|.. LogScope
+LoggerLike --|> AutoCloseable
+LogScope --> LogLevel
+LogScope --> EnglishLevelFormatter
+InfoLog ..> LogLevel
+TraceLog ..> LogLevel
+
+object SupportFunction
+object Constants
+object EntityConstants
+object MessageConstants
+
+@enduml

@@ -1,0 +1,110 @@
+@startuml
+title AndrORM モジュール依存クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+package "app" as App {
+  class "SQL Builder群" as SqlBuilders
+  class AndrOrmDatabaseHelper
+  class RuntimeEntityMetaFactory
+  object EntityManager
+  class TraceAspect <<debug>>
+}
+
+package "androrm-common" as Common {
+  package "annotations" {
+    annotation Table
+    annotation Column
+    annotation Projection
+    annotation MigrationDefault
+  }
+  package "meta" {
+    class EntityMeta
+    class PropertyMeta
+    class EntityMetaValidator
+  }
+  package "interfaces" {
+    interface Entity
+    interface TableDefinitionEntity
+    interface SelectEntity
+    interface InsertEntity
+    interface UpdateEntity
+    interface UpsertEntity
+    interface AbsertEntity
+    interface DeleteEntity
+  }
+  object SqlDefaultValueValidator
+}
+
+package "androrm-generator-ksp" as Ksp {
+  class PropsProcessorProvider
+  class PropsProcessor
+  class KspEntityMetaFactory
+  class DataClassWriter
+}
+
+package "androrm-detekt-rules" as Rules {
+  class AndrOrmRuleSetProvider
+  class AndrOrmEntityRefRule
+  class AndrOrmDuplicateTableNameRule
+}
+
+package "shared-library" as Shared {
+  object Utils
+}
+
+package "test-support" as TestSupport {
+  class AnyListConverter
+  class Any2dListConverter
+  object CsvTokenParser
+}
+
+class "JUnit Jupiter" as JUnitJupiter
+
+package "ksp-fixtures" as Fixtures {
+  class "不正Entity定義群" as InvalidEntities
+}
+
+SqlBuilders ..> Common
+AndrOrmDatabaseHelper ..> SqlBuilders
+AndrOrmDatabaseHelper ..> Common
+RuntimeEntityMetaFactory ..> EntityMeta
+EntityManager ..> Common
+TraceAspect ..> Common
+TraceAspect ..> Utils
+
+PropsProcessorProvider --> PropsProcessor
+PropsProcessor ..> Common
+PropsProcessor ..> Shared
+PropsProcessor --> KspEntityMetaFactory
+PropsProcessor --> DataClassWriter
+
+AndrOrmRuleSetProvider --> AndrOrmEntityRefRule
+AndrOrmRuleSetProvider --> AndrOrmDuplicateTableNameRule
+Rules ..> Common
+
+Common ..> Shared
+TestSupport ..> JUnitJupiter
+InvalidEntities ..> Common
+
+note right of TestSupport
+Gradleの独立モジュールではなく、
+app / androrm-common の
+test sourceSetへ取り込まれる。
+end note
+
+note right of Fixtures
+settings.gradle.ktsには含まれない。
+KSP異常系コンパイル検証用。
+end note
+
+@enduml

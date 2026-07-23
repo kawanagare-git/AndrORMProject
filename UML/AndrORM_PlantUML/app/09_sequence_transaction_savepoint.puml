@@ -1,0 +1,57 @@
+@startuml
+title app トランザクション・SAVEPOINTシーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor Client
+participant AndrOrmDatabaseHelper as Helper
+participant Savepoint
+database SQLite
+
+Client -> Helper : transaction { ... }
+Helper -> SQLite : beginTransaction()
+Client -> Helper : executeDml(DB処理1)
+Helper -> SQLite : SQL1
+
+Client -> Helper : savepoint("point1") { DB処理2 }
+Helper -> Savepoint : new(name, db)
+Savepoint -> SQLite : SAVEPOINT "point1"
+alt SAVEPOINT作成失敗
+  SQLite --> Savepoint : exception
+  Savepoint --> Helper : NotCreatedSavepointException
+  Helper --> Client : 例外伝播
+else 作成成功
+  Helper -> SQLite : DB処理2
+  alt block成功
+    SQLite --> Helper : result
+    Helper -> Savepoint : close()
+    Savepoint -> SQLite : RELEASE SAVEPOINT
+    Helper --> Client : SavepointResult(success)
+  else block例外
+    SQLite --> Helper : exception
+    Helper -> Savepoint : rollback()
+    Savepoint -> SQLite : ROLLBACK TO SAVEPOINT
+    Helper -> Savepoint : close()
+    Savepoint -> SQLite : RELEASE SAVEPOINT
+    Helper --> Client : SavepointResult(failure)
+  end
+end
+
+alt transactionブロック正常終了
+  Helper -> SQLite : setTransactionSuccessful()
+  Helper -> SQLite : endTransaction()
+else 管理例外が外へ伝播
+  Helper -> SQLite : endTransaction()\n(全体rollback)
+end
+
+@enduml

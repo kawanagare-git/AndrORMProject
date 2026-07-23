@@ -1,0 +1,85 @@
+@startuml
+title androrm-generator-ksp 詳細クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+interface SymbolProcessorProvider
+interface SymbolProcessor
+
+class PropsProcessorProvider {
+  +create(environment): SymbolProcessor
+}
+class PropsProcessor {
+  +process(resolver): List<KSAnnotated>
+  +finish()
+  +onError()
+}
+SymbolProcessorProvider <|.. PropsProcessorProvider
+SymbolProcessor <|.. PropsProcessor
+PropsProcessorProvider --> PropsProcessor
+
+class ProjectionExtractor
+class ProjectionArgumentParser
+class ProjectionDefinition
+class ProjectionValidator
+class InterfaceResolver
+class KspEntityMetaFactory
+class ColumnDefaultValueValidator
+class MigrationDefaultValueValidator
+class ColumnPropertyFactory
+class FunctionPropertyFactory
+class TableAnnotationFactory
+class GeneratedProperty
+class DataClassWriter
+class AnnotationHelper
+class ImportHelper
+class TypeHelper
+
+PropsProcessor *-- ProjectionExtractor
+PropsProcessor *-- ProjectionArgumentParser
+PropsProcessor *-- ProjectionValidator
+PropsProcessor *-- InterfaceResolver
+PropsProcessor *-- KspEntityMetaFactory
+PropsProcessor *-- ColumnDefaultValueValidator
+PropsProcessor *-- MigrationDefaultValueValidator
+PropsProcessor *-- ColumnPropertyFactory
+PropsProcessor *-- FunctionPropertyFactory
+PropsProcessor *-- TableAnnotationFactory
+PropsProcessor *-- DataClassWriter
+PropsProcessor *-- AnnotationHelper
+PropsProcessor *-- ImportHelper
+PropsProcessor *-- TypeHelper
+
+ProjectionExtractor --> ProjectionDefinition
+ProjectionArgumentParser --> ProjectionDefinition
+ProjectionValidator --> ProjectionDefinition
+ColumnPropertyFactory --> GeneratedProperty
+FunctionPropertyFactory --> GeneratedProperty
+DataClassWriter --> GeneratedProperty
+
+interface LoggerLike
+class CompositeLogger
+class KspDelegatingLogger
+class FileDelegatingLogger
+object CreateLogger
+object DefaultLogMessageGenerator
+object LogUtils
+
+LoggerLike <|.. CompositeLogger
+LoggerLike <|.. KspDelegatingLogger
+LoggerLike <|.. FileDelegatingLogger
+PropsProcessor o-- LoggerLike
+CreateLogger --> CompositeLogger
+CompositeLogger o-- KspDelegatingLogger
+CompositeLogger o-- FileDelegatingLogger
+
+@enduml

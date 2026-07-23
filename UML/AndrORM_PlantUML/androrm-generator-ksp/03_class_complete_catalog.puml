@@ -1,0 +1,61 @@
+@startuml
+title androrm-generator-ksp 全クラス一覧図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+hide members
+left to right direction
+package "root" {
+  object Constants
+  class PropsProcessor
+  class PropsProcessorProvider
+}
+package "factory" {
+  class ColumnPropertyFactory
+  class FunctionPropertyFactory
+  class GeneratedProperty
+  class TableAnnotationFactory
+}
+package "helper" {
+  class AnnotationHelper
+  class ImportHelper
+  class TypeHelper
+}
+package "logging" {
+  class CompositeLogger
+  object CreateLogger
+  object DefaultLogMessageGenerator
+  class FileDelegatingLogger
+  class KspDelegatingLogger
+  object LogUtils
+}
+package "meta" {
+  class KspEntityMetaFactory
+}
+package "projectoin" {
+  class ProjectionArgumentParser
+  class ProjectionDefinition
+  class ProjectionExtractor
+  class ProjectionValidator
+}
+package "resolver" {
+  class InterfaceResolver
+}
+package "validator" {
+  class ColumnDefaultValueValidator
+  class MigrationDefaultValueValidator
+}
+package "writer" {
+  class DataClassWriter
+}
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+title AndrORM 定義から実行までの全体シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor 開発者 as Dev
+participant "テーブル定義Entity" as Definition
+participant "KSP\nPropsProcessor" as KSP
+participant "生成Entity" as Generated
+participant "Query Builder" as Builder
+participant "AndrOrmDatabaseHelper" as Helper
+database "SQLite" as DB
+
+Dev -> Definition : @Table / @Column / @Projectionを記述
+Dev -> KSP : Gradleビルド
+KSP -> Definition : シンボル・アノテーション取得
+KSP -> KSP : Projection検証\nEntityMeta検証\nDEFAULT検証
+alt 検証成功
+  KSP -> Generated : 用途別data classを書き出す
+else 検証失敗
+  KSP --> Dev : KSP error / warning
+end
+
+Dev -> Builder : 生成Entityを指定してDSL構築
+Builder -> Builder : SQL句を組み立てる
+Builder -> Builder : プレースホルダー順にbindValues保持
+Dev -> Helper : executeDml(builder)\nまたはexecuteSelect...(select)
+Helper -> Builder : build()
+Builder --> Helper : SQL
+Helper -> Builder : bindValues
+Helper -> DB : compileStatement / rawQuery
+DB --> Helper : 件数 / Cursor
+alt SELECT Entity形式
+  Helper -> Helper : Mapへ変換
+  Helper -> Generated : コンストラクタ呼出し
+  Generated --> Helper : Entity
+end
+Helper --> Dev : 実行結果
+
+@enduml

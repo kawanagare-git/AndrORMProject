@@ -1,0 +1,49 @@
+@startuml
+title app DBアップグレードシーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor AndroidFramework as Android
+participant AndrOrmDatabaseHelper as Helper
+participant Create
+participant Insert
+participant Select
+participant "Annotation / Metadata" as Meta
+database SQLite
+
+Android -> Helper : onUpgrade(db, oldVersion, newVersion)
+Helper -> Helper : migrateDatabase(db, newVersion)
+loop 登録Entity
+  Helper -> Meta : Table名・Column名・ColumnOldName取得
+  Helper -> SQLite : PRAGMA table_info(oldTable)
+  SQLite --> Helper : 旧カラム一覧
+  Helper -> Meta : nullable / MigrationDefault確認
+  Helper -> Create : Create(entity, table_new)
+  Create --> Helper : CREATE TABLE
+  Helper -> Create : buildIndexQueries(newVersion)
+  Create --> Helper : CREATE INDEX群
+  Helper -> Select : tableColumns(oldTable, sourceExpressions)
+  Select --> Helper : SELECT SQL
+  Helper -> Insert : intoTableColumns(newTable, targets, select)
+  Insert --> Helper : INSERT INTO ... SELECT ...
+end
+Helper -> SQLite : DROP残存 *_new
+Helper -> SQLite : CREATE新テーブル
+Helper -> SQLite : INSERT SELECT
+Helper -> SQLite : CREATE INDEX
+Helper -> SQLite : DROP旧テーブル
+Helper -> SQLite : ALTER TABLE RENAME
+SQLite --> Helper : 完了
+Helper --> Android : return
+
+@enduml

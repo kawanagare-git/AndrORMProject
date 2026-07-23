@@ -1,0 +1,39 @@
+@startuml
+title androrm-detekt-rules ユースケース図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+left to right direction
+actor "Detekt Engine" as Engine
+actor "開発者" as Dev
+actor "Kotlin Source" as Source
+
+rectangle "androrm-detekt-rules" {
+  usecase "RuleSetを提供する" as U1
+  usecase "Select内のEntity参照を検証する" as U2
+  usecase "重複テーブル名を検出する" as U3
+  usecase "CodeSmellを報告する" as U4
+  usecase "解析ログを出力する" as U5
+}
+
+Engine --> U1
+Source --> U2
+Source --> U3
+Dev --> U4
+U1 .> U2 : <<include>>
+U1 .> U3 : <<include>>
+U2 .> U4 : <<include>>
+U3 .> U4 : <<include>>
+U2 .> U5 : <<extend>>
+U3 .> U5 : <<extend>>
+
+@enduml

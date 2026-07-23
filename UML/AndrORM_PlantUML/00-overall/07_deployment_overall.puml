@@ -1,0 +1,47 @@
+@startuml
+title AndrORM 配置図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+node "開発PC" as DevPC {
+  node "Android Studio / Gradle" as Gradle {
+    artifact "AndrORM Source" as Source
+    artifact "Generated KSP Sources" as Generated
+    component "Kotlin Compiler" as Kotlin
+    component "KSP" as KSP
+    component "Detekt" as Detekt
+  }
+  folder "build/reports" as Reports
+  folder "build/generated/ksp" as GeneratedDir
+}
+
+node "Android Emulator / Device" as Device {
+  artifact "app-debug.apk" as APK
+  component "AndrORM Runtime" as Runtime
+  component "Android SQLite Framework" as SQLiteFramework
+  database "app.db" as AppDb
+  folder "App files / logs" as Logs
+}
+
+Source --> KSP
+KSP --> Generated
+Generated --> GeneratedDir
+Source --> Detekt
+Detekt --> Reports
+Kotlin --> APK
+
+APK --> Runtime
+Runtime --> SQLiteFramework
+SQLiteFramework --> AppDb
+Runtime --> Logs : AOP / logger
+
+@enduml

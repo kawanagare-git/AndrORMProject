@@ -1,0 +1,48 @@
+@startuml
+title androrm-detekt-rules Detektタスクタイミング図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+concise "Gradle" as Gradle
+concise "RuleSetProvider" as Provider
+concise "EntityRefRule" as Entity
+concise "DuplicateRule" as Duplicate
+
+@0
+Gradle is Configure
+Provider is Idle
+Entity is Idle
+Duplicate is Idle
+
+@10
+Gradle is DetektTask
+Provider is CreateRules
+
+@20
+Provider is Ready
+Entity is VisitFiles
+Duplicate is ScanSourceSet
+
+@50
+Entity is Report
+Duplicate is Report
+
+@60
+Entity is Completed
+Duplicate is Completed
+Gradle is WriteReport
+
+@70
+Gradle is Finished
+Provider is Idle
+
+@enduml

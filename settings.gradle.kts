@@ -16,4 +16,3 @@ include(
     ":shared-library",
 )
 include(":androrm-detekt-rules")
-include(":androrm-logging-ksp")

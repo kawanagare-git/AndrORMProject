@@ -170,4 +170,239 @@ class UpdateTest {
             update.bindValues,
         )
     }
+
+    /**
+     * updateAllを指定した場合、WHERE句なしの全件更新SQLを生成することを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_updateAll_buildsAllRecordsUpdate() {
+        val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
+        val entity =
+            TestAllEntityUpdate(
+                name = "更新後",
+                address = "愛知県豊田市",
+                updateDate = updateDate,
+            )
+        val update = Update(TestAllEntityUpdate::class)
+            .set(entity)
+            .updateAll()
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate),
+            update.bindValues,
+        )
+    }
+
+    /**
+     * WHERE付きSQLを生成した後にupdateAllを指定した場合、
+     * WHERE句を除外したSQLへ再生成されることを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_whereBuiltThenUpdateAll_rebuildsAllRecordsUpdate() {
+        val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
+        val entity =
+            TestAllEntityUpdate(
+                name = "更新後",
+                address = "愛知県豊田市",
+                updateDate = updateDate,
+            )
+        val update = Update(TestAllEntityUpdate::class)
+            .set(entity)
+            .where {
+                TestAllEntityUpdate::name eq "更新前"
+            }
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ? " +
+                    "where TEST_ALL_ENTITY.NAME = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate, "更新前"),
+            update.bindValues,
+        )
+        update.updateAll()
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate),
+            update.bindValues,
+        )
+    }
+
+    /**
+     * WHERE付きSQLを生成した後にupdateAllを指定した場合、
+     * WHERE句を除外したSQLへ再生成されることを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_rebuildsAllRecordsUpdate_whereBuiltThenUpdateAll() {
+        val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
+        val entity =
+            TestAllEntityUpdate(
+                name = "更新後",
+                address = "愛知県豊田市",
+                updateDate = updateDate,
+            )
+        val update = Update(TestAllEntityUpdate::class)
+            .set(entity)
+            .updateAll()
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate),
+            update.bindValues,
+        )
+        update.set(entity)
+            .where {
+                TestAllEntityUpdate::name eq "更新前"
+            }
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ? " +
+                    "where TEST_ALL_ENTITY.NAME = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate, "更新前"),
+            update.bindValues,
+        )
+    }
+
+    /**
+     * updateAllによる全件更新SQLを生成した後にWHEREを指定した場合、
+     * 条件付き更新SQLへ再生成されることを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_updateAllBuiltThenWhere_rebuildsConditionalUpdate() {
+        val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
+        val entity =
+            TestAllEntityUpdate(
+                name = "更新後",
+                address = "愛知県豊田市",
+                updateDate = updateDate,
+            )
+        val update = Update(TestAllEntityUpdate::class)
+            .set(entity)
+            .updateAll()
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ?",
+            update.build(),
+        )
+        update.where {
+            TestAllEntityUpdate::name eq "更新前"
+        }
+        assertEquals(
+            "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
+                    "set NAME = ?, ADDRESS = ?, UPDATE_DATE = ? " +
+                    "where TEST_ALL_ENTITY.NAME = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate, "更新前"),
+            update.bindValues,
+        )
+    }
+
+    /**
+     * 同じUpdateを複数回buildしても、
+     * SET用バインド値が重複しないことを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_updateAll_buildTwice_doesNotDuplicateBindValues() {
+        val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
+        val entity =
+            TestAllEntityUpdate(
+                name = "更新後",
+                address = "愛知県豊田市",
+                updateDate = updateDate,
+            )
+        val update = Update(TestAllEntityUpdate::class)
+            .set(entity)
+            .updateAll()
+        val firstQuery = update.build()
+        val firstBindValues = update.bindValues
+        val secondQuery = update.build()
+        val secondBindValues = update.bindValues
+        assertEquals(firstQuery, secondQuery)
+        assertEquals(
+            listOf("更新後", "愛知県豊田市", updateDate),
+            firstBindValues,
+        )
+        assertEquals(
+            firstBindValues,
+            secondBindValues,
+        )
+    }
+
+    /**
+     * updateAll指定時もJOIN条件のバインド値は残し、
+     * WHERE条件のバインド値だけ除外することを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_updateAllWithJoin_keepsJoinBindValues() {
+        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val fromTable = TableRef(TestSelectEntity::class, "X")
+        val joinTable = TableRef(TestSelectEntity::class, "Y")
+        val update = Update(targetTable)
+            .set {
+                TestAllEntityUpdate::name assign "更新後"
+            }
+            .from(fromTable)
+            .join(INNER, joinTable) {
+                joinTable[TestSelectEntity::id] eq 50
+            }
+            .where {
+                targetTable[TestAllEntityUpdate::name] eq "更新前"
+            }
+            .updateAll()
+        assertEquals(
+            "update TEST_ALL_ENTITY as A " +
+                    "set NAME = ? " +
+                    "from TEST_SELECT_ENTITY X " +
+                    "inner join TEST_SELECT_ENTITY Y on Y.ID = ?",
+            update.build(),
+        )
+        assertEquals(
+            listOf("更新後", 50),
+            update.bindValues,
+        )
+    }
+
+    /**
+     * updateAllを指定しても、SET句が未指定なら例外になることを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-07-22
+     */
+    @Test
+    fun testBuild_updateAllWithoutSet_throwsIllegalArgumentException() {
+        val update = Update(TestAllEntityUpdate::class)
+            .updateAll()
+        val actual = assertThrows(IllegalArgumentException::class.java) {
+            update.build()
+        }
+        assertEquals(AE00014, actual.message)
+    }
 }

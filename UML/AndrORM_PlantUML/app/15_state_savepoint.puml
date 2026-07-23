@@ -1,0 +1,35 @@
+@startuml
+title app Savepoint状態図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+[*] --> ACTIVE : SAVEPOINT成功
+
+ACTIVE --> BROKEN : rollback開始
+BROKEN --> ROLLED_BACK : ROLLBACK TO成功
+BROKEN --> [*] : ROLLBACK TO失敗\nFailureRollbackException
+
+ACTIVE --> BROKEN : release開始
+ROLLED_BACK --> BROKEN : release開始
+BROKEN --> RELEASED : RELEASE成功
+BROKEN --> [*] : RELEASE失敗\nFailureReleaseException
+
+RELEASED --> [*]
+ROLLED_BACK --> RELEASED : close()
+ACTIVE --> RELEASED : close()
+
+note right of BROKEN
+管理SQL実行前にBROKENへ遷移。
+失敗後に誤って再解放しない。
+end note
+
+@enduml

@@ -1,0 +1,27 @@
+@startuml
+title androrm-common 検証結果状態図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+[*] --> 未検証
+未検証 --> 正常 : errors=0, warnings=0
+未検証 --> 警告あり : errors=0, warnings>0
+未検証 --> エラーあり : errors>0
+
+警告あり --> 生成継続 : KSP warning出力
+正常 --> 生成継続
+エラーあり --> 生成中止 : KSP error出力
+
+生成継続 --> [*]
+生成中止 --> [*]
+
+@enduml

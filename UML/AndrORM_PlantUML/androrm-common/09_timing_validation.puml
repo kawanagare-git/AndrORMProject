@@ -1,0 +1,50 @@
+@startuml
+title androrm-common メタ情報検証タイミング図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+concise "Factory" as Factory
+concise "Meta creation" as Meta
+concise "EntityMetaValidator" as Validator
+concise "Caller" as Caller
+
+@0
+Factory is Start
+Meta is Idle
+Validator is Idle
+Caller is Waiting
+
+@10
+Factory is ReadAnnotations
+Meta is Constructing
+
+@20
+Meta is Ready
+Validator is DualAnnotation
+
+@30
+Validator is SelectableProperty
+
+@40
+Validator is DuplicateAlias
+
+@50
+Validator is Completed
+Caller is ReceiveResult
+
+@60
+Factory is Finished
+Meta is Idle
+Validator is Idle
+Caller is Continue
+
+@enduml

@@ -1,0 +1,28 @@
+@startuml
+title androrm-detekt-rules Gradle配置図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+node "Gradle Build" {
+  artifact "androrm-detekt-rules.jar" as RuleJar
+  component "detektPlugins configuration" as Config
+  component "Detekt Task" as Task
+  folder "Module Kotlin Sources" as Sources
+  folder "build/reports/detekt" as Reports
+}
+
+RuleJar --> Config
+Config --> Task
+Sources --> Task
+Task --> Reports
+
+@enduml

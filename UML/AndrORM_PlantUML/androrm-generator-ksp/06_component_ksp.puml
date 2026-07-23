@@ -1,0 +1,46 @@
+@startuml
+title androrm-generator-ksp コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "KSP Entry Point" as Entry
+component "Projection Extraction" as Extract
+component "Projection Parsing" as Parse
+component "Validation" as Validation
+component "Metadata Factory" as Meta
+component "Property Factories" as Factory
+component "Interface Resolver" as Resolver
+component "KotlinPoet Writer" as Writer
+component "Logging" as Logging
+component "androrm-common" as Common
+component "shared-library" as Shared
+component "KSP API" as KspApi
+component "KotlinPoet" as KotlinPoet
+
+KspApi --> Entry
+Entry --> Extract
+Entry --> Parse
+Entry --> Validation
+Entry --> Meta
+Entry --> Factory
+Entry --> Resolver
+Entry --> Writer
+Entry --> Logging
+Validation --> Common
+Meta --> Common
+Factory --> Common
+Resolver --> Common
+Logging --> Common
+Logging --> Shared
+Writer --> KotlinPoet
+
+@enduml

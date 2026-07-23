@@ -1,0 +1,39 @@
+@startuml
+title androrm-generator-ksp 生成処理アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+:Resolverから@Projection / @Projections対象探索;
+repeat
+  :Projection注釈を抽出;
+  :ProjectionDefinitionへ解析;
+  :MigrationDefaultを検証;
+  :プロパティ指定を検証;
+  :集約関数競合を検証;
+  :KspEntityMetaFactoryでEntityMeta生成;
+  :共通EntityMetaValidatorを実行;
+  if (エラーあり?) then (はい)
+    :KSP errorを記録;
+  else (いいえ)
+    :出力packageを解決;
+    :生成クラス名と@Tableを作成;
+    :ColumnProjectionから生成Propertyを作成;
+    :FunctionProjectionから生成Propertyを作成;
+    :common/custom interfaceを収集;
+    :DataClassWriterでKotlinソース出力;
+  endif
+repeat while (次のProjection?) is (ある)
+:deferred symbolを返す;
+stop
+
+@enduml

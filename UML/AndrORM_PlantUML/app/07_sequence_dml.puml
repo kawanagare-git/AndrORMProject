@@ -1,0 +1,43 @@
+@startuml
+title app DML生成・実行シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+actor Client
+participant "Insert / Update /\nDelete / Upsert / Absert" as Builder
+participant "Clause Delegate / DSL" as Clause
+participant QueryWithBindValues as Values
+participant AndrOrmDatabaseHelper as Helper
+participant SQLiteStatement as Statement
+database SQLite
+
+Client -> Builder : Entity・条件・SETを指定
+Builder -> Clause : 句を構築
+Clause -> Values : bind値を追加
+Client -> Helper : executeDml(builder)
+Helper -> Builder : build()
+Builder -> Builder : 必須条件を検証
+Builder -> Values : clear / add bindValues
+Builder --> Helper : SQL
+Helper -> Values : bindValues
+Values --> Helper : プレースホルダー順の値
+Helper -> SQLite : compileStatement(SQL)
+SQLite --> Helper : SQLiteStatement
+loop bindValues
+  Helper -> Statement : bindNull / bindLong /\nbindDouble / bindString / bindBlob
+end
+Helper -> Statement : executeUpdateDelete()
+Statement --> Helper : affected rows
+Helper --> Client : Int
+
+@enduml

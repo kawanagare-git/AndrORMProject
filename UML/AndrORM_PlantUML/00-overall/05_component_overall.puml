@@ -1,0 +1,57 @@
+@startuml
+title AndrORM 全体コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "Android Application" as AndroidApp
+component "app\nRuntime / SQL Builder" as App
+component "androrm-common\nAnnotations / Metadata" as Common
+component "androrm-generator-ksp\nCode Generator" as KSP
+component "androrm-detekt-rules\nStatic Analysis" as DetektRules
+component "shared-library\nUtilities" as Shared
+component "test-support\nJUnit Converter" as TestSupport
+component "ksp-fixtures\nInvalid Definitions" as Fixtures
+
+component "Kotlin Compiler" as Kotlin
+component "KSP Plugin" as KspPlugin
+component "Detekt Plugin" as Detekt
+component "Android SQLite API" as AndroidSQLite
+database "SQLite Database" as DB
+
+AndroidApp --> App : runtime API
+AndroidApp --> Common : annotations / generated interfaces
+App --> Common
+App --> Shared
+App --> AndroidSQLite
+AndroidSQLite --> DB
+
+Kotlin --> KspPlugin
+KspPlugin --> KSP
+KSP --> Common
+KSP --> Shared
+KSP --> AndroidApp : generated Kotlin sources
+
+Detekt --> DetektRules
+DetektRules --> Common
+DetektRules ..> AndroidApp : source analysis
+
+TestSupport ..> App : app Unit Test sourceSet
+TestSupport ..> Common : common Unit Test sourceSet
+Fixtures --> KSP : compile-testing input
+
+note bottom of App
+appはAndroid Libraryではなく、
+現行プロジェクト上のAndroid application module。
+AndrORM本体ランタイムもここに配置。
+end note
+
+@enduml

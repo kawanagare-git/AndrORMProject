@@ -1,0 +1,46 @@
+@startuml
+title テストパイプライン アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+fork
+  :app Unit Test;
+  :JUnit5でSQL Builder / DB補助を検証;
+fork again
+  :androrm-common Unit Test;
+  :注釈補助 / Validator / Functionを検証;
+fork again
+  :KSP Unit Test;
+  :Kotlin Compile Testingで生成・異常系検証;
+fork again
+  :Detekt Rule Unit Test;
+  :Rule lint結果を検証;
+fork again
+  :shared-library Unit Test;
+end fork
+
+if (全Unit Test成功?) then (はい)
+  :Android Emulatorを起動;
+  :JUnit4 Android Testを順序実行;
+  :各Step後にCSV出力;
+  if (全Android Test成功?) then (はい)
+    :完了;
+  else (いいえ)
+    :Instrumentation失敗;
+  endif
+else (いいえ)
+  :Unit Test失敗;
+endif
+stop
+
+@enduml

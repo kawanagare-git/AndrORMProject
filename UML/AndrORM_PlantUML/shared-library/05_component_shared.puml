@@ -1,0 +1,24 @@
+@startuml
+title shared-library コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "Utils" as Utils
+component "app.TraceAspect" as App
+component "androrm-common.LogScope" as Common
+component "androrm-generator-ksp.Logging" as KSP
+
+App --> Utils
+Common ..> Utils
+KSP ..> Utils
+
+@enduml

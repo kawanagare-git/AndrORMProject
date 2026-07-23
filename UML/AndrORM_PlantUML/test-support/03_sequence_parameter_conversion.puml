@@ -1,0 +1,33 @@
+@startuml
+title test-support ParameterizedTest変換シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+participant JUnit
+participant AnyListConverter as Converter
+participant CsvTokenParser as Parser
+participant "Parameterized Test" as Test
+
+JUnit -> Converter : convert("A:1:true:<null>", List)
+Converter -> Converter : targetType検証
+Converter -> Parser : parseList(source)
+Parser -> Parser : splitEscaped(':')
+Parser --> Converter : token list
+loop 各token
+  Converter -> Parser : toAnyValue(token)
+  Parser --> Converter : String/Int/Long/Double/Boolean/null
+end
+Converter --> JUnit : List<Any?>
+JUnit -> Test : 引数注入
+
+@enduml

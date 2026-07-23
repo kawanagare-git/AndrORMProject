@@ -1,0 +1,42 @@
+@startuml
+title androrm-generator-ksp ユースケース図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+left to right direction
+actor "Kotlin Compiler / KSP" as Compiler
+actor "Entity定義者" as Dev
+actor "ファイルシステム" as FS
+
+rectangle "androrm-generator-ksp" {
+  usecase "Projection対象を探索する" as U1
+  usecase "Projection引数を解析する" as U2
+  usecase "Entity定義を検証する" as U3
+  usecase "生成プロパティを作成する" as U4
+  usecase "実装インターフェースを解決する" as U5
+  usecase "data classを書き出す" as U6
+  usecase "KSPログを出力する" as U7
+}
+
+Compiler --> U1
+Dev --> U3
+FS --> U6
+U1 .> U2 : <<include>>
+U2 .> U3 : <<include>>
+U3 .> U4 : <<include>>
+U4 .> U5 : <<include>>
+U5 .> U6 : <<include>>
+U1 .> U7 : <<extend>>
+U3 .> U7 : <<extend>>
+U6 .> U7 : <<extend>>
+
+@enduml

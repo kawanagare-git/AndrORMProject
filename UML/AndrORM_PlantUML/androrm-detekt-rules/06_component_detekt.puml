@@ -1,0 +1,35 @@
+@startuml
+title androrm-detekt-rules コンポーネント図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+component "RuleSet Provider" as Provider
+component "Entity Reference Rule" as EntityRule
+component "Duplicate Table Rule" as DupRule
+component "Messages" as Messages
+component "Logger" as Logger
+component "Detekt API" as Detekt
+component "Kotlin PSI" as PSI
+component "androrm-common annotations" as Common
+
+Detekt --> Provider
+Provider --> EntityRule
+Provider --> DupRule
+EntityRule --> PSI
+DupRule --> PSI
+EntityRule --> Messages
+DupRule --> Messages
+EntityRule --> Logger
+DupRule --> Logger
+DupRule --> Common
+
+@enduml

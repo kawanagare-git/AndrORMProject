@@ -1,0 +1,33 @@
+@startuml
+title androrm-common EntityMeta検証シーケンス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+autonumber
+participant "KSP / Runtime Factory" as Factory
+participant EntityMetaValidator as Validator
+participant EntityMeta
+participant PropertyMeta
+participant EntityMetaValidationResult as Result
+
+Factory -> Validator : validate(entityMeta)
+Validator -> EntityMeta : properties / interfaces取得
+loop 各PropertyMeta
+  Validator -> PropertyMeta : @Columnと@Function併用確認
+  Validator -> PropertyMeta : hideFromSelect / alias確認
+end
+Validator -> Validator : SELECT対象の有無を確認
+Validator -> Validator : alias重複を確認
+Validator -> Result : errors / warningsを生成
+Result --> Factory : validation result
+
+@enduml

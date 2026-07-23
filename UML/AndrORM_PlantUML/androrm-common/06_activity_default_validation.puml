@@ -1,0 +1,49 @@
+@startuml
+title androrm-common DEFAULT値検証 アクティビティ図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+start
+:Kotlin型からSqlDefaultValueTypeを決定;
+:指定値をtrim;
+if (空文字?) then (はい)
+  :DEFAULT指定なしとして有効;
+  stop
+endif
+if (NULL?) then (はい)
+  if (nullable?) then (はい)
+    :有効;
+  else (いいえ)
+    :無効;
+  endif
+  stop
+endif
+if (型?) then (整数)
+  :整数リテラルを検証;
+elseif (型は浮動小数?) then (浮動小数)
+  :整数または小数を検証;
+elseif (型はBoolean?) then (Boolean)
+  :0または1を検証;
+elseif (型はString?) then (String)
+  :SQL文字列リテラルを検証;
+elseif (型はLocalDate?) then (LocalDate)
+  :日付リテラルまたはCURRENT_DATE;
+elseif (型はLocalTime?) then (LocalTime)
+  :時刻リテラルまたはCURRENT_TIME;
+elseif (型はLocalDateTime?) then (LocalDateTime)
+  :日時リテラルまたはCURRENT_TIMESTAMP系;
+else (ByteArray / 未対応)
+  :無効;
+endif
+stop
+
+@enduml

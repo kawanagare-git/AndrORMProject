@@ -1,0 +1,35 @@
+@startuml
+title test-support クラス図
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment left
+skinparam noteBackgroundColor #FFFDE7
+skinparam noteBorderColor #9E9E9E
+skinparam ArrowColor #455A64
+skinparam activityDiamondBackgroundColor #ECEFF1
+skinparam activityDiamondBorderColor #455A64
+
+abstract class SimpleArgumentConverter
+class AnyListConverter {
+  +convert(source, targetType): Any
+}
+class Any2dListConverter {
+  +convert(source, targetType): Any
+}
+object CsvTokenParser {
+  +parseList(source): List<String>
+  +parse2dList(source): List<List<String>>
+  +toStringValue(token): String?
+  +toAnyValue(token): Any?
+  -splitEscaped(...)
+}
+
+SimpleArgumentConverter <|-- AnyListConverter
+SimpleArgumentConverter <|-- Any2dListConverter
+AnyListConverter --> CsvTokenParser
+Any2dListConverter --> CsvTokenParser
+
+@enduml
