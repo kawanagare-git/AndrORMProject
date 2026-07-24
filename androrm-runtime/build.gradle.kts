@@ -1,9 +1,13 @@
 // ＜androrm-runtime/build.gradle.kts＞
+import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    id("maven-publish")
 }
+group = providers.gradleProperty("andrormGroup").get()
+version = providers.gradleProperty("andrormVersion").get()
 
 android {
     namespace = "jp.pgw.lab78.androrm.runtime"
@@ -36,6 +40,12 @@ android {
             java.srcDir(
                 rootProject.file("test-support/src/test/kotlin")
             )
+        }
+    }
+    // 追加：release版AARをMaven公開対象にする
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
         }
     }
 }
@@ -80,4 +90,19 @@ tasks.withType<Test>().configureEach {
         "-Dsun.stdout.encoding=UTF-8",
         "-Dsun.stderr.encoding=UTF-8",
     )
+}
+/*
+ * Android Gradle Pluginがreleaseコンポーネントを作成した後に、
+ * MavenPublicationへ登録する。
+ */
+afterEvaluate {
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                artifactId = "androrm-runtime"
+
+                from(components["release"])
+            }
+        }
+    }
 }
