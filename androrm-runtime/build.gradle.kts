@@ -1,33 +1,83 @@
+// ＜androrm-runtime/build.gradle.kts＞
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
 }
 
 android {
-    namespace = "jp.pgw.lab78.androrm_runtime"
+    namespace = "jp.pgw.lab78.androrm.runtime"
     compileSdk = 34
 
     defaultConfig {
         minSdk = 24
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
+
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-    kotlinOptions {
-        jvmTarget = "11"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+
+        // LocalDate／LocalTime／LocalDateTime対応
+        isCoreLibraryDesugaringEnabled = true
     }
 
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    /*
+     * 既存のUnit Testが使用している共通テスト支援コード。
+     * Unit Testをruntimeへ移動した際に使用する。
+     */
+    sourceSets {
+        getByName("test") {
+            java.srcDir(
+                rootProject.file("test-support/src/test/kotlin")
+            )
+        }
+    }
 }
 
 dependencies {
-    implementation(libs.appcompat)
-    implementation(libs.core.ktx.v1131)
-    implementation(libs.material)
+    /*
+     * SelectEntity、InsertEntityなどはruntimeの公開APIに現れるため、
+     * 利用側にも公開されるapi依存とする。
+     */
+    api(project(":androrm-common"))
+
+    /*
+     * shared-libraryはruntime内部だけで使用する。
+     */
+    implementation(project(":shared-library"))
+
+    // Kotlinリフレクション
+    implementation(libs.kotlin.reflect)
+
+    // java.timeなどの新しいJava API対応
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+
+    // Unit Test：JUnit 5
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.jupiter.engine)
+
+    // 既存JUnit 4テストとの互換
     testImplementation(libs.junit)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(libs.ext.junit)
+    testRuntimeOnly(libs.junit.vintage.engine)
+
+    // Mockito
+    testImplementation(libs.mockito.core)
+}
+
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+
+    systemProperty("file.encoding", "UTF-8")
+
+    jvmArgs(
+        "-Dfile.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8",
+    )
 }
