@@ -1,13 +1,13 @@
 package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeColumnRef
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeProperty
 import jp.pgw.lab78.androrm.database.utility.EntityManager.toColumnString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
 
 /**
  * ## Condition テスト

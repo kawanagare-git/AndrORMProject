@@ -10,9 +10,9 @@ import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.MAX
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
-import jp.pgw.lab78.androrm.database.entities.select.SalaryEntitySelective
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntityIdSelection as EmployeeEntityIdSelection
+import jp.pgw.lab78.androrm.database.entities.RuntimeSalaryEntitySelective as SalaryEntitySelective
 import jp.pgw.lab78.androrm.database.interfaces.plus
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.*
 import jp.pgw.lab78.androrm.database.reference.TableRef

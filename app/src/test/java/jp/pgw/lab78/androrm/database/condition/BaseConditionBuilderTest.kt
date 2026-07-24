@@ -2,8 +2,6 @@ package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.base.BaseConditionBuilder.NullMarker
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.support.SupportOperation.changeColumnRef
@@ -14,6 +12,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntityIdSelection as EmployeeEntityIdSelection
 
 /**
  * ## ConditionBuilder テスト

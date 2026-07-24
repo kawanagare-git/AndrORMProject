@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.database.support
 
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
 
 /**
  * ## テストサポートクラス

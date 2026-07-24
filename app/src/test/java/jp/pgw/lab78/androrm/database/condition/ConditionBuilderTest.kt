@@ -1,11 +1,11 @@
 package jp.pgw.lab78.androrm.database.condition
 
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.support.createConditionBuilderTestState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
 
 /**
  * ## ConditionBuilder テスト

@@ -21,9 +21,9 @@ import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.entities.define.SalaryEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestLargeEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
-import jp.pgw.lab78.androrm.database.entities.select.SalaryEntitySelective
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntityIdSelection as EmployeeEntityIdSelection
+import jp.pgw.lab78.androrm.database.entities.RuntimeSalaryEntitySelective as SalaryEntitySelective
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.LEFT
 import jp.pgw.lab78.androrm.database.utility.EntityManager.SelectColumnTarget

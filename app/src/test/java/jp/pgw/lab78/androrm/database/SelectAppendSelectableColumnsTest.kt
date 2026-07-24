@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntityIdSelection
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntityIdSelection as EmployeeEntityIdSelection
 import jp.pgw.lab78.androrm.database.queryparts.JoinType
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import org.junit.jupiter.api.Assertions.*

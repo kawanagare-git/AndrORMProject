@@ -1,7 +1,6 @@
 package jp.pgw.lab78.androrm.database.condition
 
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
-import jp.pgw.lab78.androrm.database.entities.select.EmployeeEntity
 import jp.pgw.lab78.androrm.database.function.AggregateFunction.MAX
 import jp.pgw.lab78.androrm.database.support.createConditionBuilderTestState
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import kotlin.reflect.KProperty1
+import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
 
 /**
  * ## HavingConditionBuilder テスト
