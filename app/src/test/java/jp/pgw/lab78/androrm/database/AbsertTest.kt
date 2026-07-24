@@ -2,7 +2,7 @@ package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00016
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00017
-import jp.pgw.lab78.androrm.database.entities.upsert.SalaryEntityUpsert
+import jp.pgw.lab78.androrm.database.entities.RuntimeSalaryEntityUpsert
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -25,17 +25,17 @@ class AbsertTest {
     fun testSingleLineBuild() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
 
-        val absert = Absert(SalaryEntityUpsert::class)
+        val absert = Absert(RuntimeSalaryEntityUpsert::class)
             .addEntity(
-                SalaryEntityUpsert(
+                RuntimeSalaryEntityUpsert(
                     employeeId = "00010",
                     payMonth = "202607",
                     createdAt = createdAt,
                 )
             )
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
-                column(SalaryEntityUpsert::payMonth)
+                column(RuntimeSalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::payMonth)
             }
 
         val actualQuery = absert.build()
@@ -70,15 +70,15 @@ class AbsertTest {
         val createdAt1 = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
         val createdAt2 = LocalDateTime.of(2026, 7, 2, 21, 31, 0)
 
-        val absert = Absert(SalaryEntityUpsert::class)
+        val absert = Absert(RuntimeSalaryEntityUpsert::class)
             .addEntities(
                 listOf(
-                    SalaryEntityUpsert(
+                    RuntimeSalaryEntityUpsert(
                         employeeId = "00010",
                         payMonth = "202607",
                         createdAt = createdAt1,
                     ),
-                    SalaryEntityUpsert(
+                    RuntimeSalaryEntityUpsert(
                         employeeId = "00011",
                         payMonth = "202607",
                         createdAt = createdAt2,
@@ -86,8 +86,8 @@ class AbsertTest {
                 )
             )
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
-                column(SalaryEntityUpsert::payMonth)
+                column(RuntimeSalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::payMonth)
             }
 
         val actualQuery = absert.build()
@@ -122,10 +122,10 @@ class AbsertTest {
      */
     @Test
     fun testBuildEmptyList() {
-        val absert = Absert(SalaryEntityUpsert::class)
+        val absert = Absert(RuntimeSalaryEntityUpsert::class)
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
-                column(SalaryEntityUpsert::payMonth)
+                column(RuntimeSalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::payMonth)
             }
 
         val actual = assertThrows(IllegalArgumentException::class.java) {
@@ -145,9 +145,9 @@ class AbsertTest {
     fun testBuildWithoutConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
 
-        val absert = Absert(SalaryEntityUpsert::class)
+        val absert = Absert(RuntimeSalaryEntityUpsert::class)
             .addEntity(
-                SalaryEntityUpsert(
+                RuntimeSalaryEntityUpsert(
                     employeeId = "00010",
                     payMonth = "202607",
                     createdAt = createdAt,
@@ -171,20 +171,20 @@ class AbsertTest {
     fun testOnConflictCalledTwiceReplacesConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
 
-        val absert = Absert(SalaryEntityUpsert::class)
+        val absert = Absert(RuntimeSalaryEntityUpsert::class)
             .addEntity(
-                SalaryEntityUpsert(
+                RuntimeSalaryEntityUpsert(
                     employeeId = "00010",
                     payMonth = "202607",
                     createdAt = createdAt,
                 )
             )
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::employeeId)
             }
             .onConflict {
-                key(SalaryEntityUpsert::employeeId)
-                key(SalaryEntityUpsert::payMonth)
+                key(RuntimeSalaryEntityUpsert::employeeId)
+                key(RuntimeSalaryEntityUpsert::payMonth)
             }
 
         assertEquals(

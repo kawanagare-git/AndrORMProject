@@ -3,8 +3,8 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00016
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00017
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00018
-import jp.pgw.lab78.androrm.database.entities.insert.TestAllEntityComprehensive
-import jp.pgw.lab78.androrm.database.entities.upsert.SalaryEntityUpsert
+import jp.pgw.lab78.androrm.database.entities.RuntimeSalaryEntityUpsert
+import jp.pgw.lab78.androrm.database.entities.RuntimeTestAllEntityComprehensive
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -28,7 +28,7 @@ class UpsertTest {
         val updateDate = LocalDateTime.of(2026, 5, 27, 12, 1, 0)
         val insertDateTime = LocalDateTime.of(2026, 5, 27, 12, 2, 0)
 
-        val entity = TestAllEntityComprehensive(
+        val entity = RuntimeTestAllEntityComprehensive(
             id = 1,
             name = "川流",
             address = "愛知県豊田市",
@@ -37,12 +37,12 @@ class UpsertTest {
             insertDateTime = insertDateTime,
         )
         val updateData = LocalDateTime.now().plusMonths(1)
-        val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict { column(TestAllEntityComprehensive::id) }
+        val upsert = Upsert(RuntimeTestAllEntityComprehensive::class)
+            .onConflict { column(RuntimeTestAllEntityComprehensive::id) }
             .set {
-                TestAllEntityComprehensive::name assign excluded(TestAllEntityComprehensive::name)
-                TestAllEntityComprehensive::address assign excluded(TestAllEntityComprehensive::address)
-                TestAllEntityComprehensive::updateDate becomes updateData
+                RuntimeTestAllEntityComprehensive::name assign excluded(RuntimeTestAllEntityComprehensive::name)
+                RuntimeTestAllEntityComprehensive::address assign excluded(RuntimeTestAllEntityComprehensive::address)
+                RuntimeTestAllEntityComprehensive::updateDate becomes updateData
             }
         val query = upsert.addEntity(entity).build()
         val values = upsert.bindValues
@@ -85,7 +85,7 @@ class UpsertTest {
         val insertDateTime2 = LocalDateTime.of(2026, 5, 27, 13, 2, 0)
 
         val entityList = listOf(
-            TestAllEntityComprehensive(
+            RuntimeTestAllEntityComprehensive(
                 id = 1,
                 name = "川流",
                 address = "愛知県豊田市",
@@ -93,7 +93,7 @@ class UpsertTest {
                 updateDate = updateDate1,
                 insertDateTime = insertDateTime1,
             ),
-            TestAllEntityComprehensive(
+            RuntimeTestAllEntityComprehensive(
                 id = 2,
                 name = "kawanagare",
                 address = "宮城県仙台市",
@@ -102,12 +102,12 @@ class UpsertTest {
                 insertDateTime = insertDateTime2,
             )
         )
-        val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict { column(TestAllEntityComprehensive::id) }
+        val upsert = Upsert(RuntimeTestAllEntityComprehensive::class)
+            .onConflict { column(RuntimeTestAllEntityComprehensive::id) }
             .set {
-                TestAllEntityComprehensive::name assign excluded(TestAllEntityComprehensive::name)
-                TestAllEntityComprehensive::address assign excluded(TestAllEntityComprehensive::address)
-                TestAllEntityComprehensive::updateDate becomes excluded(TestAllEntityComprehensive::updateDate)
+                RuntimeTestAllEntityComprehensive::name assign excluded(RuntimeTestAllEntityComprehensive::name)
+                RuntimeTestAllEntityComprehensive::address assign excluded(RuntimeTestAllEntityComprehensive::address)
+                RuntimeTestAllEntityComprehensive::updateDate becomes excluded(RuntimeTestAllEntityComprehensive::updateDate)
             }
         val query = upsert.addEntities(entityList).build()
         val values = upsert.bindValues
@@ -148,14 +148,14 @@ class UpsertTest {
     fun testAddEntityBuild() {
         val createdAt = LocalDateTime.of(2026, 5, 27, 12, 1, 0)
 
-        val upsert = Upsert(SalaryEntityUpsert::class)
+        val upsert = Upsert(RuntimeSalaryEntityUpsert::class)
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
-                column(SalaryEntityUpsert::payMonth)
+                column(RuntimeSalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::payMonth)
             }
-            .set { SalaryEntityUpsert::createdAt assign excluded(SalaryEntityUpsert::createdAt) }
+            .set { RuntimeSalaryEntityUpsert::createdAt assign excluded(RuntimeSalaryEntityUpsert::createdAt) }
         upsert.addEntity(
-            SalaryEntityUpsert(
+            RuntimeSalaryEntityUpsert(
                 employeeId = "00010",
                 payMonth = "202605",
                 createdAt = createdAt,
@@ -191,9 +191,9 @@ class UpsertTest {
      */
     @Test
     fun testBuildEmptyList() {
-        val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict { column(TestAllEntityComprehensive::id) }
-            .set { TestAllEntityComprehensive::name becomes TestAllEntityComprehensive::name }
+        val upsert = Upsert(RuntimeTestAllEntityComprehensive::class)
+            .onConflict { column(RuntimeTestAllEntityComprehensive::id) }
+            .set { RuntimeTestAllEntityComprehensive::name becomes RuntimeTestAllEntityComprehensive::name }
         val actual = assertThrows(IllegalArgumentException::class.java) {
             upsert.build()
         }
@@ -212,7 +212,7 @@ class UpsertTest {
         val insertDateTime = LocalDateTime.of(2026, 5, 27, 12, 2, 0)
 
         val entityList = listOf(
-            TestAllEntityComprehensive(
+            RuntimeTestAllEntityComprehensive(
                 id = 1,
                 name = "川流",
                 address = "愛知県豊田市",
@@ -222,9 +222,9 @@ class UpsertTest {
             )
         )
 
-        val upsert = Upsert(TestAllEntityComprehensive::class)
+        val upsert = Upsert(RuntimeTestAllEntityComprehensive::class)
             .addEntities(entityList)
-            .set { TestAllEntityComprehensive::name assign "Test name" }
+            .set { RuntimeTestAllEntityComprehensive::name assign "Test name" }
 
         val actual = assertThrows(IllegalArgumentException::class.java) {
             upsert.build()
@@ -244,7 +244,7 @@ class UpsertTest {
         val insertDateTime = LocalDateTime.of(2026, 5, 27, 12, 2, 0)
 
         val entityList = listOf(
-            TestAllEntityComprehensive(
+            RuntimeTestAllEntityComprehensive(
                 id = 1,
                 name = "川流",
                 address = "愛知県豊田市",
@@ -253,8 +253,8 @@ class UpsertTest {
                 insertDateTime = insertDateTime,
             )
         )
-        val upsert = Upsert(TestAllEntityComprehensive::class)
-            .onConflict { column(TestAllEntityComprehensive::id) }.addEntities(entityList)
+        val upsert = Upsert(RuntimeTestAllEntityComprehensive::class)
+            .onConflict { column(RuntimeTestAllEntityComprehensive::id) }.addEntities(entityList)
         val actual = assertThrows(IllegalArgumentException::class.java) {
             upsert.build()
         }
@@ -270,21 +270,21 @@ class UpsertTest {
     fun testBuildWithWhereBuildsDoUpdateWhereClause() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
 
-        val upsert = Upsert(SalaryEntityUpsert::class)
+        val upsert = Upsert(RuntimeSalaryEntityUpsert::class)
             .addEntity(
-                SalaryEntityUpsert(
+                RuntimeSalaryEntityUpsert(
                     employeeId = "00010",
                     payMonth = "202607",
                     createdAt = createdAt,
                 )
             )
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
-                column(SalaryEntityUpsert::payMonth)
+                column(RuntimeSalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::payMonth)
             }
             .set {
-                SalaryEntityUpsert::createdAt assign
-                        excluded(SalaryEntityUpsert::createdAt)
+                RuntimeSalaryEntityUpsert::createdAt assign
+                        excluded(RuntimeSalaryEntityUpsert::createdAt)
             }
             .where {
                 condition("excluded.PAY_MONTH = ?", "202607")
@@ -323,24 +323,24 @@ class UpsertTest {
     fun testOnConflictCalledTwiceReplacesConflictColumns() {
         val createdAt = LocalDateTime.of(2026, 7, 2, 21, 30, 0)
 
-        val upsert = Upsert(SalaryEntityUpsert::class)
+        val upsert = Upsert(RuntimeSalaryEntityUpsert::class)
             .addEntity(
-                SalaryEntityUpsert(
+                RuntimeSalaryEntityUpsert(
                     employeeId = "00010",
                     payMonth = "202607",
                     createdAt = createdAt,
                 )
             )
             .onConflict {
-                column(SalaryEntityUpsert::employeeId)
+                column(RuntimeSalaryEntityUpsert::employeeId)
             }
             .onConflict {
-                key(SalaryEntityUpsert::employeeId)
-                key(SalaryEntityUpsert::payMonth)
+                key(RuntimeSalaryEntityUpsert::employeeId)
+                key(RuntimeSalaryEntityUpsert::payMonth)
             }
             .set {
-                SalaryEntityUpsert::createdAt assign
-                        excluded(SalaryEntityUpsert::createdAt)
+                RuntimeSalaryEntityUpsert::createdAt assign
+                        excluded(RuntimeSalaryEntityUpsert::createdAt)
             }
 
         assertEquals(
