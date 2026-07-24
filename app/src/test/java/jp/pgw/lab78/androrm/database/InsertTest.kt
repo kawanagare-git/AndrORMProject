@@ -1,8 +1,8 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00011
-import jp.pgw.lab78.androrm.database.entities.insert.DepartmentEntityInsert
-import jp.pgw.lab78.androrm.database.entities.insert.SalaryEntityInsert
+import jp.pgw.lab78.androrm.database.entities.RuntimeDepartmentEntityInsert
+import jp.pgw.lab78.androrm.database.entities.RuntimeSalaryEntityInsert
 import jp.pgw.lab78.androrm.database.entities.insert.TestInsertEntity
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
@@ -59,20 +59,20 @@ class InsertTest {
     fun testMultiLineBuild() {
         val updateAt = LocalDateTime.of(2026, 5, 23, 0, 10, 59)
         val testInsertEntityList = listOf(
-            SalaryEntityInsert(
+            RuntimeSalaryEntityInsert(
                 "00010", "1",
                 278900,
                 updateAt,
                 "KW001",
             ),
-            SalaryEntityInsert(
+            RuntimeSalaryEntityInsert(
                 "00010", "2",
                 286500,
                 updateAt,
                 "KW002",
             )
         )
-        val insert = Insert(SalaryEntityInsert::class)
+        val insert = Insert(RuntimeSalaryEntityInsert::class)
         val query = insert.addEntities(testInsertEntityList).build()
         val values = insert.bindValues
         assertEquals(
@@ -98,16 +98,16 @@ class InsertTest {
         val createAt = LocalDateTime.of(2026, 5, 23, 0, 10, 59)
         val updateAt = LocalDateTime.of(2026, 5, 23, 12, 40, 59)
         val testInsertEntityList = listOf(
-            DepartmentEntityInsert(
+            RuntimeDepartmentEntityInsert(
                 "00010", "開発", "ゲーム",
                 createAt, "KW003", updateAt, "KW003",
             ),
-            DepartmentEntityInsert(
+            RuntimeDepartmentEntityInsert(
                 "00020", "設計", "パッケージ",
                 createAt, "KW004", updateAt, "KW004",
             )
         )
-        val insert = Insert(DepartmentEntityInsert::class)
+        val insert = Insert(RuntimeDepartmentEntityInsert::class)
         val query1 = insert.addEntities(testInsertEntityList).build()
         val values1 = insert.bindValues
         assertEquals(
@@ -122,7 +122,7 @@ class InsertTest {
             values1
         )
         insert.addEntity(
-            DepartmentEntityInsert(
+            RuntimeDepartmentEntityInsert(
                 "00010", "受注", "企画",
                 createAt, "KW004", updateAt, "KW003",
             )
