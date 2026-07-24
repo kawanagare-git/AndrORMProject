@@ -3,8 +3,8 @@ package jp.pgw.lab78.androrm.database
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00013
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00014
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00015
+import jp.pgw.lab78.androrm.database.entities.RuntimeTestAllEntityUpdate
 import jp.pgw.lab78.androrm.database.entities.select.TestSelectEntity
-import jp.pgw.lab78.androrm.database.entities.update.TestAllEntityUpdate
 import jp.pgw.lab78.androrm.database.interfaces.plus
 import jp.pgw.lab78.androrm.database.interfaces.rawExpression
 import jp.pgw.lab78.androrm.database.queryparts.JoinType.INNER
@@ -29,10 +29,14 @@ class UpdateTest {
     fun testBuild_setEntityAndWhere() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
         val entity =
-            TestAllEntityUpdate(name = "川流", address = "愛知県豊田市", updateDate = updateDate)
-        val update = Update(TestAllEntityUpdate::class)
+            RuntimeTestAllEntityUpdate(
+                name = "川流",
+                address = "愛知県豊田市",
+                updateDate = updateDate
+            )
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
-            .where { TestAllEntityUpdate::name eq "更新前" }
+            .where { RuntimeTestAllEntityUpdate::name eq "更新前" }
         val actualQuery = update.build()
         val actualValues = update.bindValues
         assertEquals(
@@ -55,14 +59,14 @@ class UpdateTest {
     @Test
     fun testBuild_setDslFromJoinAndWhere() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
-        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val targetTable = TableRef(RuntimeTestAllEntityUpdate::class, "A")
         val fromTable = TableRef(TestSelectEntity::class, "X")
         val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
             .set {
-                TestAllEntityUpdate::name becomes fromTable[TestSelectEntity::name]
-                TestAllEntityUpdate::address becomes joinTable[TestSelectEntity::address]
-                TestAllEntityUpdate::updateDate assign updateDate
+                RuntimeTestAllEntityUpdate::name becomes fromTable[TestSelectEntity::name]
+                RuntimeTestAllEntityUpdate::address becomes joinTable[TestSelectEntity::address]
+                RuntimeTestAllEntityUpdate::updateDate assign updateDate
             }
             .from(fromTable)
             .join(INNER, joinTable) {
@@ -94,9 +98,9 @@ class UpdateTest {
      */
     @Test
     fun testBuild_withoutSet_throwsIllegalArgumentException() {
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .where {
-                TestAllEntityUpdate::name eq "川流"
+                RuntimeTestAllEntityUpdate::name eq "川流"
             }
 
         val actual = assertThrows(IllegalArgumentException::class.java) {
@@ -114,8 +118,12 @@ class UpdateTest {
     fun testBuild_withoutWhere_throwsIllegalArgumentException() {
         val updateDate = LocalDateTime.parse("2026-05-24T19:14:00")
         val entity =
-            TestAllEntityUpdate(name = "川流", address = "愛知県豊田市", updateDate = updateDate)
-        val update = Update(TestAllEntityUpdate::class)
+            RuntimeTestAllEntityUpdate(
+                name = "川流",
+                address = "愛知県豊田市",
+                updateDate = updateDate
+            )
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
         val actual = assertThrows(IllegalArgumentException::class.java) {
             update.build()
@@ -130,7 +138,7 @@ class UpdateTest {
      */
     @Test
     fun testJoin_beforeFrom_throwsIllegalStateException() {
-        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val targetTable = TableRef(RuntimeTestAllEntityUpdate::class, "A")
         val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
         val actual = assertThrows(IllegalStateException::class.java) {
@@ -148,15 +156,15 @@ class UpdateTest {
      */
     @Test
     fun testBuild_setDslWithSqlExpression_buildsSetExpressionAndBindValues() {
-        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val targetTable = TableRef(RuntimeTestAllEntityUpdate::class, "A")
 
         val update = Update(targetTable)
             .set {
-                TestAllEntityUpdate::name becomes (targetTable[TestAllEntityUpdate::name] + 10)
-                TestAllEntityUpdate::updateDate becomes rawExpression("CURRENT_TIMESTAMP")
+                RuntimeTestAllEntityUpdate::name becomes (targetTable[RuntimeTestAllEntityUpdate::name] + 10)
+                RuntimeTestAllEntityUpdate::updateDate becomes rawExpression("CURRENT_TIMESTAMP")
             }
             .where {
-                targetTable[TestAllEntityUpdate::name] eq "更新前"
+                targetTable[RuntimeTestAllEntityUpdate::name] eq "更新前"
             }
 
         assertEquals(
@@ -180,12 +188,12 @@ class UpdateTest {
     fun testBuild_updateAll_buildsAllRecordsUpdate() {
         val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
         val entity =
-            TestAllEntityUpdate(
+            RuntimeTestAllEntityUpdate(
                 name = "更新後",
                 address = "愛知県豊田市",
                 updateDate = updateDate,
             )
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
             .updateAll()
         assertEquals(
@@ -209,15 +217,15 @@ class UpdateTest {
     fun testBuild_whereBuiltThenUpdateAll_rebuildsAllRecordsUpdate() {
         val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
         val entity =
-            TestAllEntityUpdate(
+            RuntimeTestAllEntityUpdate(
                 name = "更新後",
                 address = "愛知県豊田市",
                 updateDate = updateDate,
             )
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
             .where {
-                TestAllEntityUpdate::name eq "更新前"
+                RuntimeTestAllEntityUpdate::name eq "更新前"
             }
         assertEquals(
             "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
@@ -251,12 +259,12 @@ class UpdateTest {
     fun testBuild_rebuildsAllRecordsUpdate_whereBuiltThenUpdateAll() {
         val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
         val entity =
-            TestAllEntityUpdate(
+            RuntimeTestAllEntityUpdate(
                 name = "更新後",
                 address = "愛知県豊田市",
                 updateDate = updateDate,
             )
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
             .updateAll()
         assertEquals(
@@ -270,7 +278,7 @@ class UpdateTest {
         )
         update.set(entity)
             .where {
-                TestAllEntityUpdate::name eq "更新前"
+                RuntimeTestAllEntityUpdate::name eq "更新前"
             }
         assertEquals(
             "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
@@ -294,12 +302,12 @@ class UpdateTest {
     fun testBuild_updateAllBuiltThenWhere_rebuildsConditionalUpdate() {
         val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
         val entity =
-            TestAllEntityUpdate(
+            RuntimeTestAllEntityUpdate(
                 name = "更新後",
                 address = "愛知県豊田市",
                 updateDate = updateDate,
             )
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
             .updateAll()
         assertEquals(
@@ -308,7 +316,7 @@ class UpdateTest {
             update.build(),
         )
         update.where {
-            TestAllEntityUpdate::name eq "更新前"
+            RuntimeTestAllEntityUpdate::name eq "更新前"
         }
         assertEquals(
             "update TEST_ALL_ENTITY as TEST_ALL_ENTITY " +
@@ -332,12 +340,12 @@ class UpdateTest {
     fun testBuild_updateAll_buildTwice_doesNotDuplicateBindValues() {
         val updateDate = LocalDateTime.parse("2026-07-22T09:00:00")
         val entity =
-            TestAllEntityUpdate(
+            RuntimeTestAllEntityUpdate(
                 name = "更新後",
                 address = "愛知県豊田市",
                 updateDate = updateDate,
             )
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .set(entity)
             .updateAll()
         val firstQuery = update.build()
@@ -363,19 +371,19 @@ class UpdateTest {
      */
     @Test
     fun testBuild_updateAllWithJoin_keepsJoinBindValues() {
-        val targetTable = TableRef(TestAllEntityUpdate::class, "A")
+        val targetTable = TableRef(RuntimeTestAllEntityUpdate::class, "A")
         val fromTable = TableRef(TestSelectEntity::class, "X")
         val joinTable = TableRef(TestSelectEntity::class, "Y")
         val update = Update(targetTable)
             .set {
-                TestAllEntityUpdate::name assign "更新後"
+                RuntimeTestAllEntityUpdate::name assign "更新後"
             }
             .from(fromTable)
             .join(INNER, joinTable) {
                 joinTable[TestSelectEntity::id] eq 50
             }
             .where {
-                targetTable[TestAllEntityUpdate::name] eq "更新前"
+                targetTable[RuntimeTestAllEntityUpdate::name] eq "更新前"
             }
             .updateAll()
         assertEquals(
@@ -398,7 +406,7 @@ class UpdateTest {
      */
     @Test
     fun testBuild_updateAllWithoutSet_throwsIllegalArgumentException() {
-        val update = Update(TestAllEntityUpdate::class)
+        val update = Update(RuntimeTestAllEntityUpdate::class)
             .updateAll()
         val actual = assertThrows(IllegalArgumentException::class.java) {
             update.build()
