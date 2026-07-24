@@ -3,6 +3,7 @@ import com.android.build.gradle.AppExtension
 import io.gitlab.arturbosch.detekt.Detekt
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.gradle.api.attributes.Attribute
 
 plugins {
     id("com.android.application")
@@ -16,6 +17,12 @@ plugins {
 
 val aspectjVersion = "1.9.25.1"
 val aspectjTools by configurations.creating
+/*
+ * Android Libraryが公開する複数の成果物から、
+ * コンパイル用クラスJARを選択するための属性。
+ */
+val androidArtifactType =
+    Attribute.of("artifactType", String::class.java)
 
 dependencies {
     implementation(project(":shared-library"))
@@ -292,8 +299,17 @@ val weaveDebugAspectJ by tasks.registering {
 
         val compileClasspath = configurations
             .getByName("debugCompileClasspath")
+            .incoming
+            .artifactView {
+                attributes {
+                    attribute(
+                        androidArtifactType,
+                        "android-classes-jar",
+                    )
+                }
+            }
             .files
-            .joinToString(File.pathSeparator) { it.absolutePath }
+            .asPath
 
         val aspectPath = inputDirs
             .joinToString(File.pathSeparator) { it.absolutePath }
