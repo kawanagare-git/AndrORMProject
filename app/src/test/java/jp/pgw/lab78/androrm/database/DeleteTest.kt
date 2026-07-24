@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00038
-import jp.pgw.lab78.androrm.database.entities.delete.TestAllEntityDelete
+import jp.pgw.lab78.androrm.database.entities.RuntimeTestAllEntityDelete
 import org.junit.Test
 import org.junit.jupiter.api.Assertions.*
 
@@ -20,7 +20,7 @@ class DeleteTest {
      */
     @Test
     fun testDeleteAll() {
-        val delete = Delete(TestAllEntityDelete::class)
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
             .deleteAll()
         assertEquals(
             "delete from TEST_ALL_ENTITY",
@@ -39,8 +39,8 @@ class DeleteTest {
      */
     @Test
     fun testDeleteSelect() {
-        val delete = Delete(TestAllEntityDelete::class)
-        delete.where { TestAllEntityDelete::address like "長野県%" }
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
+        delete.where { RuntimeTestAllEntityDelete::address like "長野県%" }
         val actual = delete.build()
         val values = delete.bindValues
         assertEquals(
@@ -58,7 +58,7 @@ class DeleteTest {
      */
     @Test
     fun testBuild_withoutWhereAndDeleteAll_throwsIllegalArgumentException() {
-        val delete = Delete(TestAllEntityDelete::class)
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
         val actual = assertThrows(IllegalArgumentException::class.java) {
             delete.build()
         }
@@ -73,9 +73,9 @@ class DeleteTest {
      */
     @Test
     fun testBuild_whereBuiltThenDeleteAll_rebuildsAllRecordsDelete() {
-        val delete = Delete(TestAllEntityDelete::class)
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
             .where {
-                TestAllEntityDelete::address like "長野県%"
+                RuntimeTestAllEntityDelete::address like "長野県%"
             }
         assertEquals(
             "delete from TEST_ALL_ENTITY " +
@@ -105,14 +105,14 @@ class DeleteTest {
      */
     @Test
     fun testBuild_deleteAllBuiltThenWhere_rebuildsConditionalDelete() {
-        val delete = Delete(TestAllEntityDelete::class)
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
             .deleteAll()
         assertEquals(
             "delete from TEST_ALL_ENTITY",
             delete.build(),
         )
         delete.where {
-            TestAllEntityDelete::address like "長野県%"
+            RuntimeTestAllEntityDelete::address like "長野県%"
         }
         assertEquals(
             "delete from TEST_ALL_ENTITY " +
@@ -133,7 +133,7 @@ class DeleteTest {
      */
     @Test
     fun testBuild_deleteAll_buildTwice_keepsQueryAndBindValues() {
-        val delete = Delete(TestAllEntityDelete::class)
+        val delete = Delete(RuntimeTestAllEntityDelete::class)
             .deleteAll()
         val firstQuery = delete.build()
         val firstBindValues = delete.bindValues

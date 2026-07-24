@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database.queryparts
 
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00010
-import jp.pgw.lab78.androrm.database.entities.delete.TestAllEntityDelete
+import jp.pgw.lab78.androrm.database.entities.RuntimeTestAllEntityDelete
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -55,7 +55,7 @@ class WhereClauseDelegateTest {
         }
 
         val actualOwner = target.where {
-            TestAllEntityDelete::address like "長野県%"
+            RuntimeTestAllEntityDelete::address like "長野県%"
         }
 
         assertSame(owner, actualOwner)
@@ -90,8 +90,8 @@ class WhereClauseDelegateTest {
         )
 
         target.where {
-            TestAllEntityDelete::id eq 10
-            TestAllEntityDelete::address like "愛知県%"
+            RuntimeTestAllEntityDelete::id eq 10
+            RuntimeTestAllEntityDelete::address like "愛知県%"
         }
 
         assertEquals(
@@ -122,12 +122,12 @@ class WhereClauseDelegateTest {
         )
 
         target.where {
-            TestAllEntityDelete::id eq 10
+            RuntimeTestAllEntityDelete::id eq 10
         }
 
         val actual = assertThrows(IllegalStateException::class.java) {
             target.where {
-                TestAllEntityDelete::address like "愛知県%"
+                RuntimeTestAllEntityDelete::address like "愛知県%"
             }
         }
 
