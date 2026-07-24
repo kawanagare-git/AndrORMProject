@@ -4,11 +4,17 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 plugins {
     id("java-library")
     kotlin("jvm")
+    id("maven-publish")
 }
+group = providers.gradleProperty("andrormGroup").get()
+version = providers.gradleProperty("andrormVersion").get()
 
 // Kotlin JVM 設定（型指定方式で衝突を回避）
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     jvmToolchain(17)
+}
+java {
+    withSourcesJar()
 }
 
 dependencies {
@@ -45,6 +51,15 @@ kotlin {
     sourceSets {
         val test by getting {
             kotlin.srcDir(rootProject.file("test-support/src/test/kotlin"))
+        }
+    }
+}
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = "androrm-common"
+
+            from(components["java"])
         }
     }
 }

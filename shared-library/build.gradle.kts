@@ -4,11 +4,17 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 plugins {
     id("java-library")
     kotlin("jvm")
+    id("maven-publish")
 }
+group = providers.gradleProperty("andrormGroup").get()
+version = providers.gradleProperty("andrormVersion").get()
 
 // Kotlin JVM 設定（Toolchain指定）
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     jvmToolchain(17)
+}
+java {
+    withSourcesJar()
 }
 
 dependencies {
@@ -26,4 +32,13 @@ tasks.withType<Test>().configureEach {
 }
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     enabled = false
+}
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = "shared-library"
+
+            from(components["java"])
+        }
+    }
 }

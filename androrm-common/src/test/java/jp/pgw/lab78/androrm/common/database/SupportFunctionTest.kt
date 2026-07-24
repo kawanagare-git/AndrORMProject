@@ -114,7 +114,7 @@ class SupportFunctionTest {
     @Test
     fun testGetTableAliasFromClassName() {
         val actual = EmptyTableAliasEntity::class.getTableAlias()
-        assertEquals("EMPTY_ALIAS_ENTITY", actual)
+        assertEquals("EMPTY_ALIAS_TABLE", actual)
     }
 
     /**
