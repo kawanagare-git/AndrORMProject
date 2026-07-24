@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm_runtime
+package jp.pgw.lab78.androrm
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
