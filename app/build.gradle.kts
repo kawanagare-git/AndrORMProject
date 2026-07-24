@@ -3,7 +3,6 @@ import com.android.build.gradle.AppExtension
 import io.gitlab.arturbosch.detekt.Detekt
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
-import org.gradle.api.attributes.Attribute
 
 plugins {
     id("com.android.application")
@@ -25,6 +24,7 @@ val androidArtifactType =
     Attribute.of("artifactType", String::class.java)
 
 dependencies {
+    implementation(project(":androrm-runtime"))
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
