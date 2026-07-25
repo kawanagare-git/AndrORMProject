@@ -16,8 +16,15 @@ plugins {
 
 val aspectjVersion = "1.9.25.1"
 val aspectjTools by configurations.creating
+/*
+ * Android Libraryが公開する複数の成果物から、
+ * コンパイル用クラスJARを選択するための属性。
+ */
+val androidArtifactType =
+    Attribute.of("artifactType", String::class.java)
 
 dependencies {
+    implementation(project(":androrm-runtime"))
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
@@ -292,8 +299,17 @@ val weaveDebugAspectJ by tasks.registering {
 
         val compileClasspath = configurations
             .getByName("debugCompileClasspath")
+            .incoming
+            .artifactView {
+                attributes {
+                    attribute(
+                        androidArtifactType,
+                        "android-classes-jar",
+                    )
+                }
+            }
             .files
-            .joinToString(File.pathSeparator) { it.absolutePath }
+            .asPath
 
         val aspectPath = inputDirs
             .joinToString(File.pathSeparator) { it.absolutePath }

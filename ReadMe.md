@@ -1,10 +1,9 @@
 # AndrORM
 
-[!IMPORTANT]
-AndrORMは現在開発中です。
-現在のランタイム実装は`app`モジュールに含まれており、
-Mavenなどから利用できるライブラリ形式では公開していません。
-今後のモジュール分離に伴い、構成およびAPIが変更される可能性があります。
+> [!IMPORTANT]
+> AndrORMは現在開発中です。
+> 初回公開バージョンは`0.1.0-alpha`です。
+> アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
 
@@ -28,7 +27,10 @@ AndrORMは、SQLiteを直接扱う際の可読性・保守性を高めること�
 
 本プロジェクトは開発中です。
 
-現時点ではMaven Centralなどへのライブラリアーティファクト公開設定はなく、リポジトリ内のマルチモジュールプロジェクトとして構成されています。
+ランタイム、共通定義、KSP Processorおよび共有ライブラリを
+独立した成果物として公開できる構成になっています。
+
+初回公開バージョンは`0.1.0-alpha`です。
 
 ## 対応環境
 
@@ -49,7 +51,8 @@ AndrORMは、SQLiteを直接扱う際の可読性・保守性を高めること�
 
 | モジュール | 役割 |
 |---|---|
-| `app` | SQLビルダー、SQLite実行、DBヘルパー、ランタイムEntity変換 |
+| `app` | AndrORMの動作確認、サンプル、Android Test |
+| `androrm-runtime` | SQLビルダー、SQLite実行、DBヘルパー、ランタイムEntity変換 |
 | `androrm-common` | アノテーション、共通メタ情報、DMLマーカーインターフェース、DEFAULT値検証 |
 | `androrm-generator-ksp` | `@Projection`を基に用途別Entityを生成 |
 | `androrm-detekt-rules` | AndrORM専用Detektルール |
@@ -61,9 +64,12 @@ AndrORMは、SQLiteを直接扱う際の可読性・保守性を高めること�
 
 ```text
 app
- ├─ androrm-common
- ├─ shared-library
+ ├─ androrm-runtime
  └─ androrm-generator-ksp（KSP）
+
+androrm-runtime
+ ├─ androrm-common
+ └─ shared-library
 
 androrm-generator-ksp
  ├─ androrm-common
@@ -146,7 +152,7 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 主な条件演算をDSLで指定できます。
 
 - `eq`／`equal`
-- `ne`／`norEqual`
+- `ne`／`notEqual`
 - `gt`／`graterThan`
 - `ge`／`graterEqual`
 - `lt`／`lesserThan`
@@ -162,6 +168,42 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 - `condition`によるraw条件
 
 ## セットアップ
+
+### Maven Centralからの利用方法
+
+KSPプラグインを有効にします。
+
+```kotlin
+plugins {
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+}
+```
+AndrORMのランタイムとKSP Processorを追加します。
+```
+dependencies {
+    implementation(
+        "io.github.kawanagare-git:androrm-runtime:0.1.0-alpha"
+    )
+
+    ksp(
+        "io.github.kawanagare-git:androrm-generator-ksp:0.1.0-alpha"
+    )
+}
+```
+Core Library Desugaringを有効にします。
+```
+android {
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring(
+        "com.android.tools:desugar_jdk_libs:2.1.5"
+    )
+}
+```
 
 ### プロジェクトを開く
 
@@ -185,6 +227,7 @@ Unit Test：
 
 ```powershell
 .\gradlew :app:testDebugUnitTest
+.\gradlew :androrm-runtime:testDebugUnitTest
 .\gradlew :androrm-common:test
 .\gradlew :androrm-generator-ksp:test
 .\gradlew :androrm-detekt-rules:test
@@ -836,22 +879,6 @@ config/detekt/detekt.yml
 | Unit Test | JUnit5（Jupiter）。JUnit4／Vintage互換も有効 |
 | Android Test | JUnit4 |
 
-### アップロード済みプロジェクトに含まれる直近結果
-
-| 区分 | テスト数 | 失敗 | エラー | スキップ |
-|---|---:|---:|---:|---:|
-| Unit Test結果XML | 357 | 0 | 0 | 0 |
-| Android Test | 28 | 0 | 0 | 0 |
-
-Android Testの実行環境：
-
-```text
-Pixel_9_Pro_API_34
-Android 14
-```
-
-このREADME生成環境ではGradle 8.10.2の取得に外部通信が必要だったため、テストの再実行はできませんでした。上記はアップロード済みプロジェクト内の結果ファイルを集計した値です。
-
 ## ディレクトリ構成
 
 ```text
@@ -863,6 +890,7 @@ AndrORM/
 ├─ androrm-common/
 ├─ androrm-generator-ksp/
 ├─ androrm-detekt-rules/
+├─ androrm-runtime/
 ├─ shared-library/
 ├─ test-support/
 ├─ ksp-fixtures/

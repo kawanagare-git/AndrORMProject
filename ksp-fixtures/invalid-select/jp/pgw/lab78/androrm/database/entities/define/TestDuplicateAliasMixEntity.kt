@@ -9,6 +9,11 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 
+/**
+ * KSPの不正なSELECT Entity検証に使用するTestDuplicateAliasMixEntity。
+ * @author Masahiro Inoue
+ * @since 2026-05-01
+ */
 @Table(name = "TEST_DUP_ALIAS_MIX", alias = "TDAM")
 @Projection(
     entityNameExtend = "Select",

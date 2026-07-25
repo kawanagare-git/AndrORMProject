@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.ksp.projectoin
 
 import com.google.devtools.ksp.symbol.KSAnnotation
+import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSType
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.Constants.UNKNOWN
@@ -148,6 +149,12 @@ class ProjectionArgumentParser() : LoggerLike by logger {
                     commonInterfaces = (value as? List<*>)?.mapNotNull { element ->
                         when (element) {
                             is DMLInterfaceEnum -> element
+                            is KSClassDeclaration -> runCatching {
+                                DMLInterfaceEnum.valueOf(
+                                    element.simpleName.asString()
+                                )
+                            }.getOrNull()
+
                             is KSType -> runCatching {
                                 DMLInterfaceEnum.valueOf(element.declaration.simpleName.asString())
                             }.getOrNull()

@@ -9,6 +9,11 @@ import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 
+/**
+ * KSPの不正なSELECT Entity検証に使用するTestAllHiddenMixEntity。
+ * @author Masahiro Inoue
+ * @since 2026-05-01
+ */
 @Table(name = "TEST_ALL_HIDDEN_MIX", alias = "TAHM")
 @Projection(
     entityNameExtend = "Select",

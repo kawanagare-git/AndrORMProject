@@ -3,9 +3,12 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
     id("org.jetbrains.kotlin.jvm")
-//    id("com.google.devtools.ksp")
     alias(libs.plugins.ksp)
+    // Maven Central公開用
+    id("com.vanniktech.maven.publish")
 }
+group = providers.gradleProperty("andrormGroup").get()
+version = providers.gradleProperty("andrormVersion").get()
 
 // Kotlin JVM 設定
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
@@ -32,35 +35,6 @@ subprojects {
     }
 }
 
-// === KSP META-INF サービス登録 ===
-tasks.register("generateKspMeta") {
-    val outputDir = layout.buildDirectory.dir("ksp-meta")
-    outputs.dir(outputDir)
-
-    doLast {
-        val servicesDir = outputDir.get().dir("META-INF/services").asFile
-        servicesDir.mkdirs()
-
-        val file = servicesDir.resolve("com.google.devtools.ksp.processing.SymbolProcessorProvider")
-        file.writeText("jp.pgw.lab78.androrm.ksp.PropsProcessorProvider")
-    }
-}
-
-// === JAR 出力設定 ===
-tasks.withType<Jar> {
-    manifest {
-        attributes["Main-Class"] = "jp.pgw.lab78.androrm.ksp.PropsProcessorProvider"
-    }
-    from(layout.buildDirectory.dir("ksp-meta")) {
-        into("META-INF/services")
-    }
-}
-
-// === KSP メタ生成を Kotlin コンパイル前に実行 ===
-tasks.named("compileKotlin").configure {
-    dependsOn("generateKspMeta")
-}
-
 // === KSP 出力ソースを明示的に追加 ===
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     sourceSets["main"].kotlin.srcDir("build/generated/ksp/main/kotlin")
@@ -81,4 +55,42 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
+
+    pom {
+        name = "AndrORM KSP Generator"
+        description =
+            "KSP processor that generates projection entities for AndrORM."
+        inceptionYear = "2025"
+        url = "https://github.com/kawanagare-git/AndrORMProject"
+
+
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://opensource.org/license/mit"
+                distribution = "repo"
+            }
+        }
+
+        developers {
+            developer {
+                id = "kawanagare-git"
+                name = "Masahiro Inoue"
+                email = "maspost0083@hotmail.com"
+                url = "https://github.com/kawanagare-git"
+            }
+        }
+
+        scm {
+            url = "https://github.com/kawanagare-git/AndrORMProject"
+            connection =
+                "scm:git:https://github.com/kawanagare-git/AndrORMProject.git"
+            developerConnection =
+                "scm:git:ssh://git@github.com/kawanagare-git/AndrORMProject.git"
+        }
+    }
 }

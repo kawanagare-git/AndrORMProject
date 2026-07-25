@@ -1,9 +1,9 @@
 # AndrORM
 
-[!IMPORTANT]
-AndrORM is currently under development.
-The current runtime implementation is included in the `app` module and is not yet published as a library that can be used through Maven or similar repositories.
-The module structure and APIs may change as the project is separated into dedicated modules in the future.
+> [!IMPORTANT]
+> AndrORM is currently under development.
+> The initial release version is `0.1.0-alpha`.
+> Because this is an alpha release, APIs and specifications may change in future versions.
 
 AndrORM is a SQLite ORM for Android and Kotlin that is currently under development.
 
@@ -27,7 +27,9 @@ AndrORM is designed to improve readability and maintainability when working dire
 
 This project is still under development.
 
-At present, no library artifact publishing configuration is available for Maven Central or similar repositories. The project is structured as a multi-module project within this repository.
+The runtime, common definitions, KSP processor, and shared library are structured so that they can be published as independent artifacts.
+
+The initial release version is `0.1.0-alpha`.
 
 ## Supported Environment
 
@@ -48,7 +50,8 @@ At present, no library artifact publishing configuration is available for Maven 
 
 | Module | Role |
 |---|---|
-| `app` | SQL builders, SQLite execution, database helper, and runtime entity conversion |
+| `app` | AndrORM verification, samples, and Android Tests |
+| `androrm-runtime` | SQL builders, SQLite execution, database helper, and runtime entity conversion |
 | `androrm-common` | Annotations, shared metadata, DML marker interfaces, and DEFAULT value validation |
 | `androrm-generator-ksp` | Generates purpose-specific entities based on `@Projection` |
 | `androrm-detekt-rules` | AndrORM-specific Detekt rules |
@@ -60,9 +63,12 @@ The main dependencies are as follows:
 
 ```text
 app
- ├─ androrm-common
- ├─ shared-library
+ ├─ androrm-runtime
  └─ androrm-generator-ksp (KSP)
+
+androrm-runtime
+ ├─ androrm-common
+ └─ shared-library
 
 androrm-generator-ksp
  ├─ androrm-common
@@ -145,7 +151,7 @@ The current `JoinType` does not provide RIGHT JOIN or FULL JOIN.
 The main condition operators can be specified through the DSL.
 
 - `eq` / `equal`
-- `ne` / `norEqual`
+- `ne` / `notEqual`
 - `gt` / `graterThan`
 - `ge` / `graterEqual`
 - `lt` / `lesserThan`
@@ -161,6 +167,46 @@ The main condition operators can be specified through the DSL.
 - Raw conditions using `condition`
 
 ## Setup
+
+### Using AndrORM from Maven Central
+
+Enable the KSP plugin.
+
+```kotlin
+plugins {
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+}
+```
+
+Add the AndrORM runtime and KSP processor.
+
+```kotlin
+dependencies {
+    implementation(
+        "io.github.kawanagare-git:androrm-runtime:0.1.0-alpha"
+    )
+
+    ksp(
+        "io.github.kawanagare-git:androrm-generator-ksp:0.1.0-alpha"
+    )
+}
+```
+
+Enable Core Library Desugaring.
+
+```kotlin
+android {
+    compileOptions {
+        isCoreLibraryDesugaringEnabled = true
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring(
+        "com.android.tools:desugar_jdk_libs:2.1.5"
+    )
+}
+```
 
 ### Open the Project
 
@@ -184,6 +230,7 @@ Unit Tests:
 
 ```powershell
 .\gradlew :app:testDebugUnitTest
+.\gradlew :androrm-runtime:testDebugUnitTest
 .\gradlew :androrm-common:test
 .\gradlew :androrm-generator-ksp:test
 .\gradlew :androrm-detekt-rules:test
@@ -835,21 +882,6 @@ config/detekt/detekt.yml
 | Unit Test | JUnit5 (Jupiter), with JUnit4 / Vintage compatibility enabled |
 | Android Test | JUnit4 |
 
-### Latest Results Included in the Uploaded Project
-
-| Category | Tests | Failures | Errors | Skipped |
-|---|---:|---:|---:|---:|
-| Unit Test result XML | 357 | 0 | 0 | 0 |
-| Android Test | 28 | 0 | 0 | 0 |
-
-Android Test environment:
-
-```text
-Pixel_9_Pro_API_34
-Android 14
-```
-
-The tests could not be rerun in the environment where this README was generated because downloading Gradle 8.10.2 required external network access. The values above were aggregated from the result files included in the uploaded project.
 
 ## Directory Structure
 
@@ -862,6 +894,7 @@ AndrORM/
 ├─ androrm-common/
 ├─ androrm-generator-ksp/
 ├─ androrm-detekt-rules/
+├─ androrm-runtime/
 ├─ shared-library/
 ├─ test-support/
 ├─ ksp-fixtures/

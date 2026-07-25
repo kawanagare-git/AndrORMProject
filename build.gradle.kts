@@ -13,6 +13,8 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version "1.23.6"
     // KSP（バージョンは libs.versions.toml の plugins.ksp から取る）
     alias(libs.plugins.ksp) apply false
+    // 追加：Maven Central公開用
+    id("com.vanniktech.maven.publish") version "0.34.0" apply false
 }
 
 subprojects {
