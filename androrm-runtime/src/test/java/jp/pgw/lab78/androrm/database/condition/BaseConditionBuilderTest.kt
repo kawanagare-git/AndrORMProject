@@ -37,7 +37,7 @@ class BaseConditionBuilderTest {
         "'eq',10,'EMP.EMPLOYEE_ID = ?'",
         "'equal',10,'EMP.EMPLOYEE_ID = ?'",
         "'ne',10,'EMP.EMPLOYEE_ID <> ?'",
-        "'norEqual',10,'EMP.EMPLOYEE_ID <> ?'",
+        "'notEqual',10,'EMP.EMPLOYEE_ID <> ?'",
         "'gt',10,'EMP.EMPLOYEE_ID > ?'",
         "'graterThan',10,'EMP.EMPLOYEE_ID > ?'",
         "'ge',10,'EMP.EMPLOYEE_ID >= ?'",
@@ -63,7 +63,7 @@ class BaseConditionBuilderTest {
                 "eq" -> EmployeeEntity::employeeId eq value
                 "equal" -> EmployeeEntity::employeeId equal value
                 "ne" -> EmployeeEntity::employeeId ne value
-                "norEqual" -> EmployeeEntity::employeeId norEqual value
+                "notEqual" -> EmployeeEntity::employeeId notEqual value
                 "gt" -> EmployeeEntity::employeeId gt value
                 "graterThan" -> EmployeeEntity::employeeId graterThan value
                 "ge" -> EmployeeEntity::employeeId ge value
@@ -99,7 +99,7 @@ class BaseConditionBuilderTest {
         "'eq','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID = ?'",
         "'equal','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID = ?'",
         "'ne','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID <> ?'",
-        "'norEqual','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID <> ?'",
+        "'notEqual','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID <> ?'",
         "'gt','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID > ?'",
         "'graterThan','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID > ?'",
         "'ge','EmployeeEntity::employeeId',10,'EMP.EMPLOYEE_ID >= ?'",
@@ -127,7 +127,7 @@ class BaseConditionBuilderTest {
                 "eq" -> columnRef eq value
                 "equal" -> columnRef equal value
                 "ne" -> columnRef ne value
-                "norEqual" -> columnRef norEqual value
+                "notEqual" -> columnRef notEqual value
                 "gt" -> columnRef gt value
                 "graterThan" -> columnRef graterThan value
                 "ge" -> columnRef ge value
@@ -163,7 +163,7 @@ class BaseConditionBuilderTest {
         "'eq','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID = EMP.EMPLOYEE_ID'",
         "'equal','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID = EMP.EMPLOYEE_ID'",
         "'ne','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID <> EMP.EMPLOYEE_ID'",
-        "'norEqual','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID <> EMP.EMPLOYEE_ID'",
+        "'notEqual','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID <> EMP.EMPLOYEE_ID'",
         "'gt','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID > EMP.EMPLOYEE_ID'",
         "'graterThan','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID > EMP.EMPLOYEE_ID'",
         "'ge','EmployeeEntity::employeeId','EmployeeEntity::employeeId','EMP.EMPLOYEE_ID >= EMP.EMPLOYEE_ID'",
@@ -188,7 +188,7 @@ class BaseConditionBuilderTest {
                 "eq" -> lhs eq rhs
                 "equal" -> lhs equal rhs
                 "ne" -> lhs ne rhs
-                "norEqual" -> lhs norEqual rhs
+                "notEqual" -> lhs notEqual rhs
                 "gt" -> lhs gt rhs
                 "graterThan" -> lhs graterThan rhs
                 "ge" -> lhs ge rhs

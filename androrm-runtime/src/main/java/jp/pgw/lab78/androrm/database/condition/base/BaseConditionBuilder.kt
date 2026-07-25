@@ -147,7 +147,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    infix fun <T : Entity> KProperty1<T, *>.norEqual(value: Any) {
+    infix fun <T : Entity> KProperty1<T, *>.notEqual(value: Any) {
         this.ne(value)
     }
 
@@ -180,7 +180,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-12
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.norEqual(value: Any) {
+    infix fun <T : Entity> ColumnRef<out T, *>.notEqual(value: Any) {
         this.ne(value)
     }
 
@@ -191,7 +191,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-12
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.norEqual(rhs: ColumnRef<out T, *>) {
+    infix fun <T : Entity> ColumnRef<out T, *>.notEqual(rhs: ColumnRef<out T, *>) {
         this.ne(rhs as Any)
     }
 

@@ -152,7 +152,7 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 主な条件演算をDSLで指定できます。
 
 - `eq`／`equal`
-- `ne`／`notEqual`
+- `ne`／`norEqual`
 - `gt`／`graterThan`
 - `ge`／`graterEqual`
 - `lt`／`lesserThan`
@@ -170,15 +170,6 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 ## セットアップ
 
 ### Maven Centralからの利用方法
-
-KSPプラグインを有効にします。
-
-```kotlin
-plugins {
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
-}
-```
-AndrORMのランタイムとKSP Processorを追加します。
 ```
 dependencies {
     implementation(
@@ -190,7 +181,7 @@ dependencies {
     )
 }
 ```
-Core Library Desugaringを有効にします。
+要 Core Library Desugaring
 ```
 android {
     compileOptions {
@@ -227,7 +218,6 @@ Unit Test：
 
 ```powershell
 .\gradlew :app:testDebugUnitTest
-.\gradlew :androrm-runtime:testDebugUnitTest
 .\gradlew :androrm-common:test
 .\gradlew :androrm-generator-ksp:test
 .\gradlew :androrm-detekt-rules:test
@@ -878,6 +868,22 @@ config/detekt/detekt.yml
 |---|---|
 | Unit Test | JUnit5（Jupiter）。JUnit4／Vintage互換も有効 |
 | Android Test | JUnit4 |
+
+### アップロード済みプロジェクトに含まれる直近結果
+
+| 区分 | テスト数 | 失敗 | エラー | スキップ |
+|---|---:|---:|---:|---:|
+| Unit Test結果XML | 357 | 0 | 0 | 0 |
+| Android Test | 28 | 0 | 0 | 0 |
+
+Android Testの実行環境：
+
+```text
+Pixel_9_Pro_API_34
+Android 14
+```
+
+このREADME生成環境ではGradle 8.10.2の取得に外部通信が必要だったため、テストの再実行はできませんでした。上記はアップロード済みプロジェクト内の結果ファイルを集計した値です。
 
 ## ディレクトリ構成
 

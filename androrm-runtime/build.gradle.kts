@@ -88,14 +88,12 @@ tasks.withType<Test>().configureEach {
 mavenPublishing {
     publishToMavenCentral()
     signAllPublications()
-
     pom {
         name = "AndrORM Runtime"
         description =
             "Android runtime library for building and executing AndrORM queries."
         inceptionYear = "2025"
         url = "https://github.com/kawanagare-git/AndrORMProject"
-
         licenses {
             license {
                 name = "MIT License"
@@ -103,7 +101,6 @@ mavenPublishing {
                 distribution = "repo"
             }
         }
-
         developers {
             developer {
                 id = "kawanagare-git"
@@ -112,13 +109,10 @@ mavenPublishing {
                 url = "https://github.com/kawanagare-git"
             }
         }
-
         scm {
             url = "https://github.com/kawanagare-git/AndrORMProject"
-
             connection =
                 "scm:git:https://github.com/kawanagare-git/AndrORMProject.git"
-
             developerConnection =
                 "scm:git:ssh://git@github.com/kawanagare-git/AndrORMProject.git"
         }
