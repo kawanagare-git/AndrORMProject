@@ -1,10 +1,10 @@
 // ＜androrm-runtime/build.gradle.kts＞
-import org.gradle.api.publish.maven.MavenPublication
 
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    id("maven-publish")
+    // Maven Central公開用
+    id("com.vanniktech.maven.publish")
 }
 group = providers.gradleProperty("andrormGroup").get()
 version = providers.gradleProperty("andrormVersion").get()
@@ -40,12 +40,6 @@ android {
             java.srcDir(
                 rootProject.file("test-support/src/test/kotlin")
             )
-        }
-    }
-    // 追加：release版AARをMaven公開対象にする
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
         }
     }
 }
@@ -91,18 +85,42 @@ tasks.withType<Test>().configureEach {
         "-Dsun.stderr.encoding=UTF-8",
     )
 }
-/*
- * Android Gradle Pluginがreleaseコンポーネントを作成した後に、
- * MavenPublicationへ登録する。
- */
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                artifactId = "androrm-runtime"
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 
-                from(components["release"])
+    pom {
+        name = "AndrORM Runtime"
+        description =
+            "Android runtime library for building and executing AndrORM queries."
+        inceptionYear = "2025"
+        url = "https://github.com/kawanagare-git/AndrORMProject"
+
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://opensource.org/license/mit"
+                distribution = "repo"
             }
+        }
+
+        developers {
+            developer {
+                id = "kawanagare-git"
+                name = "Masahiro Inoue"
+                email = "maspost0083@hotmail.com"
+                url = "https://github.com/kawanagare-git"
+            }
+        }
+
+        scm {
+            url = "https://github.com/kawanagare-git/AndrORMProject"
+
+            connection =
+                "scm:git:https://github.com/kawanagare-git/AndrORMProject.git"
+
+            developerConnection =
+                "scm:git:ssh://git@github.com/kawanagare-git/AndrORMProject.git"
         }
     }
 }

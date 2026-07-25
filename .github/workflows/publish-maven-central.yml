@@ -1,0 +1,95 @@
+﻿name: Publish AndrORM to Maven Central
+
+# GitHub Releaseを公開したときに開始する
+on:
+  release:
+    types:
+      - published
+
+# ソースコードの読み取りだけを許可する
+permissions:
+  contents: read
+
+# Maven Centralへの公開処理を同時に複数実行しない
+concurrency:
+  group: publish-maven-central
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Test and upload to Maven Central
+
+    # GitHubが用意するLinux環境
+    runs-on: ubuntu-24.04
+
+    # 60分を超えた場合は異常終了
+    timeout-minutes: 60
+
+    steps:
+      # GitHub Releaseで指定されたタグのソースを取得する
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      # Windowsで作成したGradle WrapperをLinuxから実行可能にする
+      - name: Make Gradle Wrapper executable
+        run: chmod +x gradlew
+
+      # AndrORMのビルドで使用するJDK 17を準備する
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Gradle Wrapperの検証とキャッシュ設定を行う
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+
+      # GitHub Releaseのタグとgradle.propertiesのバージョンを照合する
+      - name: Verify release version
+        shell: bash
+        run: |
+          VERSION="$(
+            sed -n 's/^andrormVersion=//p' gradle.properties |
+            tr -d '\r'
+          )"
+
+          RELEASE_TAG="${{ github.event.release.tag_name }}"
+          EXPECTED_TAG="v${VERSION}"
+
+          echo "gradle.properties version : ${VERSION}"
+          echo "GitHub Release tag       : ${RELEASE_TAG}"
+
+          if [[ -z "${VERSION}" ]]; then
+            echo "::error::andrormVersionがgradle.propertiesにありません。"
+            exit 1
+          fi
+
+          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
+            echo "::error::Releaseタグは${EXPECTED_TAG}である必要があります。"
+            exit 1
+          fi
+
+      # Maven Centralへ送信する前にUnit Testを実行する
+      - name: Run unit tests
+        run: |
+          ./gradlew \
+            :shared-library:test \
+            :androrm-common:test \
+            :androrm-generator-ksp:test \
+            :androrm-runtime:testDebugUnitTest \
+            --stacktrace
+
+      # 署名した4モジュールをCentral Publisher Portalへ送信する
+      # Maven Centralへの最終公開はPortal画面から手動で行う
+      - name: Upload to Central Publisher Portal
+        run: ./gradlew publishToMavenCentral --stacktrace
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}

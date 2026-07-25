@@ -4,7 +4,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 plugins {
     id("java-library")
     kotlin("jvm")
-    id("maven-publish")
+    // Maven Central公開用
+    id("com.vanniktech.maven.publish")
 }
 group = providers.gradleProperty("andrormGroup").get()
 version = providers.gradleProperty("andrormVersion").get()
@@ -12,9 +13,6 @@ version = providers.gradleProperty("andrormVersion").get()
 // Kotlin JVM 設定（型指定方式で衝突を回避）
 extensions.configure<KotlinJvmProjectExtension>("kotlin") {
     jvmToolchain(17)
-}
-java {
-    withSourcesJar()
 }
 
 dependencies {
@@ -54,12 +52,40 @@ kotlin {
         }
     }
 }
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            artifactId = "androrm-common"
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 
-            from(components["java"])
+    pom {
+        name = "AndrORM Common"
+        description =
+            "Common annotations, metadata and interfaces used by AndrORM."
+        inceptionYear = "2025"
+        url = "https://github.com/kawanagare-git/AndrORMProject"
+
+        licenses {
+            license {
+                name = "MIT License"
+                url = "https://opensource.org/license/mit"
+                distribution = "repo"
+            }
+        }
+
+        developers {
+            developer {
+                id = "kawanagare-git"
+                name = "Masahiro Inoue"
+                email = "maspost0083@hotmail.com"
+                url = "https://github.com/kawanagare-git"
+            }
+        }
+
+        scm {
+            url = "https://github.com/kawanagare-git/AndrORMProject"
+            connection =
+                "scm:git:https://github.com/kawanagare-git/AndrORMProject.git"
+            developerConnection =
+                "scm:git:ssh://git@github.com/kawanagare-git/AndrORMProject.git"
         }
     }
 }
