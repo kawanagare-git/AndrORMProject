@@ -867,12 +867,6 @@ ReturnHint.DATETIME
 - `AndrOrmEntityRefRule`
   - AndrORMのEntity参照方法を検証
 
-Detekt設定は次のファイルにあります。
-
-```text
-config/detekt/detekt.yml
-```
-
 ## テスト
 
 ### テスト方式

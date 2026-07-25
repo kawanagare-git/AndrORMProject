@@ -875,12 +875,6 @@ ReturnHint.DATETIME
 - `AndrOrmEntityRefRule`
   - Validates how AndrORM entities are referenced
 
-The Detekt configuration file is located at:
-
-```text
-config/detekt/detekt.yml
-```
-
 ## Tests
 
 ### Test Frameworks
