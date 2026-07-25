@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> The initial release version is `0.1.0-alpha`.
+> The current published version is `0.1.1-alpha`.
 > Because this is an alpha release, APIs and specifications may change in future versions.
 
 AndrORM is a SQLite ORM for Android and Kotlin that is currently under development.
@@ -170,24 +170,32 @@ The main condition operators can be specified through the DSL.
 
 ### Using AndrORM from Maven Central
 
-Enable the KSP plugin.
+AndrORM requires all three artifacts: `androrm-runtime`,
+`androrm-generator-ksp`, and `androrm-detekt-rules`.
+
+Enable the KSP and Detekt plugins.
 
 ```kotlin
 plugins {
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    id("io.gitlab.arturbosch.detekt") version "1.23.6"
 }
 ```
 
-Add the AndrORM runtime and KSP processor.
+Add the AndrORM runtime, KSP processor, and Detekt rules.
 
 ```kotlin
 dependencies {
     implementation(
-        "io.github.kawanagare-git:androrm-runtime:0.1.0-alpha"
+        "io.github.kawanagare-git:androrm-runtime:0.1.1-alpha"
     )
 
     ksp(
-        "io.github.kawanagare-git:androrm-generator-ksp:0.1.0-alpha"
+        "io.github.kawanagare-git:androrm-generator-ksp:0.1.1-alpha"
+    )
+
+    detektPlugins(
+        "io.github.kawanagare-git:androrm-detekt-rules:0.1.1-alpha"
     )
 }
 ```
@@ -866,12 +874,6 @@ ReturnHint.DATETIME
   - Detects duplicate table names across entities
 - `AndrOrmEntityRefRule`
   - Validates how AndrORM entities are referenced
-
-The Detekt configuration file is located at:
-
-```text
-config/detekt/detekt.yml
-```
 
 ## Tests
 
