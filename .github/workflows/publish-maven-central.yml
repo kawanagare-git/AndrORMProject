@@ -81,10 +81,11 @@ jobs:
             :shared-library:test \
             :androrm-common:test \
             :androrm-generator-ksp:test \
+            :androrm-detekt-rules:test \
             :androrm-runtime:testDebugUnitTest \
             --stacktrace
 
-      # 署名した4モジュールをCentral Publisher Portalへ送信する
+      # 署名した5モジュールをCentral Publisher Portalへ送信する
       # Maven Centralへの最終公開はPortal画面から手動で行う
       - name: Upload to Central Publisher Portal
         run: ./gradlew publishToMavenCentral --stacktrace

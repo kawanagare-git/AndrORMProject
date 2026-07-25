@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 初回公開バージョンは`0.1.0-alpha`です。
+> 現在の公開バージョンは`0.1.1-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
@@ -170,23 +170,27 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 ## セットアップ
 
 ### Maven Centralからの利用方法
+AndrORMを利用する場合は、`androrm-runtime`、`androrm-generator-ksp`、`androrm-detekt-rules`の3成果物をすべて導入する必要があります。
 
 KSPプラグインを有効にします。
 
 ```kotlin
 plugins {
     id("com.google.devtools.ksp") version "1.9.24-1.0.20"
+    id("io.gitlab.arturbosch.detekt") version "1.23.6"
 }
 ```
 AndrORMのランタイムとKSP Processorを追加します。
 ```
 dependencies {
     implementation(
-        "io.github.kawanagare-git:androrm-runtime:0.1.0-alpha"
+        "io.github.kawanagare-git:androrm-runtime:0.1.1-alpha"
     )
-
     ksp(
-        "io.github.kawanagare-git:androrm-generator-ksp:0.1.0-alpha"
+        "io.github.kawanagare-git:androrm-generator-ksp:0.1.1-alpha"
+    )
+    detektPlugins(
+        "io.github.kawanagare-git:androrm-detekt-rules:0.1.1-alpha"
     )
 }
 ```
@@ -204,7 +208,6 @@ dependencies {
     )
 }
 ```
-
 ### プロジェクトを開く
 
 Android Studioでプロジェクトルートを開きます。
