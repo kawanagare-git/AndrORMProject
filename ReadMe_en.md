@@ -7,29 +7,29 @@
 
 AndrORM is a SQLite ORM for Android and Kotlin that is currently under development.
 
-It uses Kotlin `data class` definitions as table definitions and provides KSP-based entity generation for different purposes, type-safe SQL builders, DML and SELECT execution, database upgrades, transactions, and SAVEPOINT support.
+It uses Kotlin `data class` declarations as table definitions and provides purpose-specific Entity generation with KSP, a type-safe SQL builder, DML and SELECT execution, database upgrades, transactions, and SAVEPOINT support.
 
 ## Purpose
 
-AndrORM is designed to improve readability and maintainability when working directly with SQLite.
+AndrORM aims to improve readability and maintainability when working directly with SQLite.
 
 - Centralize table definitions in Kotlin `data class` declarations
 - Generate SQL for SELECT, INSERT, UPDATE, DELETE, UPSERT, and ABSERT
-- Centrally manage SQL strings and bind values
-- Automatically generate purpose-specific entities using KSP
-- Create SQLite tables from entities
+- Manage SQL strings and bind values in one place
+- Automatically generate purpose-specific Entities with KSP
+- Create SQLite tables from Entities
 - Rebuild tables and migrate data during database version upgrades
-- Retrieve SELECT results as Entity, Map, or Cursor values
-- Support partial rollback through transactions and SAVEPOINTs
-- Perform static validation of entity definitions using custom Detekt rules
+- Retrieve SELECT results as Entity, Map, or Cursor data
+- Support partial rollback with transactions and SAVEPOINTs
+- Perform static validation of Entity definitions with custom Detekt rules
 
 ## Current Status
 
-This project is still under development.
+This project is under development.
 
-The runtime, common definitions, KSP processor, and shared library are structured so that they can be published as independent artifacts.
+The runtime, common definitions, KSP Processor, Detekt rules, and shared library are published as independent artifacts.
 
-The initial release version is `0.1.0-alpha`.
+The first published version was `0.1.0-alpha`.
 
 ## Supported Environment
 
@@ -50,16 +50,16 @@ The initial release version is `0.1.0-alpha`.
 
 | Module | Role |
 |---|---|
-| `app` | AndrORM verification, samples, and Android Tests |
-| `androrm-runtime` | SQL builders, SQLite execution, database helper, and runtime entity conversion |
-| `androrm-common` | Annotations, shared metadata, DML marker interfaces, and DEFAULT value validation |
-| `androrm-generator-ksp` | Generates purpose-specific entities based on `@Projection` |
+| `app` | AndrORM operation checks, samples, and Android Tests |
+| `androrm-runtime` | SQL builder, SQLite execution, database helper, and runtime Entity conversion |
+| `androrm-common` | Annotations, common metadata, DML marker interfaces, and DEFAULT value validation |
+| `androrm-generator-ksp` | Generates purpose-specific Entities based on `@Projection` |
 | `androrm-detekt-rules` | AndrORM-specific Detekt rules |
-| `shared-library` | Shared utilities used across modules |
-| `test-support` | Test support utilities, including common Unit Test converters |
-| `ksp-fixtures` | Source files used to validate KSP error cases |
+| `shared-library` | Common utilities shared among modules |
+| `test-support` | Test support such as shared converters for Unit Tests |
+| `ksp-fixtures` | Sources for KSP error-case validation |
 
-The main dependencies are as follows:
+The main dependencies are as follows.
 
 ```text
 app
@@ -101,7 +101,7 @@ androrm-common
 - `FunctionProjection`
 - `@EntityPackageInfo`
 - Marker interfaces for each DML purpose
-- Additional custom interfaces
+- Support for custom interfaces
 
 ### SQL Generation
 
@@ -113,7 +113,7 @@ androrm-common
 - `Upsert`
 - `Absert`
 
-`Absert` is an AndrORM-specific name that generates the following SQLite statement:
+`Absert` is an AndrORM-specific term that generates the following SQLite SQL.
 
 ```sql
 INSERT ... ON CONFLICT (...) DO NOTHING
@@ -143,7 +143,7 @@ The current `JoinType` does not provide RIGHT JOIN or FULL JOIN.
 - EXISTS / NOT EXISTS
 - Aggregate functions
 - Scalar functions
-- Raw conditions / raw expressions
+- Raw conditions and raw expressions
 - SQL bind value management
 
 ### Condition DSL
@@ -164,36 +164,46 @@ The main condition operators can be specified through the DSL.
 - `exists` / `notExists`
 - `isNull` / `isNotNull`
 - `and` / `or`
-- Raw conditions using `condition`
+- Raw conditions with `condition`
 
 ## Setup
 
 ### Using AndrORM from Maven Central
 
-AndrORM requires all three artifacts: `androrm-runtime`,
-`androrm-generator-ksp`, and `androrm-detekt-rules`.
+To use AndrORM, all three artifacts—`androrm-runtime`, `androrm-generator-ksp`, and `androrm-detekt-rules`—must be included.
 
 Enable the KSP and Detekt plugins.
 
+- Project root: `build.gradle.kts (<project-name>)`
+
 ```kotlin
 plugins {
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
-    id("io.gitlab.arturbosch.detekt") version "1.23.6"
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+    id("io.gitlab.arturbosch.detekt") version "1.23.6" apply false
 }
 ```
 
-Add the AndrORM runtime, KSP processor, and Detekt rules.
+- Target module: `build.gradle.kts (:<module-name>)`
+
+```kotlin
+plugins {
+    id("com.google.devtools.ksp")
+    id("io.gitlab.arturbosch.detekt")
+}
+```
+
+Add the AndrORM runtime, KSP Processor, and Detekt rules.
+
+- Target module: `build.gradle.kts (:<module-name>)`
 
 ```kotlin
 dependencies {
     implementation(
         "io.github.kawanagare-git:androrm-runtime:0.1.1-alpha"
     )
-
     ksp(
         "io.github.kawanagare-git:androrm-generator-ksp:0.1.1-alpha"
     )
-
     detektPlugins(
         "io.github.kawanagare-git:androrm-detekt-rules:0.1.1-alpha"
     )
@@ -201,6 +211,8 @@ dependencies {
 ```
 
 Enable Core Library Desugaring.
+
+- Target module: `build.gradle.kts (:<module-name>)`
 
 ```kotlin
 android {
@@ -216,7 +228,7 @@ dependencies {
 }
 ```
 
-### Open the Project
+### Opening the Project
 
 Open the project root in Android Studio.
 
@@ -257,7 +269,7 @@ Detekt:
 .\gradlew detektAll
 ```
 
-Tasks are also available to analyze only the Unit Tests and Android Tests in the `app` module.
+Tasks are also provided for analyzing only the Unit Tests and Android Tests in the `app` module.
 
 ```powershell
 .\gradlew :app:detektUnitTestOnly
@@ -268,7 +280,7 @@ Tasks are also available to analyze only the Unit Tests and Android Tests in the
 
 ### Generated Package
 
-Create a file that specifies the package where generated entities will be placed.
+Create a file that specifies the package for generated Entities.
 
 ```kotlin
 @file:EntityPackageInfo(
@@ -280,7 +292,7 @@ package com.example.database.entities
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
 ```
 
-By default, entities are generated in the following subpackages according to their purpose.
+By default, generated Entities are placed in the following subpackages according to purpose.
 
 | Purpose | Generated Package |
 |---|---|
@@ -388,18 +400,18 @@ data class UserMaster(
 
 ### `@Projection`
 
-`@Projection` generates purpose-specific `data class` declarations from the original table definition entity.
+`@Projection` generates purpose-specific `data class` declarations from the original table-definition Entity.
 
 | Argument | Description |
 |---|---|
 | `entityNameExtend` | Text appended to the generated class name |
 | `aliasExtend` | Text appended to the table alias |
-| `properties` | Properties to include in the generated class |
-| `functions` | SQL function properties to include in the generated class |
-| `commonInterface` | Common interfaces such as SELECT and INSERT |
+| `properties` | Properties to generate |
+| `functions` | SQL function properties to generate |
+| `commonInterface` | Common interfaces such as SELECT or INSERT |
 | `customInterface` | User-defined interfaces |
 
-Generated class names generally use the following format:
+Generated class names generally follow this format.
 
 ```text
 Original class name + entityNameExtend
@@ -413,9 +425,9 @@ UserMaster + Select = UserMasterSelect
 
 ### `hideFromSelect`
 
-A property with `ColumnProjection.hideFromSelect = true` remains in the entity metadata but is excluded from the SELECT projection list.
+A property with `ColumnProjection.hideFromSelect = true` remains in the Entity metadata but is excluded from the SELECT clause.
 
-This is used for properties that are needed for conditions or DELETE entities but do not need to be included in query results.
+Use this for condition expressions, DELETE Entities, and other properties that are not needed in query results.
 
 ## CREATE TABLE
 
@@ -423,7 +435,7 @@ This is used for properties that are needed for conditions or DELETE entities bu
 val query = Create(UserMaster::class).build()
 ```
 
-The SQL statements for `@Index` and `@Unique` are obtained separately.
+SQL statements for `@Index` and `@Unique` are obtained separately.
 
 ```kotlin
 val create = Create(UserMaster::class)
@@ -432,7 +444,7 @@ val createTableQuery = create.build()
 val indexQueries = create.buildIndexQueries(indexVersion = 1)
 ```
 
-`Create` generates columns in the order of the properties in the primary constructor.
+`Create` generates columns in the property order of the primary constructor.
 
 ## SELECT
 
@@ -454,7 +466,7 @@ val sql = select.build()
 val bindValues = select.bindValues
 ```
 
-`limit()` returns an intermediate object that provides `offset()`, `build()`, and `bindValues`.
+`limit()` returns an intermediate object through which `offset()`, `build()`, and `bindValues` are available.
 
 Use `TableRef` to specify a table alias explicitly.
 
@@ -485,7 +497,7 @@ val sql = insert.build()
 val bindValues = insert.bindValues
 ```
 
-Multiple entities can be expanded into a single VALUES clause.
+Multiple records can be expanded into a single VALUES clause.
 
 ```kotlin
 insert.addEntities(entityList)
@@ -493,7 +505,7 @@ insert.addEntities(entityList)
 
 ## UPDATE
 
-A SET clause can be generated from an entire entity.
+A SET clause can be generated from an entire Entity.
 
 ```kotlin
 val update = Update(UserMasterUpdate::class)
@@ -523,9 +535,9 @@ val update = Update(UserMasterUpdate::class)
     }
 ```
 
-### Update All Rows
+### Updating All Records
 
-An UPDATE without a WHERE clause requires an explicit `updateAll()` call to prevent unintended operations.
+An UPDATE without a WHERE clause requires an explicit call to `updateAll()` as a safeguard against accidental operations.
 
 ```kotlin
 val update = Update(UserMasterUpdate::class)
@@ -535,7 +547,7 @@ val update = Update(UserMasterUpdate::class)
     .updateAll()
 ```
 
-When both `where()` and `updateAll()` are specified on the same instance, the one called later determines the update scope.
+When `where()` and `updateAll()` are specified on the same instance, the method called later determines the effective update scope.
 
 ## DELETE
 
@@ -546,20 +558,20 @@ val delete = Delete(UserMasterDelete::class)
     }
 ```
 
-### Delete All Rows
+### Deleting All Records
 
-A DELETE without a WHERE clause requires an explicit `deleteAll()` call to prevent unintended operations.
+A DELETE without a WHERE clause requires an explicit call to `deleteAll()` as a safeguard against accidental operations.
 
 ```kotlin
 val delete = Delete(UserMasterDelete::class)
     .deleteAll()
 ```
 
-When both `where()` and `deleteAll()` are specified on the same instance, the one called later determines the delete scope.
+When `where()` and `deleteAll()` are specified on the same instance, the method called later determines the effective delete scope.
 
 ## UPSERT
 
-Generates SQLite `INSERT ... ON CONFLICT ... DO UPDATE`.
+Generates SQLite `INSERT ... ON CONFLICT ... DO UPDATE` SQL.
 
 ```kotlin
 val upsert = Upsert(UserMasterUpsert::class)
@@ -574,15 +586,15 @@ val upsert = Upsert(UserMasterUpsert::class)
     }
 ```
 
-UPSERT requires the following:
+UPSERT requires the following.
 
-- One or more entities
-- One or more conflict target columns
-- One or more columns to update
+- At least one Entity
+- At least one conflict-target column
+- At least one column to update
 
 ## ABSERT
 
-Generates SQLite `INSERT ... ON CONFLICT ... DO NOTHING`.
+Generates SQLite `INSERT ... ON CONFLICT ... DO NOTHING` SQL.
 
 ```kotlin
 val absert = Absert(UserMasterUpsert::class)
@@ -592,10 +604,10 @@ val absert = Absert(UserMasterUpsert::class)
     }
 ```
 
-ABSERT requires the following:
+ABSERT requires the following.
 
-- One or more entities
-- One or more conflict target columns
+- At least one Entity
+- At least one conflict-target column
 
 ## Executing SQL
 
@@ -614,7 +626,7 @@ class AppDatabaseHelper(
 )
 ```
 
-A vararg constructor can also be used.
+When using the vararg constructor:
 
 ```kotlin
 class AppDatabaseHelper(
@@ -627,13 +639,13 @@ class AppDatabaseHelper(
 )
 ```
 
-### Executing DML
+### DML Execution
 
 ```kotlin
 val affectedRows = helper.executeDml(insert)
 ```
 
-A SQL string and bind values can also be specified directly.
+You can also specify the SQL string and bind values directly.
 
 ```kotlin
 val affectedRows = helper.executeDml(
@@ -642,31 +654,31 @@ val affectedRows = helper.executeDml(
 )
 ```
 
-`executeDml()` executes data modification statements such as INSERT, UPDATE, DELETE, UPSERT, and ABSERT, and returns the number of affected rows.
+`executeDml()` executes modifying statements such as INSERT, UPDATE, DELETE, UPSERT, and ABSERT, and returns the number of affected rows.
 
 ### SELECT Results
 
-Entity format:
+As Entities:
 
 ```kotlin
 val rows = helper.executeSelectAsEntityList(select)
 ```
 
-Map format:
+As Maps:
 
 ```kotlin
 val rows = helper.executeSelectAsMapList(select)
 ```
 
-Cursor format:
+As a Cursor:
 
 ```kotlin
 helper.executeSelectAsCursor(select).use { cursor ->
-    // Use the Cursor here
+    // Use the Cursor
 }
 ```
 
-The execution time of the most recently executed DML statement or Map-format SELECT is stored in `queryExecutionTime` in nanoseconds.
+The execution time of the most recently executed DML statement or Map-based SELECT is stored in `queryExecutionTime` in nanoseconds.
 
 ## Transactions
 
@@ -680,9 +692,9 @@ helper.transaction {
 
 The transaction is committed when the block completes successfully.
 
-If an exception propagates outside the block, `setTransactionSuccessful()` is not called, and the entire transaction is rolled back.
+If an exception propagates out of the block, `setTransactionSuccessful()` is not called, so the entire transaction is rolled back.
 
-A Cursor returned by `executeSelectAsCursor()` must be used within the transaction block.
+A Cursor obtained with `executeSelectAsCursor()` should be used within the transaction block.
 
 ## SAVEPOINT
 
@@ -695,7 +707,7 @@ helper.transaction {
     }
 
     if (secondResult.isSuccess) {
-        // Processing within the SAVEPOINT succeeded
+        // The SAVEPOINT block completed successfully
     } else {
         // secondQuery has already been rolled back to the SAVEPOINT
         val cause = secondResult.failure
@@ -705,42 +717,42 @@ helper.transaction {
 }
 ```
 
-A normal processing exception inside a SAVEPOINT is handled as follows:
+Ordinary processing exceptions inside a SAVEPOINT block are handled as follows.
 
 ```text
-Exception in the block
+Exception in block
 → ROLLBACK TO SAVEPOINT
 → RELEASE SAVEPOINT
 → Return SavepointResult(isSuccess = false)
 ```
 
-If SAVEPOINT management itself fails, one of the following `RuntimeException` types is thrown:
+If SAVEPOINT management itself fails, one of the following `RuntimeException` subclasses is thrown.
 
 - `NotCreatedSavepointException`
 - `FailureRollbackException`
 - `FailureReleaseException`
 
-These exceptions are intended to propagate to the outer `transaction()` block so that the entire transaction is rolled back.
+These exceptions are expected to propagate to the outer `transaction()` call and cause the entire transaction to be rolled back.
 
-If the SAVEPOINT name is omitted, a unique internal name is generated.
+If the SAVEPOINT name is omitted, an internally generated unique name is used.
 
-## Database Upgrade
+## Database Upgrades
 
-`AndrOrmDatabaseHelper#onUpgrade()` performs the following operations based on the registered entities:
+Based on the registered Entities, `AndrOrmDatabaseHelper#onUpgrade()` performs the following process.
 
 1. Drop the migration table named `<table name>_new`
-2. Create mappings between old and new columns
+2. Create old-to-new column mappings
 3. Create the new table
-4. Transfer migratable data from the old table
+4. Transfer all data that can be migrated from the old table
 5. Create INDEX and UNIQUE INDEX definitions
 6. Drop the old table
 7. Rename the new table to the original table name
 
-> `<table name>_new` is reserved for the upgrade process. Do not create a table with the same name because it will be dropped during an upgrade.
+> `<table name>_new` is a reserved name used exclusively by the upgrade process. Do not create a user table with this name, because it will be dropped during an upgrade.
 
 ### Renaming a Column
 
-Use `@ColumnOldName` when only the column name changes.
+Use `@ColumnOldName` when only a column name is changed.
 
 ```kotlin
 @Column(name = "DISPLAY_NAME")
@@ -748,20 +760,20 @@ Use `@ColumnOldName` when only the column name changes.
 val displayName: String
 ```
 
-### Adding a Non-Nullable Column
+### Adding a Non-nullable Column
 
-A non-nullable column that does not exist in the old table requires `@MigrationDefault`.
+A newly added non-nullable column that does not exist in the old table requires `@MigrationDefault`.
 
 ```kotlin
 @MigrationDefault("1")
 val enabled: Boolean
 ```
 
-`@MigrationDefault` is used only to supply values for existing rows during a database upgrade.
+`@MigrationDefault` is used only to supply values for existing records during database upgrades.
 
-It is not used as a CREATE TABLE DEFAULT clause.
+It is not used for a DEFAULT clause in CREATE TABLE.
 
-### Difference from CREATE-Time DEFAULT
+### Difference from CREATE-time DEFAULT Values
 
 ```kotlin
 @Column(default = "1")
@@ -771,14 +783,14 @@ val enabled: Boolean
 
 | Annotation | Usage |
 |---|---|
-| `@Column(default = "...")` | DEFAULT clause used by CREATE TABLE |
-| `@MigrationDefault("...")` | Value used to populate existing rows during a database upgrade |
+| `@Column(default = "...")` | DEFAULT clause in CREATE TABLE |
+| `@MigrationDefault("...")` | Value supplied to existing records during a database upgrade |
 
-A property default value declared in a `data class` is not used to populate existing rows during a database upgrade.
+A property default value in a `data class` is not used as a replacement value during database upgrades.
 
-### Custom Column Mappings
+### Custom Column Mapping
 
-For more complex column migrations, override `resolveColumnMappings()`.
+Override `resolveColumnMappings()` when more complex column migration is required.
 
 ```kotlin
 override fun resolveColumnMappings() =
@@ -789,7 +801,7 @@ override fun resolveColumnMappings() =
     )
 ```
 
-## Kotlin and SQLite Type Mapping
+## Kotlin Types and SQLite Types
 
 | Kotlin Type | SQLite Column Type | Storage / Binding |
 |---|---|---|
@@ -806,33 +818,33 @@ override fun resolveColumnMappings() =
 
 An exception is thrown when an unsupported type is specified.
 
-## Date and Time Data Notes
+## Notes on Date and Time Data
 
-SQLite allows column type names such as `DATE` and `DATETIME`, but stored values are not held in a dedicated date-time data type. They are managed as strings, numbers, or other supported SQLite storage classes.
+SQLite allows type names such as `DATE` and `DATETIME` in column definitions, but the stored value is not maintained as a dedicated date-time type. It is stored as text, a number, or another supported SQLite storage type.
 
-AndrORM's standard type conversion stores `LocalDate`, `LocalTime`, and `LocalDateTime` values as strings and converts them back to their corresponding types when reading them.
+AndrORM's standard type conversion serializes `LocalDate`, `LocalTime`, and `LocalDateTime` as strings and converts them back to their respective types when reading data.
 
-Use a consistent date-time format within the application for all values stored in the same column. This avoids inconsistencies during searches, comparisons, sorting, and conversion when reading values.
+Use a consistent format throughout the application for date and time values stored in the same column so that searches, comparisons, ordering, and conversion during reads remain consistent.
 
-When using a custom date-time format, the application is responsible for managing its meaning and ensuring that conversions are valid.
+When using a custom date-time format, the user is responsible for managing its meaning and ensuring valid conversions.
 
 ## DEFAULT and MigrationDefault Values
 
-The shared validator checks the following values according to their Kotlin type.
+The common validator checks the following values according to the Kotlin type.
 
-| Kotlin Type | Main Accepted Values |
+| Kotlin Type | Main Allowed Values |
 |---|---|
 | `Int` / `Long` | Integer |
 | `Float` / `Double` | Integer or decimal |
 | `Boolean` | `0` or `1` |
-| `String` | SQL string literal enclosed in single quotes |
-| `LocalDate` | `'yyyy-MM-dd'` or `CURRENT_DATE` |
-| `LocalTime` | `'HH:mm:ss'` or `CURRENT_TIME` |
-| `LocalDateTime` | `'yyyy-MM-ddTHH:mm:ss'`, `'yyyy-MM-dd HH:mm:ss'`, `CURRENT_TIMESTAMP`, or `CURRENT_TIMESTAMP_ISO` |
+| `String` | SQL string enclosed in single quotation marks |
+| `LocalDate` | `'yyyy-MM-dd'`, `CURRENT_DATE` |
+| `LocalTime` | `'HH:mm:ss'`, `CURRENT_TIME` |
+| `LocalDateTime` | `'yyyy-MM-ddTHH:mm:ss'`, `'yyyy-MM-dd HH:mm:ss'`, `CURRENT_TIMESTAMP`, `CURRENT_TIMESTAMP_ISO` |
 | `ByteArray` | DEFAULT values are not supported |
-| Nullable types | `NULL` can be specified |
+| Nullable type | `NULL` is allowed |
 
-At SQLite execution time, `CURRENT_TIMESTAMP_ISO` is converted to the following expression:
+At SQLite execution time, `CURRENT_TIMESTAMP_ISO` is converted to the following expression.
 
 ```sql
 (strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime'))
@@ -840,19 +852,19 @@ At SQLite execution time, `CURRENT_TIMESTAMP_ISO` is converted to the following 
 
 ## KSP Validation
 
-The KSP process mainly validates the following:
+KSP processing primarily validates the following.
 
-- Invalid simultaneous use of `@Column` and `@Function`
-- Presence of properties that can be selected
+- Invalid combinations of `@Column` and `@Function`
+- Presence of properties selected by SELECT
 - Duplicate aliases
-- Target properties specified by `ColumnProjection`
-- Arguments specified by `FunctionProjection`
+- Target properties referenced by `ColumnProjection`
+- Arguments of `FunctionProjection`
 - Function return types
 - Type compatibility of `@Column(default)`
 - Type compatibility of `@MigrationDefault`
 - Compatibility between generated interfaces and their purposes
 
-Specify `FunctionProjection.returnHint` only when the return type cannot be inferred automatically.
+Specify `FunctionProjection.returnHint` only when the type cannot be inferred automatically.
 
 ```kotlin
 ReturnHint.AUTO
@@ -868,22 +880,21 @@ ReturnHint.DATETIME
 
 ## Custom Detekt Rules
 
-`androrm-detekt-rules` implements the following rules:
+`androrm-detekt-rules` provides the following rules.
 
 - `AndrOrmDuplicateTableNameRule`
-  - Detects duplicate table names across entities
+  - Detects duplicate table names across Entities
 - `AndrOrmEntityRefRule`
-  - Validates how AndrORM entities are referenced
+  - Validates how AndrORM Entities are referenced
 
-## Tests
+## Testing
 
 ### Test Frameworks
 
 | Category | Framework |
 |---|---|
-| Unit Test | JUnit5 (Jupiter), with JUnit4 / Vintage compatibility enabled |
-| Android Test | JUnit4 |
-
+| Unit Test | JUnit 5 (Jupiter), with JUnit 4 / Vintage compatibility also enabled |
+| Android Test | JUnit 4 |
 
 ## Directory Structure
 

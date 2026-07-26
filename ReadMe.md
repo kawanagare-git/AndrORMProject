@@ -27,8 +27,8 @@ AndrORMは、SQLiteを直接扱う際の可読性・保守性を高めること�
 
 本プロジェクトは開発中です。
 
-ランタイム、共通定義、KSP Processorおよび共有ライブラリを
-独立した成果物として公開できる構成になっています。
+ランタイム、共通定義、KSP Processor、Detektルールおよび共有ライブラリを
+独立した成果物として公開しています。
 
 初回公開バージョンは`0.1.0-alpha`です。
 
@@ -172,15 +172,23 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 ### Maven Centralからの利用方法
 AndrORMを利用する場合は、`androrm-runtime`、`androrm-generator-ksp`、`androrm-detekt-rules`の3成果物をすべて導入する必要があります。
 
-KSPプラグインを有効にします。
-
+KSPプラグインとDetektプラグインを有効にします。
+- プロジェクトルート側：`build.gradle.kts（<プロジェクト名>）`
 ```kotlin
 plugins {
-    id("com.google.devtools.ksp") version "1.9.24-1.0.20"
-    id("io.gitlab.arturbosch.detekt") version "1.23.6"
+    id("com.google.devtools.ksp") version "1.9.24-1.0.20" apply false
+    id("io.gitlab.arturbosch.detekt") version "1.23.6" apply false
 }
 ```
-AndrORMのランタイムとKSP Processorを追加します。
+- 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
+```kotlin
+plugins {
+    id("com.google.devtools.ksp")
+    id("io.gitlab.arturbosch.detekt")
+}
+```
+AndrORMのランタイム、KSP Processor、Detektルールを追加します。
+- 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```
 dependencies {
     implementation(
@@ -195,6 +203,7 @@ dependencies {
 }
 ```
 Core Library Desugaringを有効にします。
+- 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```
 android {
     compileOptions {
