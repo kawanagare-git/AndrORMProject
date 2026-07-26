@@ -180,7 +180,7 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version "1.23.6" apply false
 }
 ```
-- モジュール別：build.gradle.kts(モジュール名)
+- 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```kotlin
 plugins {
     id("com.google.devtools.ksp")

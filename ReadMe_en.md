@@ -212,7 +212,7 @@ dependencies {
 
 Enable Core Library Desugaring.
 
-- Module: `build.gradle.kts` (module-level)
+- Target module: `build.gradle.kts (:<module-name>)`
 
 ```kotlin
 android {
