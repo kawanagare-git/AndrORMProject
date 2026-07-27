@@ -425,6 +425,32 @@ UserMaster + Select = UserMasterSelect
 
 ### `hideFromSelect`
 
+## Location of AndrORM Entity Definitions
+
+When generating entities with AndrORM's KSP processor, Kotlin entity definitions annotated with `@Projection` or `@Projections` must be placed in the Kotlin source directory, not the Java source directory.
+
+```text
+src/main/kotlin
+```
+
+Example:
+
+```text
+app/src/main/kotlin/com/example/database/entities/
+```
+
+If Kotlin files are placed under `src/main/java`, the Kotlin compilation itself may succeed, but KSP may fail to detect the annotated classes, and the generated entities may not be created.
+
+```text
+src/main/java
+```
+
+If no entities are generated and the KSP log contains an entry similar to the following, confirm that the target Kotlin files are located under `src/main/kotlin`.
+
+```text
+findProjectionClasses: Exiting: []
+```
+
 A property with `ColumnProjection.hideFromSelect = true` remains in the Entity metadata but is excluded from the SELECT clause.
 
 Use this for condition expressions, DELETE Entities, and other properties that are not needed in query results.
