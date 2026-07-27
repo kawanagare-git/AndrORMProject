@@ -418,6 +418,33 @@ UserMaster + Select = UserMasterSelect
 
 条件式やDELETE用Entityなど、抽出結果として不要なプロパティを定義する際に使用します。
 
+## AndrORM Entityの配置先
+
+AndrORMでKSPによるEntity生成を行う場合、`@Projection`または`@Projections`を付与したKotlinのEntity定義は、Javaソースディレクトリではなく、Kotlinソースディレクトリへ配置してください。
+
+```text
+src/main/kotlin
+```
+
+配置例：
+
+```text
+app/src/main/kotlin/com/example/database/entities/
+```
+
+次のように、Kotlinファイルを`src/main/java`配下へ配置した場合、通常のKotlinコンパイルが成功していても、KSPが対象クラスを検出できず、用途別Entityが生成されないことがあります。
+
+```text
+src/main/java
+```
+
+KSPログに次のような出力があり、Entityが生成されない場合は、対象のKotlinファイルが`src/main/kotlin`配下に配置されていることを確認してください。
+
+```text
+findProjectionClasses: Exiting: []
+```
+
+
 ## CREATE TABLE
 
 ```kotlin
