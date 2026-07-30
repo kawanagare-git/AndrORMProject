@@ -8,7 +8,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
@@ -567,11 +566,15 @@ class AndrOrmDatabaseAndroidTest {
      */
     @Test
     fun step13_deleteSeedData() {
+        actualCount = 0
+        val deleteTarget = listOf<String>("step03", "step99")
         val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
-        deleteTargetStep(databaseHelper, "step03")
+        deleteTarget.forEach { deleteTargetStep(databaseHelper, it) }
         refreshTableRowCounts(databaseHelper)
         databaseHelper.use { helper ->
-            actualCount = deleteData(helper, "step03")
+            deleteTarget.forEach {
+                actualCount += deleteData(helper, it)
+            }
         }
     }
 
@@ -2075,11 +2078,14 @@ class AndrOrmDatabaseAndroidTest {
      */
     private fun deleteTargetStep(databaseHelper: AndrOrmDatabaseHelper, step: String) {
         deleteEntityList.forEach {
-            val targetTable = TableRef(it, it.getTableAlias())
-            val deleteCount =
-                Select(targetTable).where { targetTable[DeleteCountEntity::updateMethod] eq step }
-            val rowCount = databaseHelper.executeSelectAsMapList(deleteCount)[0]
-            deleteTableRowCounts[it.getTableName()] = rowCount.getValue("DC_COUNT") as Long
+            val deleteCount = getTableRows(
+                databaseHelper.readableDatabase,
+                it.getTableName(),
+                "UPDATE_METHOD = '$step'"
+            )
+            val tableName = it.getTableName()
+            deleteTableRowCounts[tableName] =
+                deleteTableRowCounts.getOrDefault(tableName, 0L) + deleteCount
         }
     }
 
