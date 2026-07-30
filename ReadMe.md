@@ -267,44 +267,6 @@ Detekt：
 
 ## Entity定義
 
-### Entityの定義方法
-
-AndrORMのEntityは、KSPで生成する方法だけでなく、Kotlinの`data class`として手書きする方法にも対応しています。
-
-KSPによるEntity生成は、用途別Entityの定義を省力化するための機能であり、AndrORMを利用するための必須条件ではありません。手書きする場合は、`@Table`、`@Column`、`@PrimaryKey`などの必要なアノテーションを付与し、用途に対応するマーカーインターフェースを実装してください。
-
-次は、SELECT用Entityを手書きする例です。
-
-```kotlin
-import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
-import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-
-@Table(name = "USER_MASTER", alias = "U")
-data class UserMasterManualSelect(
-    @PrimaryKey
-    @Column(name = "ID")
-    val id: Int,
-
-    @Column(name = "USER_NAME")
-    val userName: String,
-) : SelectEntity
-```
-
-手書きしたEntityも、KSPで生成したEntityと同様にSQLビルダーへ指定できます。
-
-```kotlin
-val select = Select(UserMasterManualSelect::class)
-    .where {
-        UserMasterManualSelect::id eq 1
-    }
-```
-
-> [!WARNING]
-> `data class`ではない通常のKotlinクラスでも、クラスの構造によっては動作する可能性があります。ただし、AndrORMではEntityを`data class`として定義することを前提に検証しているため、通常クラスは動作保証の対象外です。
-
-
 ### 生成先パッケージ
 
 生成先パッケージを指定するファイルを作成します。
@@ -494,6 +456,42 @@ KSPログに次のような出力があり、Entityが生成されない場合�
 findProjectionClasses: Exiting: []
 ```
 
+## Entityの定義方法
+
+AndrORMのEntityは、KSPで生成する方法だけでなく、Kotlinの`data class`として手書きする方法にも対応しています。
+
+KSPによるEntity生成は、用途別Entityの定義を省力化するための機能であり、AndrORMを利用するための必須条件ではありません。手書きする場合は、`@Table`、`@Column`、`@PrimaryKey`などの必要なアノテーションを付与し、用途に対応するマーカーインターフェースを実装してください。
+
+次は、SELECT用Entityを手書きする例です。
+
+```kotlin
+import jp.pgw.lab78.androrm.common.database.annotation.Column
+import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
+import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+
+@Table(name = "USER_MASTER", alias = "U")
+data class UserMasterManualSelect(
+    @PrimaryKey
+    @Column(name = "ID")
+    val id: Int,
+
+    @Column(name = "USER_NAME")
+    val userName: String,
+) : SelectEntity
+```
+
+手書きしたEntityも、KSPで生成したEntityと同様にSQLビルダーへ指定できます。
+
+```kotlin
+val select = Select(UserMasterManualSelect::class)
+    .where {
+        UserMasterManualSelect::id eq 1
+    }
+```
+
+> [!WARNING]
+> `data class`ではない通常のKotlinクラスでも、クラスの構造によっては動作する可能性があります。ただし、AndrORMではEntityを`data class`として定義することを前提に検証しているため、通常クラスは動作保証の対象外です。
 
 ## CREATE TABLE
 
