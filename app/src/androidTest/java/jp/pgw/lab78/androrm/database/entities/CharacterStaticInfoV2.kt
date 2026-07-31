@@ -54,7 +54,7 @@ import java.time.LocalDateTime
                 ColumnProjection("characterPk"),
                 ColumnProjection("characterName"),
             ],
-            commonInterface = [SELECT],
+            customInterface = ["getname"]
         ),
         Projection(
             entityNameExtend = "Delete",

@@ -198,8 +198,12 @@ class PropsProcessor(
         logTraceEntered(classDecl, definition, resolver)
         val packageName = interfaceResolver.resolvePackageNameFromAnnotation(
             classDecl,
-            resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
-            definition.commonInterfaces.firstOrNull()
+            resolver.getSymbolsWithAnnotation(
+                ENTITY_PACKAGE_INFO_FQN,
+                false,
+            ),
+            definition.commonInterfaces.firstOrNull(),
+            definition.customInterfaces,
         )
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
         val createClassName = classDecl.simpleName.asString() + definition.entityNameExtend

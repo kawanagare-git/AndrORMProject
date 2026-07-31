@@ -12,7 +12,7 @@ import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
  * @param properties プロパティのリスト
  * @param functions 関数のリスト
  * @param commonInterfaces 共通インターフェースのリスト
- * @param customInterfaces カスタムインターフェースのリスト
+ * @param customInterfaces カスタム生成先サブパッケージのリスト
  * @author Masahiro Inoue
  * @since 2026-04-17
  */

@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> The current public release is `0.1.1-alpha`.
+> This README targets version `0.1.2-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
@@ -102,7 +102,16 @@ androrm-common
 - `FunctionProjection`
 - `@EntityPackageInfo`
 - Purpose-specific DML marker interfaces
-- Support for custom interfaces
+- Per-DML generated-package configuration
+- Custom generated subpackages using `commonInterface = [NOT_USE]` and `customInterface`
+
+### Static Validation with Detekt
+
+- Detect duplicate table names explicitly declared with `@Table` in the same source set
+- Verify that entity properties referenced by `Select`, `join`, `where`, `having`, `on`, and `order` belong to the FROM entity or an entity that has already been joined
+- Detect duplicate use of the same entity as the FROM entity and a JOIN target
+
+Detekt is used to catch entity-definition and SELECT DSL reference errors before SQL is executed.
 
 ### SQL Generation
 
@@ -134,7 +143,7 @@ The name means "Insert if absent."
 The current `JoinType` does not provide RIGHT JOIN or FULL JOIN.
 
 - WHERE
-- GROUP BY
+- GROUP BY (automatically generated when `having` is specified)
 - HAVING
 - ORDER BY
 - NULLS FIRST / NULLS LAST
@@ -189,28 +198,21 @@ plugins {
 ```
 Add the AndrORM runtime, KSP processor, and Detekt rules.
 - Target module: `build.gradle.kts (:<module-name>)`
-```
+```kotlin
 dependencies {
-    implementation(
-        "io.github.kawanagare-git:androrm-runtime:0.1.1-alpha"
-    )
-    ksp(
-        "io.github.kawanagare-git:androrm-generator-ksp:0.1.1-alpha"
-    )
-    detektPlugins(
-        "io.github.kawanagare-git:androrm-detekt-rules:0.1.1-alpha"
-    )
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.2-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.2-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.2-alpha")
 }
 ```
 Enable Core Library Desugaring.
 - Target module: `build.gradle.kts (:<module-name>)`
-```
+```kotlin
 android {
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
     }
 }
-
 dependencies {
     coreLibraryDesugaring(
         "com.android.tools:desugar_jdk_libs:2.1.5"
@@ -266,6 +268,10 @@ Tasks are also provided to analyze only the unit tests and Android tests in the 
 ```
 
 ## Entity Definitions
+
+AndrORM entities may be written manually as Kotlin `data class` declarations or generated automatically with KSP.
+
+KSP reduces the work required to create purpose-specific entities; it is not required to use AndrORM. Whether an entity is handwritten or generated, it can be used in the same way with the SQL builders and execution APIs.
 
 ### Generated Package
 
@@ -398,7 +404,7 @@ data class UserMaster(
 | `properties` | Properties to generate |
 | `functions` | SQL function properties to generate |
 | `commonInterface` | Common interfaces such as SELECT and INSERT |
-| `customInterface` | User-defined custom interfaces |
+| `customInterface` | Generated subpackage appended to `basePackage` when `commonInterface = [NOT_USE]` or when `commonInterface` is omitted |
 
 Generated class names generally use the following format.
 
@@ -411,6 +417,8 @@ Example:
 ```text
 UserMaster + Select = UserMasterSelect
 ```
+
+`customInterface` does not specify a Kotlin interface implemented by the generated class. Together with `commonInterface = [NOT_USE]`, it specifies a generated subpackage relative to `@EntityPackageInfo.basePackage`.
 
 ### `hideFromSelect`
 
@@ -455,6 +463,59 @@ If the following message appears in the KSP log and no entities are generated, v
 ```text
 findProjectionClasses: Exiting: []
 ```
+
+### Customizing Generated Packages
+
+The destination package can be changed with `@file:EntityPackageInfo` at the beginning of the Kotlin file. The file annotation must appear before the `package` declaration.
+
+```kotlin
+@file:EntityPackageInfo(
+    basePackage = "com.example.database.entities",
+    selectPackage = "select",
+    insertPackage = "insert",
+    updatePackage = "update",
+    upsertPackage = "upsert",
+    absertPackage = "absert",
+    deletePackage = "delete",
+)
+
+package com.example.database.entities.define
+```
+
+Normally, the generated package combines `basePackage` with the subpackage corresponding to `commonInterface`. For example, the destination for `commonInterface = [SELECT]` is:
+
+```text
+com.example.database.entities.select
+```
+
+To generate an entity in an arbitrary subpackage without a standard DML interface, combine `commonInterface = [NOT_USE]` with `customInterface`.
+
+```kotlin
+Projection(
+    entityNameExtend = "ManagementColumns",
+    properties = [
+        ColumnProjection("enabled"),
+        ColumnProjection("createdAt"),
+        ColumnProjection("updatedAt"),
+    ],
+    commonInterface = [NOT_USE],
+    customInterface = ["interfaces.ManagementColumns"],
+)
+```
+
+The fully qualified name of the generated class then has the following form:
+
+```text
+<basePackage>.interfaces.ManagementColumns.<source class name><entityNameExtend>
+```
+
+Example:
+
+```text
+com.example.database.entities.interfaces.ManagementColumns.UserMasterManagementColumns
+```
+
+If `customInterface` contains multiple values, the first non-blank value is used to determine the destination package.
 
 ## Defining Entities
 
@@ -542,6 +603,12 @@ val select = Select(userTable)
         userTable[UserMasterSelect::id] gt 100
     }
 ```
+
+### Automatic GROUP BY Generation
+
+When `having` is specified, AndrORM automatically generates `GROUP BY` from the selected columns that are not aggregate functions. Users do not need to assemble the `GROUP BY` clause separately.
+
+If function-column processing has already registered GROUP BY columns, those columns are retained and `having` does not generate duplicates.
 
 ## INSERT
 
@@ -763,23 +830,30 @@ A cursor obtained with `executeSelectAsCursor()` must be used within the transac
 ## SAVEPOINT
 
 ```kotlin
-helper.transaction {
-    executeDml(firstQuery)
+val savepointResult = helper.transaction {
+    executeDml(masterQuery)
 
-    val secondResult = savepoint("second_process") {
-        executeDml(secondQuery)
+    helper.savepoint("after_master") {
+        executeDml(detailQuery1)
+        executeDml(detailQuery2)
     }
+}
 
-    if (secondResult.isSuccess) {
-        // Processing inside the SAVEPOINT succeeded
-    } else {
-        // secondQuery has already been rolled back to the SAVEPOINT
-        val cause = secondResult.failure
-    }
-
-    executeDml(thirdQuery)
+if (savepointResult.isSuccess) {
+    // Processing inside the SAVEPOINT succeeded
+} else {
+    // Changes made after the SAVEPOINT was created have been rolled back
+    val cause = savepointResult.failure
 }
 ```
+
+As demonstrated by `AndrOrmDatabaseAndroidTest#step21_absertCombinedDataWithSavepoint`, operations before the SAVEPOINT and multiple operations inside it can be grouped in one `transaction`.
+
+- `masterQuery` runs before the SAVEPOINT is created.
+- If `detailQuery1` or `detailQuery2` throws an ordinary processing exception, only changes made after the SAVEPOINT was created are rolled back.
+- `savepoint()` captures the exception in `SavepointResult.failure`, so the caller can inspect `isSuccess`.
+- On success, the block's return value is stored in `SavepointResult.result`.
+- If the outer `transaction` completes normally, operations before the SAVEPOINT and successful operations inside it are committed.
 
 Normal processing exceptions inside a SAVEPOINT are handled as follows.
 
@@ -947,9 +1021,10 @@ ReturnHint.DATETIME
 The following rules are implemented in `androrm-detekt-rules`.
 
 - `AndrOrmDuplicateTableNameRule`
-  - Detects duplicate table names between entities
+  - For entities implementing `TableDefinitionEntity`, detects duplicate table names explicitly declared with `@Table(name = ...)`
 - `AndrOrmEntityRefRule`
-  - Validates how AndrORM entities are referenced
+  - Detects duplicate use of the same entity as the `Select` FROM entity and a JOIN target
+  - Verifies that property references in `join`, `where`, `having`, `on`, and `order` belong to the FROM entity or an entity that has already been joined
 
 ## Tests
 
