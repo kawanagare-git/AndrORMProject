@@ -183,7 +183,7 @@ class AndrOrmDatabaseAndroidTest {
         /**
          * ## テーブル定義 Entity
          */
-        private val tableDefinitions = arrayOf(
+        private val tableDefinitions = arrayOf<Array<KClass<out TableDefinitionEntity>>>(
             arrayOf(
                 CharacterStaticInfoV1::class,
                 ItemMaster::class,
@@ -194,7 +194,8 @@ class AndrOrmDatabaseAndroidTest {
                 WeaponMastery::class,
                 MagicTypeMastery::class,
                 CharacterSpells::class,
-            ), arrayOf(
+            ),
+            arrayOf(
                 CharacterStaticInfoV2::class,
                 ItemMaster::class,
                 SpellsMaster::class,

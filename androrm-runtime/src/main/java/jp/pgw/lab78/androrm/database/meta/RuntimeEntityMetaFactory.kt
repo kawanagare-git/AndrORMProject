@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database.meta
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
+import jp.pgw.lab78.androrm.common.database.SupportFunction.findColumnAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
@@ -86,9 +87,8 @@ class RuntimeEntityMetaFactory {
     @InfoLog
     @TraceLog
     private fun KProperty1<out SelectEntity, *>.toPropertyMeta(): PropertyMeta {
-        val columnAnnotation = findAnnotation<Column>()
+        val columnAnnotation = findColumnAnnotation()
         val functionAnnotation = findAnnotation<Function>()
-
         val hasColumnAnnotation = columnAnnotation.isNotNull()
         val hasFunctionAnnotation = functionAnnotation.isNotNull()
         val propertySnakeCase = simpleNameToSnakeCase()

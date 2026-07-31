@@ -7,9 +7,9 @@ import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00037
+import jp.pgw.lab78.androrm.common.database.SupportFunction.findColumnAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
-import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Unique
@@ -158,7 +158,13 @@ class Create<T : TableDefinitionEntity>(
     ): String {
         val columnNames = properties.map { propertyName -> resolveColumnName(propertyName) }
         return "create ${indexType.query}index ${quoteIdentifier(indexName)} " +
-                "on ${quoteIdentifier(tableName)} (${columnNames.joinToString(", ") { columnName -> quoteIdentifier(columnName) }})"
+                "on ${quoteIdentifier(tableName)} (${
+                    columnNames.joinToString(", ") { columnName ->
+                        quoteIdentifier(
+                            columnName
+                        )
+                    }
+                })"
     }
 
     /**
@@ -220,10 +226,7 @@ class Create<T : TableDefinitionEntity>(
     ): String {
         val columnName = quoteIdentifier(property.getColumnName())
         val sqlType = mapKotlinTypeToSqlType(property.returnType)
-        val defaultValue = property.findAnnotation<Column>()
-            ?.default
-            ?.trim()
-            .orEmpty()
+        val defaultValue = property.findColumnAnnotation()?.default?.trim().orEmpty()
         val defaultClause =
             if (defaultValue.isBlank()) {
                 EMPTY_STRING
