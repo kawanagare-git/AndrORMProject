@@ -521,6 +521,8 @@ com.example.database.entities.interfaces.ManagementColumns.UserMasterManagementC
 
 AndrORMのEntityは、KSPで生成する方法だけでなく、Kotlinの`data class`として手書きする方法にも対応しています。
 
+複数のテーブルで共通して使用する項目は、インターフェースなどへ分離し、各Entityへ継承できます。分離した共通項目に`@Column`を付与しておけば、カラム定義も各Entityで共通して利用できます。ただし、キーおよびインデックスの定義は継承対象ではありません。`@PrimaryKey`、`@Index`、`@Unique`は、対象となる各Entity自身に定義してください。
+
 KSPによるEntity生成は、用途別Entityの定義を省力化するための機能であり、AndrORMを利用するための必須条件ではありません。手書きする場合は、`@Table`、`@Column`、`@PrimaryKey`などの必要なアノテーションを付与し、用途に対応するマーカーインターフェースを実装してください。
 
 次は、SELECT用Entityを手書きする例です。

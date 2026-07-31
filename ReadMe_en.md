@@ -521,6 +521,8 @@ If `customInterface` contains multiple values, the first non-blank value is used
 
 AndrORM entities can be defined not only through KSP generation, but also manually as Kotlin `data class` declarations.
 
+Properties shared by multiple tables can be separated into an interface or another common type and inherited by each entity. When `@Column` is applied to those shared properties, their column definitions can also be reused by each entity. However, key and index definitions are not inherited. Define `@PrimaryKey`, `@Index`, and `@Unique` directly on each applicable entity.
+
 KSP-based entity generation is provided to reduce the effort required to define purpose-specific entities; it is not mandatory for using AndrORM. When defining an entity manually, add the required annotations such as `@Table`, `@Column`, and `@PrimaryKey`, and implement the marker interface corresponding to the intended purpose.
 
 The following example shows a manually defined entity for SELECT operations.
