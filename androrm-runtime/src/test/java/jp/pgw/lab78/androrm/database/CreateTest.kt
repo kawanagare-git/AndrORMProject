@@ -5,11 +5,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00019
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00020
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00037
-import jp.pgw.lab78.androrm.common.database.annotation.Column
-import jp.pgw.lab78.androrm.common.database.annotation.Index
-import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
-import jp.pgw.lab78.androrm.common.database.annotation.Table
-import jp.pgw.lab78.androrm.common.database.annotation.Unique
+import jp.pgw.lab78.androrm.common.database.annotation.*
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestLargeEntity
 import org.junit.Assert.assertThrows
@@ -478,6 +474,29 @@ class CreateTest {
     }
 
     /**
+     * ## インターフェースColumnからCREATE TABLEを生成するテスト
+     * ### カラム名とDEFAULT値がインターフェース側から取得されることを検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-31
+     */
+    @Test
+    fun testBuild_withColumnAnnotationOnInterface_buildsColumnDefinitions() {
+        val actual = Create(TestManagedCreateEntity::class).build()
+
+        assertEquals(
+            """create table "TEST_MANAGED_CREATE_ENTITY" """ +
+                    """("ID" INTEGER not null, """ +
+                    """"ENABLED" INTEGER not null default 1 /* 0:false / 1:true */, """ +
+                    """"CREATED_AT" DATETIME not null default """ +
+                    """(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime')), """ +
+                    """"UPDATED_AT" DATETIME not null default """ +
+                    """(strftime('%Y-%m-%dT%H:%M:%f', 'now', 'localtime')), """ +
+                    """primary key ("ID"))""",
+            actual,
+        )
+    }
+
+    /**
      * 空のIndexプロパティを持つ検証用Entity。
      *
      * @author Masahiro Inoue
@@ -814,3 +833,43 @@ class CreateTest {
         }
     }
 }
+
+/**
+ * ## CREATE TABLE検証用管理項目インターフェース
+ * @author Masahiro Inoue
+ * @since 2026-07-31
+ */
+private interface CreateManagedEntity {
+    /** 使用可能フラグ。 */
+    @Column(default = "1")
+    val enabled: Boolean
+
+    /** 作成日時。 */
+    @Column(
+        name = "CREATED_AT",
+        default = "CURRENT_TIMESTAMP_ISO",
+    )
+    val createdAt: LocalDateTime
+
+    /** 更新日時。 */
+    @Column(
+        name = "UPDATED_AT",
+        default = "CURRENT_TIMESTAMP_ISO",
+    )
+    val updatedAt: LocalDateTime
+}
+
+/**
+ * ## CREATE TABLE検証用Entity
+ * @author Masahiro Inoue
+ * @since 2026-07-31
+ */
+@Table(name = "TEST_MANAGED_CREATE_ENTITY")
+private data class TestManagedCreateEntity(
+    @PrimaryKey
+    val id: Int,
+
+    override val enabled: Boolean,
+    override val createdAt: LocalDateTime,
+    override val updatedAt: LocalDateTime,
+) : TableDefinitionEntity, CreateManagedEntity

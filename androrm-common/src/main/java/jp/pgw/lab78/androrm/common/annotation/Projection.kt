@@ -12,7 +12,7 @@ import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
  * @param properties クラスに定義する ColumnProjection ※複数指定可
  * @param functions クラスに定義する FunctionProjection ※複数指定可
  * @param commonInterface 共通インターフェース ※複数指定可
- * @param customInterface 独自インターフェース ※複数指定可
+ * @param customInterface commonInterface が NOT_USE の場合に使用する生成先サブパッケージ
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
@@ -30,6 +30,6 @@ annotation class Projection(
     val functions: Array<FunctionProjection> = [],
     /** 共通インターフェス */
     val commonInterface: Array<DMLInterfaceEnum> = [DMLInterfaceEnum.NOT_USE],
-    /** 独自インターフェス */
+    /** カスタム生成先サブパッケージ */
     val customInterface: Array<String> = [""],
 )

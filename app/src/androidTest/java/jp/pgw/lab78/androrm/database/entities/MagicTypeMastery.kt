@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.database.entities.interfaces.ManagementColumns
 import java.time.LocalDateTime
 
 /**
@@ -83,10 +84,8 @@ data class MagicTypeMastery(
     val magicTypeMastery: Int,
     @Column(default = "1")
     val mastery: Int,
-    val createMethod: String,
-    @Column(name = "CREATE_DATETIME", default = "CURRENT_TIMESTAMP_ISO")
-    val createTime: LocalDateTime,
-    val updateMethod: String,
-    @Column(name = "UPDATE_DATETIME", default = "CURRENT_TIMESTAMP_ISO")
-    val updateTime: LocalDateTime,
-) : TableDefinitionEntity
+    override val createMethod: String,
+    override val createTime: LocalDateTime,
+    override val updateMethod: String,
+    override val updateTime: LocalDateTime,
+) : TableDefinitionEntity, ManagementColumns

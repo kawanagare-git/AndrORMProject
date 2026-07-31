@@ -6,6 +6,7 @@ import com.google.devtools.ksp.symbol.KSFile
 import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.TypeName
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
+import jp.pgw.lab78.androrm.common.Constants.NULL_STRING
 import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.EntityConstants.PackageInterfaceRelation
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
@@ -47,6 +48,7 @@ class InterfaceResolver() : LoggerLike by logger {
      * @param classDeclaration 対象クラスの宣言
      * @param symbols KSP のシンボルのシーケンスル
      * @param commonInterface @Projection アノテーションの commonInterface 引数。未指定の場合は null
+     * @param customInterfaces @Projection アノテーションの customInterface 引数
      * @return 出力先 package 名
      * @author Masahiro Inoue
      * @since 2026-04-21
@@ -54,9 +56,28 @@ class InterfaceResolver() : LoggerLike by logger {
     fun resolvePackageNameFromAnnotation(
         classDeclaration: KSClassDeclaration,
         symbols: Sequence<KSAnnotated>,
-        commonInterface: DMLInterfaceEnum?
+        commonInterface: DMLInterfaceEnum?,
+        customInterfaces: List<String>,
     ): String {
-        logTraceEntered(classDeclaration, symbols, commonInterface ?: EMPTY_STRING)
+        logTraceEntered(
+            classDeclaration,
+            symbols,
+            commonInterface ?: EMPTY_STRING,
+            customInterfaces,
+        )
+        // commonInterface が NOT_USE の場合は、basePackage と customInterface から package 名を構築して返す
+        if (commonInterface == DMLInterfaceEnum.NOT_USE) {
+            val basePackage = resolveBasePackage(symbols)
+                ?: classDeclaration.packageName.asString()
+            val customInterface = customInterfaces
+                .firstOrNull { it.isNotBlank() }
+                ?.trim('.')
+                .orEmpty()
+            return listOf(basePackage.trim('.'), customInterface)
+                .filter { it.isNotBlank() }
+                .joinToString(".")
+                .also { logTraceExiting(it) }
+        }
         // commonInterface が空の場合は、クラスの package 名を返す
         if (commonInterface == null) {
             val result = classDeclaration.packageName.asString()
@@ -72,7 +93,8 @@ class InterfaceResolver() : LoggerLike by logger {
             }
             // @EntityPackageInfo アノテーションが存在し、かつ commonInterface に対応する relation が定義されている場合は、basePackage と relation から package 名を構築して返す
             if (annotation?.let {
-                    it.annotationType.resolve().declaration.qualifiedName?.asString() == ENTITY_PACKAGE_INFO_FQN
+                    it.annotationType.resolve().declaration.qualifiedName?.asString() ==
+                            ENTITY_PACKAGE_INFO_FQN
                 } == true
             ) {
                 // basePackage を抽出
@@ -89,16 +111,43 @@ class InterfaceResolver() : LoggerLike by logger {
                             it.name?.asString() == relationName
                         }?.value
                     }
-
-                val result = "$base.$sub"
-                logTraceExiting(result)
-                return result
+                return "$base.$sub".also { logTraceExiting(it) }
             }
         }
         // @EntityPackageInfo アノテーションが存在しない、または commonInterface に対応する relation が定義されていない場合は、commonInterface の FQN を package 名として返す
-        val result = common.packageName
-        logTraceExiting(result)
-        return result
+        return common.packageName.also { logTraceExiting(it) }
+    }
+
+    /**
+     * ## ベース package 名解決
+     * ### @EntityPackageInfo から basePackage を取得する
+     * @param symbols KSP のシンボルのシーケンスル
+     * @return basePackage。@EntityPackageInfo が存在しない場合は null
+     * @author Masahiro Inoue
+     * @since 2026-07-31
+     */
+    private fun resolveBasePackage(
+        symbols: Sequence<KSAnnotated>,
+    ): String? {
+        logTraceEntered(symbols)
+        symbols.filterIsInstance<KSFile>().forEach { symbol ->
+            val annotation = symbol.annotations.firstOrNull {
+                it.shortName.asString() == ENTITY_PACKAGE_INFO
+            }
+            // @EntityPackageInfo アノテーションが存在する場合は、basePackage を返す
+            if (annotation?.let {
+                    it.annotationType.resolve().declaration.qualifiedName?.asString() ==
+                            ENTITY_PACKAGE_INFO_FQN
+                } == true
+            ) {
+                return (annotation.arguments.firstOrNull {
+                    it.name?.asString() == BASE_PACKAGE
+                }?.value as? String)
+                    .also { logTraceExiting(it ?: EMPTY_STRING) }
+            }
+        }
+        logTraceExiting(NULL_STRING)
+        return null
     }
 
     /**
@@ -111,33 +160,31 @@ class InterfaceResolver() : LoggerLike by logger {
      */
     private fun generateCommonInterface(commonInterface: DMLInterfaceEnum): ClassName {
         logTraceEntered(commonInterface)
-        // commonInterface が空の場合は、デフォルトのインターフェースを返す
-        val result = ClassName.bestGuess(commonInterface.interfaceFQN)
         // commonInterface から FQN を解決して返す
-        logTraceExiting(result)
-        return result
+        return ClassName.bestGuess(commonInterface.interfaceFQN)
+            .also { logTraceExiting(it) }
     }
 
     /**
      * ## interface 一覧生成
-     * ### commonInterface / customInterface から
+     * ### commonInterface から
      * ### 実装対象の interface 一覧を構築する
-     * @param definition データクラスのマテリアルマップ。commonInterface と customInterface を含む
+     * @param definition データクラスのマテリアルマップ。commonInterface を含む
      * @return 実装対象の interface 一覧の TypeName のリスト
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
-    fun collectInterfaces(definition: ProjectionDefinition): List<TypeName> {
+    fun collectInterfaces(
+        definition: ProjectionDefinition,
+    ): List<TypeName> {
         logTraceEntered(definition)
-        // commonInterface と customInterface から、実装対象の interface 一覧を構築する
-        val result = buildList<TypeName> {
-            definition.commonInterfaces.forEach { common ->
-                add(ClassName.bestGuess(common.interfaceFQN))
-            }
-            definition.customInterfaces.filter { it.isNotBlank() }
-                .forEach { custom -> add(ClassName.bestGuess(custom)) }
-        }
-        logTraceExiting(result)
-        return result
+        // commonInterface から、実装対象の interface 一覧を構築する
+        return buildList<TypeName> {
+            definition.commonInterfaces
+                .filterNot { it == DMLInterfaceEnum.NOT_USE }
+                .forEach { common ->
+                    add(ClassName.bestGuess(common.interfaceFQN))
+                }
+        }.also { logTraceExiting(it) }
     }
 }

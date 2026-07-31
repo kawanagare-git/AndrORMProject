@@ -9,7 +9,6 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
-import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_NAME
 import jp.pgw.lab78.androrm.ksp.Constants.FP_ALIAS_FALLBACK
@@ -19,6 +18,7 @@ import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
+import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
 import jp.pgw.lab78.shared.library.Utils.isNull
 
 /**
@@ -28,8 +28,8 @@ import jp.pgw.lab78.shared.library.Utils.isNull
  * @author Masahiro Inoue
  * @since 2026-04-29
  */
-class KspEntityMetaFactory : LoggerLike by logger {
-
+class KspEntityMetaFactory(private val columnAnnotationResolver: KspColumnAnnotationResolver) :
+    LoggerLike by logger {
     /**
      * ## EntityMeta 生成
      * ### KSP 上のクラス定義と ProjectionDefinition から共通メタ情報を生成する
@@ -64,8 +64,9 @@ class KspEntityMetaFactory : LoggerLike by logger {
             }
             // プロジェクション定義とクラス定義を突き合わせて PropertyMeta を生成
             createColumnMeta(
+                ownerClass = classDecl,
                 property = sourceProperty as KSPropertyDeclaration,
-                projection = columnProjection
+                projection = columnProjection,
             )
         }
         // 関数列の PropertyMeta を生成
@@ -73,15 +74,13 @@ class KspEntityMetaFactory : LoggerLike by logger {
             createFunctionMeta(functionProjection)
         }
         // EntityMeta を生成して返却
-        val result = EntityMeta(
+        return EntityMeta(
             defineEntityQualifiedName = classDecl.qualifiedName?.asString().orEmpty(),
             entityName = classDecl.simpleName.asString() + definition.entityNameExtend,
             tableName = tableName,
             tableAlias = tableAlias,
             properties = columnMetas + functionMetas
-        )
-        logTraceExiting(result)
-        return result
+        ).also { logTraceExiting(it) }
     }
 
     /**
@@ -94,14 +93,14 @@ class KspEntityMetaFactory : LoggerLike by logger {
      * @since 2026-04-29
      */
     private fun createColumnMeta(
+        ownerClass: KSClassDeclaration,
         property: KSPropertyDeclaration,
-        projection: ColumnProjection
+        projection: ColumnProjection,
     ): PropertyMeta {
-        logTraceEntered(property, projection)
+        logTraceEntered(ownerClass, property, projection)
         // @Column と @Function の両方をチェック（両方付いている場合は両方の情報を持つ）
-        val columnAnnotation = property.annotations.firstOrNull {
-            it.shortName.asString() == COLUMN
-        }
+        val columnAnnotation =
+            columnAnnotationResolver.find(ownerClass = ownerClass, property = property)
         // @Function もチェック（あくまで通常カラム用の PropertyMeta なので、あっても functionType などは null/空になる）
         val functionAnnotation = property.annotations.firstOrNull {
             it.shortName.asString() == FUNCTION
@@ -120,7 +119,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
             ?.takeIf { it.isNotBlank() }
             ?: columnName
         // PropertyMeta を生成して返却
-        val result = PropertyMeta(
+        return PropertyMeta(
             propertyName = propertyName,
             columnName = columnName,
             aliasName = aliasName,
@@ -131,9 +130,7 @@ class KspEntityMetaFactory : LoggerLike by logger {
             functionType = null,
             functionArgs = emptyList(),
             rawFunction = ""
-        )
-        logTraceExiting(result)
-        return result
+        ).also { logTraceExiting(it) }
     }
 
     /**

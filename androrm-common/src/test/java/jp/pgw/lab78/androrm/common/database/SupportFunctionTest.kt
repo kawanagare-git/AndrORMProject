@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.common.database
 
 import jp.pgw.lab78.androrm.common.database.SupportFunction.buildAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.findColumnAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.time.LocalDateTime
 
 /**
  * ## SupportFunction テスト
@@ -399,6 +401,32 @@ class SupportFunctionTest {
         assertFalse(actual)
     }
 
+    @Test
+    fun testFindColumnAnnotationFromInterface() {
+        val enabled =
+            ManagedEntityImpl::enabled.findColumnAnnotation()
+
+        val createdAt =
+            ManagedEntityImpl::createdAt.findColumnAnnotation()
+
+        val updatedAt =
+            ManagedEntityImpl::class.findColumnAnnotation("updatedAt")
+
+        assertEquals("1", enabled?.default)
+
+        assertEquals("CREATED_AT", createdAt?.name)
+        assertEquals(
+            "CURRENT_TIMESTAMP_ISO",
+            createdAt?.default,
+        )
+
+        assertEquals("UPDATED_AT", updatedAt?.name)
+        assertEquals(
+            "CURRENT_TIMESTAMP_ISO",
+            updatedAt?.default,
+        )
+    }
+
     /**
      * ## 空文字トークン正規化
      * ### @CsvSource の <empty> を空文字に変換する
@@ -412,6 +440,30 @@ class SupportFunctionTest {
             "<empty>" -> ""
             else -> this
         }
+
+    private interface ManagedEntity {
+        @Column(default = "1")
+        val enabled: Boolean
+
+        @Column(
+            name = "CREATED_AT",
+            default = "CURRENT_TIMESTAMP_ISO",
+        )
+        val createdAt: LocalDateTime
+
+        @Column(
+            name = "UPDATED_AT",
+            default = "CURRENT_TIMESTAMP_ISO",
+        )
+        val updatedAt: LocalDateTime
+    }
+
+    @Table(name = "MANAGED_ENTITY")
+    private data class ManagedEntityImpl(
+        override val enabled: Boolean = true,
+        override val createdAt: LocalDateTime = LocalDateTime.MIN,
+        override val updatedAt: LocalDateTime = LocalDateTime.MIN,
+    ) : Entity, ManagedEntity
 
     /**
      * ## アノテーション付きテストEntity

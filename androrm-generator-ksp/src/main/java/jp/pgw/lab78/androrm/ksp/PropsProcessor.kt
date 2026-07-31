@@ -25,6 +25,7 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionExtractor
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionValidator
 import jp.pgw.lab78.androrm.ksp.resolver.InterfaceResolver
+import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
 import jp.pgw.lab78.androrm.ksp.validator.ColumnDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.validator.MigrationDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
@@ -79,17 +80,23 @@ class PropsProcessor(
     /** 自動生成するために必要な全プロパティ名 */
     private val allClassProperties = mutableMapOf<String, List<String>>()
 
-    /** Column プロパティ生成 */
-    private val columnPropertyFactory = ColumnPropertyFactory()
+    /** Columnアノテーション解決 */
+    private val kspColumnAnnotationResolver = KspColumnAnnotationResolver()
+
+    /** Columnプロパティ生成 */
+    private val columnPropertyFactory =
+        ColumnPropertyFactory(columnAnnotationResolver = kspColumnAnnotationResolver)
+
+    /** KSP Entityメタ情報生成 */
+    private val kspEntityMetaFactory =
+        KspEntityMetaFactory(columnAnnotationResolver = kspColumnAnnotationResolver)
+
+    /** @Column default妥当性検証 */
+    private val columnDefaultValueValidator =
+        ColumnDefaultValueValidator(columnAnnotationResolver = kspColumnAnnotationResolver)
 
     /** Function プロパティ生成 */
     private val functionPropertyFactory = FunctionPropertyFactory()
-
-    /** KSP Entity メタ情報生成 */
-    private val kspEntityMetaFactory = KspEntityMetaFactory()
-
-    /** @Column defaultValue 妥当性検証 */
-    private val columnDefaultValueValidator = ColumnDefaultValueValidator()
 
     /** @MigrationDefault value 妥当性検証 */
     private val migrationDefaultValueValidator = MigrationDefaultValueValidator()
@@ -191,8 +198,12 @@ class PropsProcessor(
         logTraceEntered(classDecl, definition, resolver)
         val packageName = interfaceResolver.resolvePackageNameFromAnnotation(
             classDecl,
-            resolver.getSymbolsWithAnnotation(ENTITY_PACKAGE_INFO_FQN, false),
-            definition.commonInterfaces.firstOrNull()
+            resolver.getSymbolsWithAnnotation(
+                ENTITY_PACKAGE_INFO_FQN,
+                false,
+            ),
+            definition.commonInterfaces.firstOrNull(),
+            definition.customInterfaces,
         )
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
         val createClassName = classDecl.simpleName.asString() + definition.entityNameExtend
@@ -212,8 +223,9 @@ class PropsProcessor(
         // 通常列の PropertySpec を生成（@Column / @PrimaryKey はコピー済み）
         val normalProps = selectedProps.map { prop ->
             columnPropertyFactory.create(
-                prop,
-                hideFromSelect = hideFromSelectByProperty[prop.simpleName.asString()] == true
+                ownerClass = classDecl,
+                prop = prop,
+                hideFromSelect = hideFromSelectByProperty[prop.simpleName.asString()] == true,
             )
         }
         // functions 部分（関数列）の抽出と PropertySpec 生成

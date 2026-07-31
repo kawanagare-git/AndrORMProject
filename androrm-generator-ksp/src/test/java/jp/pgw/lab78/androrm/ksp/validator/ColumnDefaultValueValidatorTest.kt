@@ -9,6 +9,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_DEFAULT_VALUE
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
+import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.params.ParameterizedTest
@@ -176,14 +177,11 @@ class ColumnDefaultValueValidatorTest {
     fun setUp() {
         val mockProcessor = mock<SymbolProcessorEnvironment>()
         mockKspLogger = mock<KSPLogger>()
-
         whenever(mockProcessor.logger).thenReturn(mockKspLogger)
-        whenever(mockProcessor.options).thenReturn(
-            mapOf("androrm.moduleDir" to "build${DIRECTORY_DELIMITER}test-module")
-        )
-
+        whenever(mockProcessor.options).thenReturn(mapOf("androrm.moduleDir" to "build${DIRECTORY_DELIMITER}test-module"))
         CreateLogger.initialize(mockProcessor)
-        target = ColumnDefaultValueValidator()
+        target =
+            ColumnDefaultValueValidator(columnAnnotationResolver = KspColumnAnnotationResolver())
     }
 
     /**

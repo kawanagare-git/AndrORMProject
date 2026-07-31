@@ -11,6 +11,7 @@ import jp.pgw.lab78.androrm.common.meta.PropertyMeta
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.LocalDateTime
 
 /**
  * RuntimeEntityMetaFactoryの動作を検証するテストクラス。
@@ -139,6 +140,46 @@ class RuntimeEntityMetaFactoryTest {
             { assertFalse(property.hideFromSelect) },
             { assertFalse(property.hasColumnAnnotation) },
             { assertFalse(property.hasFunctionAnnotation) },
+        )
+    }
+
+    /**
+     * ## インターフェースのColumnアノテーション取得テスト
+     * ### 実装先にColumnアノテーションがない場合、
+     * ### インターフェース側の定義を使用することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-31
+     */
+    @Test
+    fun testCreate_withColumnAnnotationOnInterface_returnsInheritedColumnPropertyMeta() {
+        val actual = factory.create(RuntimeManagedEntityImpl::class)
+        val enabled = actual.property("enabled")
+        val createdAt = actual.property("createdAt")
+        assertAll(
+            { assertEquals("ENABLED", enabled.columnName) },
+            { assertTrue(enabled.hasColumnAnnotation) },
+            { assertEquals("CREATED_AT", createdAt.columnName) },
+            { assertEquals("CREATED_AT", createdAt.aliasName) },
+            { assertFalse(createdAt.hideFromSelect) },
+            { assertTrue(createdAt.hasColumnAnnotation) },
+        )
+    }
+
+    /**
+     * ## 実装先Columnアノテーション優先テスト
+     * ### 実装先とインターフェースの両方にColumnがある場合、
+     * ### 実装先の定義を使用することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-07-31
+     */
+    @Test
+    fun testCreate_withColumnAnnotationOnImplementation_prioritizesImplementation() {
+        val actual = factory.create(RuntimeManagedEntityImpl::class)
+        val updatedAt = actual.property("updatedAt")
+        assertAll(
+            { assertEquals("UPDATED_AT", updatedAt.columnName) },
+            { assertTrue(updatedAt.hideFromSelect) },
+            { assertTrue(updatedAt.hasColumnAnnotation) },
         )
     }
 
@@ -422,3 +463,49 @@ private object NoPrimaryConstructorEntity : SelectEntity
  */
 @Suppress("UNUSED_PARAMETER")
 private class ConstructorParameterOnlyEntity(id: Long) : SelectEntity
+
+/**
+ * ## 管理項目インターフェース
+ * @author Masahiro Inoue
+ * @since 2026-07-31
+ */
+private interface RuntimeManagedEntity {
+    /** 使用可能フラグ。 */
+    @Column(default = "1")
+    val enabled: Boolean
+
+    /** 作成日時。 */
+    @Column(
+        name = "CREATED_AT",
+        default = "CURRENT_TIMESTAMP_ISO",
+    )
+    val createdAt: LocalDateTime
+
+    /** 更新日時。 */
+    @Column(
+        name = "UPDATED_AT",
+        default = "CURRENT_TIMESTAMP_ISO",
+    )
+    val updatedAt: LocalDateTime
+}
+
+/**
+ * ## 管理項目実装Entity
+ * @author Masahiro Inoue
+ * @since 2026-07-31
+ */
+@Table(
+    name = "RUNTIME_MANAGED_ENTITY",
+    alias = "RME",
+)
+private data class RuntimeManagedEntityImpl(
+    override val enabled: Boolean,
+    override val createdAt: LocalDateTime,
+
+    @Column(
+        name = "UPDATED_AT",
+        default = "CURRENT_TIMESTAMP_ISO",
+        hideFromSelect = true,
+    )
+    override val updatedAt: LocalDateTime,
+) : SelectEntity, RuntimeManagedEntity

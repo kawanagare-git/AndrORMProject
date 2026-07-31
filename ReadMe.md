@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 現在の公開バージョンは`0.1.1-alpha`です。
+> 本ReadMeの対象バージョンは`0.1.2-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
@@ -102,7 +102,16 @@ androrm-common
 - `FunctionProjection`
 - `@EntityPackageInfo`
 - DML用途別マーカーインターフェース
-- 独自インターフェース追加
+- DML種別ごとの生成先パッケージ指定
+- `commonInterface = [NOT_USE]`と`customInterface`によるカスタム生成先パッケージ指定
+
+### Detektによる静的検証
+
+- 同一ソース内の`@Table`で明示したテーブル名の重複を検出
+- `Select`、`join`、`where`、`having`、`on`、`order`で参照するEntityプロパティが、FROM元またはJOIN済みEntityに属しているかを検証
+- FROM元とJOIN先に、同じEntityを重複指定していないかを検出
+
+Detektは、SQLを実行する前にEntity定義やSELECT DSLの参照ミスを検出するために使用します。
 
 ### SQL生成
 
@@ -134,7 +143,7 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 現行の`JoinType`では、RIGHT JOINとFULL JOINは提供していません。
 
 - WHERE
-- GROUP BY
+- GROUP BY（`having`指定時に自動生成）
 - HAVING
 - ORDER BY
 - NULLS FIRST／NULLS LAST
@@ -189,28 +198,21 @@ plugins {
 ```
 AndrORMのランタイム、KSP Processor、Detektルールを追加します。
 - 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
-```
+```kotlin
 dependencies {
-    implementation(
-        "io.github.kawanagare-git:androrm-runtime:0.1.1-alpha"
-    )
-    ksp(
-        "io.github.kawanagare-git:androrm-generator-ksp:0.1.1-alpha"
-    )
-    detektPlugins(
-        "io.github.kawanagare-git:androrm-detekt-rules:0.1.1-alpha"
-    )
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.2-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.2-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.2-alpha")
 }
 ```
 Core Library Desugaringを有効にします。
 - 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
-```
+```kotlin
 android {
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
     }
 }
-
 dependencies {
     coreLibraryDesugaring(
         "com.android.tools:desugar_jdk_libs:2.1.5"
@@ -266,6 +268,10 @@ Detekt：
 ```
 
 ## Entity定義
+
+AndrORMのEntityは、Kotlinの`data class`として手作業で定義しても、KSPで自動生成しても構いません。
+
+KSPは用途別Entityの作成を省力化する機能であり、AndrORMの利用に必須ではありません。手作業で定義する場合も、自動生成する場合も、SQLビルダーと実行APIから同じように利用できます。
 
 ### 生成先パッケージ
 
@@ -398,7 +404,7 @@ data class UserMaster(
 | `properties` | 生成対象プロパティ |
 | `functions` | 生成対象SQL関数プロパティ |
 | `commonInterface` | SELECT／INSERTなどの共通インターフェース |
-| `customInterface` | 利用者独自インターフェース |
+| `customInterface` | `commonInterface = [NOT_USE]`又は省略した場合に、`basePackage`へ追加する生成先サブパッケージ |
 
 生成クラス名は、原則として次の形式です。
 
@@ -411,6 +417,8 @@ data class UserMaster(
 ```text
 UserMaster + Select = UserMasterSelect
 ```
+
+`customInterface`は、生成クラスが実装するKotlinインターフェースを指定する項目ではありません。`commonInterface = [NOT_USE]`と組み合わせ、`@EntityPackageInfo.basePackage`を基準とする生成先サブパッケージを指定します。
 
 ### `hideFromSelect`
 
@@ -456,9 +464,64 @@ KSPログに次のような出力があり、Entityが生成されない場合�
 findProjectionClasses: Exiting: []
 ```
 
+### 生成先パッケージのカスタマイズ
+
+生成先は、Kotlinファイルの先頭で`@file:EntityPackageInfo`を指定して変更できます。ファイルアノテーションは`package`宣言より前に記述します。
+
+```kotlin
+@file:EntityPackageInfo(
+    basePackage = "com.example.database.entities",
+    selectPackage = "select",
+    insertPackage = "insert",
+    updatePackage = "update",
+    upsertPackage = "upsert",
+    absertPackage = "absert",
+    deletePackage = "delete",
+)
+
+package com.example.database.entities.define
+```
+
+通常は、`basePackage`と`commonInterface`に対応するサブパッケージを結合した場所へ生成されます。たとえば`commonInterface = [SELECT]`の生成先は、次のとおりです。
+
+```text
+com.example.database.entities.select
+```
+
+標準DMLインターフェースを使用せず、任意のサブパッケージへ生成する場合は、`commonInterface = [NOT_USE]`と`customInterface`を組み合わせます。
+
+```kotlin
+Projection(
+    entityNameExtend = "ManagementColumns",
+    properties = [
+        ColumnProjection("enabled"),
+        ColumnProjection("createdAt"),
+        ColumnProjection("updatedAt"),
+    ],
+    commonInterface = [NOT_USE],
+    customInterface = ["interfaces.ManagementColumns"],
+)
+```
+
+この場合、生成されるクラスの完全修飾名は次の形式になります。
+
+```text
+<basePackage>.interfaces.ManagementColumns.<元クラス名><entityNameExtend>
+```
+
+例：
+
+```text
+com.example.database.entities.interfaces.ManagementColumns.UserMasterManagementColumns
+```
+
+`customInterface`に複数の値を指定した場合、生成先の決定に使用されるのは最初の空白でない値です。
+
 ## Entityの定義方法
 
 AndrORMのEntityは、KSPで生成する方法だけでなく、Kotlinの`data class`として手書きする方法にも対応しています。
+
+複数のテーブルで共通して使用する項目は、インターフェースなどへ分離し、各Entityへ継承できます。分離した共通項目に`@Column`を付与しておけば、カラム定義も各Entityで共通して利用できます。ただし、キーおよびインデックスの定義は継承対象ではありません。`@PrimaryKey`、`@Index`、`@Unique`は、対象となる各Entity自身に定義してください。
 
 KSPによるEntity生成は、用途別Entityの定義を省力化するための機能であり、AndrORMを利用するための必須条件ではありません。手書きする場合は、`@Table`、`@Column`、`@PrimaryKey`などの必要なアノテーションを付与し、用途に対応するマーカーインターフェースを実装してください。
 
@@ -542,6 +605,12 @@ val select = Select(userTable)
         userTable[UserMasterSelect::id] gt 100
     }
 ```
+
+### GROUP BYの自動生成
+
+`having`を指定すると、AndrORMはSELECT対象のうち集約関数ではない列から`GROUP BY`を自動生成します。利用者が`GROUP BY`を個別に組み立てる必要はありません。
+
+SQL関数列の処理によって既に`GROUP BY`対象が登録されている場合は、その内容を維持し、`having`による重複生成は行いません。
 
 ## INSERT
 
@@ -763,23 +832,30 @@ helper.transaction {
 ## SAVEPOINT
 
 ```kotlin
-helper.transaction {
-    executeDml(firstQuery)
+val savepointResult = helper.transaction {
+    executeDml(masterQuery)
 
-    val secondResult = savepoint("second_process") {
-        executeDml(secondQuery)
+    helper.savepoint("after_master") {
+        executeDml(detailQuery1)
+        executeDml(detailQuery2)
     }
+}
 
-    if (secondResult.isSuccess) {
-        // SAVEPOINT内の処理成功
-    } else {
-        // secondQueryはSAVEPOINTまでロールバック済み
-        val cause = secondResult.failure
-    }
-
-    executeDml(thirdQuery)
+if (savepointResult.isSuccess) {
+    // SAVEPOINT内の処理成功
+} else {
+    // SAVEPOINT作成後の処理はロールバック済み
+    val cause = savepointResult.failure
 }
 ```
+
+`AndrOrmDatabaseAndroidTest#step21_absertCombinedDataWithSavepoint`と同様に、SAVEPOINTより前の処理と、SAVEPOINT内の複数処理を1つの`transaction`にまとめて使用できます。
+
+- `masterQuery`はSAVEPOINT作成前に実行されます。
+- `detailQuery1`または`detailQuery2`で通常の処理例外が発生すると、SAVEPOINT作成後の変更だけがロールバックされます。
+- `savepoint()`は例外を`SavepointResult.failure`へ格納して返すため、呼出側は`isSuccess`で成否を判定できます。
+- SAVEPOINT内が成功した場合は、戻り値が`SavepointResult.result`へ格納されます。
+- 外側の`transaction`が正常終了すれば、SAVEPOINTより前の処理と、成功したSAVEPOINT内の処理がコミットされます。
 
 SAVEPOINT内の通常の処理例外は、次のように扱われます。
 
@@ -947,9 +1023,10 @@ ReturnHint.DATETIME
 `androrm-detekt-rules`には、次のルールが実装されています。
 
 - `AndrOrmDuplicateTableNameRule`
-  - Entity間の重複テーブル名を検出
+  - `TableDefinitionEntity`を実装するEntityを対象に、`@Table(name = ...)`で明示したテーブル名の重複を検出
 - `AndrOrmEntityRefRule`
-  - AndrORMのEntity参照方法を検証
+  - `Select`のFROM元とJOIN先に、同じEntityが重複していないかを検出
+  - `join`、`where`、`having`、`on`、`order`内のプロパティ参照が、FROM元またはJOIN済みEntityに属しているかを検証
 
 ## テスト
 

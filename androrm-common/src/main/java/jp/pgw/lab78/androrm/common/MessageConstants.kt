@@ -430,6 +430,16 @@ object MessageConstants {
         "Failed to obtain the simple name of ColumnFunction."
 
     /**
+     * ## CE00016
+     * ### 同名プロパティに異なる @Column を定義したインターフェースが複数存在する場合
+     * ### 第1引数: プロパティ名
+     * ### 第2引数: 実装クラス完全修飾名
+     * ### 第3引数: 競合したインターフェース完全修飾名
+     */
+    const val CE00016 =
+        "Conflicting @Column annotations were found for property '%s' in class '%s'. Interfaces: %s."
+
+    /**
      * ## CE00017
      * ### データベース接続に失敗した場合
      */
