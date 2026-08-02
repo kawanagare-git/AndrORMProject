@@ -42,6 +42,7 @@ deps_detektPlugins.txt
 gradle_test_log.txt
 ksp_error.log
 build.gradle_JUnit5用.kts
+ReadMe_Pratheus.md
 
 # =========================================================
 # Android Test generated CSV files

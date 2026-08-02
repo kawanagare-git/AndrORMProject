@@ -204,3 +204,6 @@ AndrORMのAPI、Entity生成、SQLビルダー、データベース移行など�
 - AndrORMをRepository内部へ閉じ込めたMVVM構成
 
 AndrORMのAPIだけでなく、Compose、StateFlow、Repositoryと組み合わせた実践的な利用方法を確認できます。
+
+## 連絡先
+kawanagare6817androrm@gmail.com
