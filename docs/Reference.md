@@ -219,6 +219,22 @@ dependencies {
     )
 }
 ```
+> [!IMPORTANT]
+> AndrORMは`minSdk 24`をサポートし、`LocalDate`、`LocalTime`、
+> `LocalDateTime`などの`java.time` APIを使用するため、
+> Core Library Desugaringを有効にして公開しています。
+>
+> そのため、AndrORMを使用するアプリ側の対象モジュールでも、
+> Core Library Desugaringを有効にする必要があります。
+> 利用アプリの`minSdk`が26以上の場合でも、この設定は必要です。
+>
+> 設定されていない場合は、AARメタデータの確認時に次のエラーが発生します。
+>
+> ```text
+> Dependency 'io.github.kawanagare-git:androrm-runtime:<version>'
+> requires core library desugaring to be enabled
+> ```
+
 ### プロジェクトを開く
 
 Android Studioでプロジェクトルートを開きます。
