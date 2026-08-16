@@ -65,7 +65,7 @@ class KspEntityMetaFactory(private val columnAnnotationResolver: KspColumnAnnota
             // プロジェクション定義とクラス定義を突き合わせて PropertyMeta を生成
             createColumnMeta(
                 ownerClass = classDecl,
-                property = sourceProperty as KSPropertyDeclaration,
+                property = sourceProperty,
                 projection = columnProjection,
             )
         }

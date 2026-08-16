@@ -108,7 +108,7 @@ class KspColumnAnnotationResolver {
                     sequenceOf(
                         InterfaceColumnAnnotation(
                             interfaceClass = superClass,
-                            annotation = annotation!!,
+                            annotation = annotation,
                         ),
                     )
                 } else {
