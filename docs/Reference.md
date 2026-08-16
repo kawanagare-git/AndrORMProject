@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 本ReadMeの対象バージョンは`0.1.2-alpha`です。
+> 本ReadMeの対象バージョンは`0.1.3-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
