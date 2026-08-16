@@ -302,7 +302,7 @@ open class AndrOrmDatabaseHelper(
             if (value.isNull()) {
                 statement.bindNull(bindIndex)
             } else {
-                DataConvertedMap[value!!::class]!!.toBind(statement, bindIndex, value)
+                DataConvertedMap[value::class]!!.toBind(statement, bindIndex, value)
             }
         }
         val start = SystemClock.elapsedRealtimeNanos()

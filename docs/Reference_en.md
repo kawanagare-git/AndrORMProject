@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> This README targets version `0.1.2-alpha`.
+> This README targets version `0.1.3-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
@@ -219,6 +219,23 @@ dependencies {
     )
 }
 ```
+> [!IMPORTANT]
+> AndrORM supports `minSdk 24` and uses `java.time` APIs such as
+> `LocalDate`, `LocalTime`, and `LocalDateTime`.
+> Therefore, AndrORM is published with Core Library Desugaring enabled.
+>
+> Applications using AndrORM must also enable Core Library Desugaring
+> in the target module.
+> This setting is required even when the application's `minSdk` is 26 or higher.
+>
+> If Core Library Desugaring is not enabled, the following error occurs
+> while checking the AAR metadata:
+>
+> ```text
+> Dependency 'io.github.kawanagare-git:androrm-runtime:<version>'
+> requires core library desugaring to be enabled
+> ```
+
 ### Open the Project
 
 Open the project root in Android Studio.

@@ -344,7 +344,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
             arg
         } else {
             // プロパティ名に一致する場合、テーブルエイリアスとカラム名を組み合わせた参照に変換して返す
-            "$tableAlias.${propertyMeta?.columnName}"
+            "$tableAlias.${propertyMeta.columnName}"
         }
     }
 

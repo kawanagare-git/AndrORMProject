@@ -1,5 +1,8 @@
 package jp.pgw.lab78.shared.library
 
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
 /**
  * 共有ライブラリで利用する共通ユーティリティ。
  * @author Masahiro Inoue
@@ -14,7 +17,14 @@ object Utils {
      * @author Masahiro Inoue
      * @since 2024-10-19
      */
-    fun Any?.isNull(): Boolean = this == null
+    @OptIn(ExperimentalContracts::class)
+    fun Any?.isNull(): Boolean {
+        contract {
+            returns(true) implies (this@isNull == null)
+            returns(false) implies (this@isNull != null)
+        }
+        return this == null
+    }
 
     /**
      * ## Not Null 判定拡張メソッド
@@ -24,7 +34,14 @@ object Utils {
      * @author Masahiro Inoue
      * @since 2024-10-19
      */
-    fun Any?.isNotNull(): Boolean = !this.isNull()
+    @OptIn(ExperimentalContracts::class)
+    fun Any?.isNotNull(): Boolean {
+        contract {
+            returns(true) implies (this@isNotNull != null)
+            returns(false) implies (this@isNotNull == null)
+        }
+        return !this.isNull()
+    }
 
     /**
      * ## Unit 判定拡張メソッド

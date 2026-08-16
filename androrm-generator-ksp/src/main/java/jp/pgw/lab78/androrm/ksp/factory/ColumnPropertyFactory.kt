@@ -79,7 +79,7 @@ class ColumnPropertyFactory(private val columnAnnotationResolver: KspColumnAnnot
         } else {
             builder.addAnnotation(
                 copyColumnAnnotation(
-                    columnAnnotation = columnAnnotation!!,
+                    columnAnnotation = columnAnnotation,
                     hideFromSelect = hideFromSelect,
                 ),
             )
