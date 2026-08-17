@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> This README targets version `0.1.3-alpha`.
+> This README targets version `0.1.4-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
