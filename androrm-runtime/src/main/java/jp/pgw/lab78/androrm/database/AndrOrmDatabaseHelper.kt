@@ -66,7 +66,7 @@ import kotlin.reflect.full.primaryConstructor
  */
 open class AndrOrmDatabaseHelper(
     context: Context,
-    databaseName: String = "app.db",
+    databaseName: String? = "app.db",
     version: Int,
     private val entities: List<KClass<out TableDefinitionEntity>>,
 ) : SQLiteOpenHelper(context, databaseName, null, version) {
