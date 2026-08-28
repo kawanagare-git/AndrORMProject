@@ -114,7 +114,8 @@ class SelectTest {
                             "avg(SAL.GROSS) as SAL_AVG_GROSS, " +
                             "max(deduction) as SAL_MAX_DEDUCTION, " +
                             "avg(deduction) as SAL_AVG_DEDUCTION " +
-                            "from SALARY SAL",
+                            "from SALARY SAL " +
+                            "group by SAL.EMPLOYEE_ID, SAL.PAY_MONTH, SAL.GROSS",
                     select.build(),
                 )
             },
@@ -806,7 +807,8 @@ class SelectTest {
                             "max(deduction) as SAL_MAX_DEDUCTION, " +
                             "avg(deduction) as SAL_AVG_DEDUCTION " +
                             "from SALARY SAL " +
-                            "where SAL.GROSS = (SAL.GROSS + ?)",
+                            "where SAL.GROSS = (SAL.GROSS + ?) " +
+                            "group by SAL.EMPLOYEE_ID, SAL.PAY_MONTH, SAL.GROSS",
                     select.build(),
                 )
             },

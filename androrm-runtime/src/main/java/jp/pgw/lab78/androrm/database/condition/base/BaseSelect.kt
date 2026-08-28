@@ -225,11 +225,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
             havingBindValues.addAll(valueHolder.bindValues)
             // HAVING 句が指定されると自動的に GROUP BY 句を生成する
             // ただし、関数列が定義されている場合、GROUP BY 句が生成されている可能性がある
-            if (groupByColumns.isEmpty()) {
-                detectGroupColumns().forEach { column ->
-                    groupByColumns += GroupByColumn(column)
-                }
-            }
+            ensureGroupByColumns()
         }
 
     /**
@@ -259,6 +255,21 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
         require(usedTableAliases.add(tableAlias)) {
             AE00003.format(tableAlias, tableName)
         }
+    }
+
+    /**
+     * ## GROUP BY自動生成
+     * ### SELECT対象の関数列以外のカラムからGROUP BY句を生成する
+     * ### 既に登録済みのカラムは追加しない
+     * @author Masahiro Inoue
+     * @since 2026-08-28
+     */
+    @InfoLog
+    protected fun ensureGroupByColumns() {
+        detectGroupColumns()
+            .map { column -> GroupByColumn(column) }
+            .filterNot { groupByColumn -> groupByColumn in groupByColumns }
+            .forEach { groupByColumn -> groupByColumns += groupByColumn }
     }
 
     /**

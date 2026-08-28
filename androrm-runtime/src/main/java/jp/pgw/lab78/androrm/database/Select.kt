@@ -12,6 +12,7 @@ import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
+import jp.pgw.lab78.androrm.common.database.function.SqlAggregateFunction
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.base.BaseSelect
@@ -85,6 +86,9 @@ class Select<T : SelectEntity>(
 
     /** 抽出カラムリスト */
     private val selectColumnList = mutableListOf<String>()
+
+    /** 集約関数使用フラグ */
+    private var hasAggregateFunction = false
 
     /** 並び替えカラムリスト */
     private val orderColumns = mutableListOf<Order>()
@@ -310,6 +314,10 @@ class Select<T : SelectEntity>(
         entityMeta.properties
             .filterNot { it.hideFromSelect }
             .forEach { propertyMeta ->
+                // 集約関数がSELECT対象に含まれているか確認
+                if (SqlAggregateFunction.entries.any { aggregateFunction -> aggregateFunction.name == propertyMeta.functionType?.name }) {
+                    hasAggregateFunction = true
+                }
                 selectColumnList += buildSelectExpression(entityMeta, tableAlias, propertyMeta)
             }
     }
@@ -361,6 +369,10 @@ class Select<T : SelectEntity>(
     override fun build(): String {
         if (!isBuild) {
             isBuild = true
+            // 集約関数がSELECT対象に含まれている場合、GROUP BY句を自動生成する
+            if (hasAggregateFunction) {
+                ensureGroupByColumns()
+            }
             val baseStatement = selectStatement.format(selectColumnList.joinToString(", "))
             buildInClauseDefinitionOrder({
                 addClauseIfNotEmpty(SelectClause.ORDER, ARGUMENT_DELIMITER, orderColumns.toList())
