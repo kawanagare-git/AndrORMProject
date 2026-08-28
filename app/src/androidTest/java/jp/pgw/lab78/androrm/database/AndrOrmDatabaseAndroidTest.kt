@@ -1063,10 +1063,6 @@ class AndrOrmDatabaseAndroidTest {
             .where {
                 staticInfo[Step25CharacterStaticInfo::characterPk] inList cumulativeCharacterPks
             }
-            .having {
-                joinedStatus[Step25JoinedCharacterStatusAggregate::updateMethod] eq
-                        CUMULATIVE_DATA_STEP
-            }
             .order {
                 Step25CharacterStaticInfo::characterPk.asc
                 Step25JoinedCharacterStatusAggregate::statusType.asc
@@ -1171,12 +1167,11 @@ class AndrOrmDatabaseAndroidTest {
                     "CSI23.CHARACTER_PK = CS23J.CHARACTER_PK AND CS23J.UPDATE_METHOD = ? " +
                     "where CSI23.CHARACTER_PK in (?, ?, ?, ?, ?) " +
                     "group by CSI23.CHARACTER_PK, CSI23.CHARACTER_NAME, CS23J.STATUS_TYPE " +
-                    "having CS23J.UPDATE_METHOD = ? " +
                     "order by CSI23.CHARACTER_PK asc nulls first, CS23J.STATUS_TYPE asc nulls first",
             cumulativeJoinQuery,
         )
         assertEquals(
-            listOf(CUMULATIVE_DATA_STEP) + expectedCharacterPks + CUMULATIVE_DATA_STEP,
+            listOf(CUMULATIVE_DATA_STEP) + expectedCharacterPks,
             cumulativeJoinBindValues,
         )
     }
