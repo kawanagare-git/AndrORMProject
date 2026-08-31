@@ -12,6 +12,120 @@ import kotlin.test.assertEquals
 class AndrOrmEntityRefRuleTest {
 
     /**
+     * ## 変数化された相関 EXISTS の検証
+     * ### 外側 SELECT の Entity 参照が誤検出されないことを確認する
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    @Test
+    fun `correlated entity reference in variable subquery is allowed`() {
+        val code = """
+            /** 従業員Entity */
+            class EmployeeEntity(val employeeId: Int)
+            /** 従業員ID選択Entity */
+            class EmployeeIdEntity(val employeeId: Int)
+
+            /** 相関EXISTSを構築する */
+            fun query() {
+                val subQuery = Select(EmployeeIdEntity::class)
+                    .where { EmployeeIdEntity::employeeId eq EmployeeEntity::employeeId }
+                Select(EmployeeEntity::class)
+                    .where { exists(subQuery) }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(0, findings.size)
+    }
+
+    /**
+     * ## 相関 EXISTS 内の対象外 Entity 検証
+     * ### 外側 SELECT にも属さない Entity は引き続き検出することを確認する
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    @Test
+    fun `unrelated entity reference in variable subquery is detected`() {
+        val code = """
+            /** 従業員Entity */
+            class EmployeeEntity(val employeeId: Int)
+            /** 従業員ID選択Entity */
+            class EmployeeIdEntity(val employeeId: Int)
+            /** 対象外Entity */
+            class OtherEntity(val employeeId: Int)
+
+            /** 対象外参照を含む相関EXISTSを構築する */
+            fun query() {
+                val subQuery = Select(EmployeeIdEntity::class)
+                    .where { EmployeeIdEntity::employeeId eq OtherEntity::employeeId }
+                Select(EmployeeEntity::class)
+                    .where { exists(subQuery) }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(1, findings.size)
+    }
+
+    /**
+     * ## インライン相関 EXISTS の検証
+     * ### インラインサブクエリでも外側 SELECT の Entity 参照を許可することを確認する
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    @Test
+    fun `correlated entity reference in inline subquery is allowed`() {
+        val code = """
+            /** 従業員Entity */
+            class EmployeeEntity(val employeeId: Int)
+            /** 従業員ID選択Entity */
+            class EmployeeIdEntity(val employeeId: Int)
+
+            /** インライン相関EXISTSを構築する */
+            fun query() {
+                Select(EmployeeEntity::class).where {
+                    exists(
+                        Select(EmployeeIdEntity::class)
+                            .where { EmployeeIdEntity::employeeId eq EmployeeEntity::employeeId }
+                    )
+                }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(0, findings.size)
+    }
+
+    /**
+     * ## ViewSelect の対象外 Entity 参照検証
+     * ### ViewSelect でも Select と同じ Entity 参照検査が行われることを確認する
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    @Test
+    fun `ViewSelect property reference is detected`() {
+        val code = """
+            /** Employeeを表すテスト用Entity */
+            class EmployeeEntity(val employeeId: Int)
+            /** クエリ対象外のDepartmentを表すテスト用Entity */
+            class DepartmentEntity(val employeeId: Int)
+
+            /** 不正なEntity参照を含むVIEW定義を構築する */
+            fun query() {
+                ViewSelect(EmployeeEntity::class)
+                    .where { DepartmentEntity::employeeId eq 10 }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(1, findings.size)
+    }
+
+    /**
      * ## 正しいプロパティ参照の検証
      * ### クエリ対象Entityのプロパティ参照が検出されないことを確認する
      * @author Masahiro Inoue

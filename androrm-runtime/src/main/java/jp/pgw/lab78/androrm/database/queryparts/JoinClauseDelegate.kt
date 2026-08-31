@@ -1,7 +1,7 @@
 package jp.pgw.lab78.androrm.database.queryparts
 
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
@@ -25,6 +25,9 @@ import kotlin.reflect.KClass
  */
 class JoinClauseDelegate<O, E : Entity>(
     private val owner: O,
+    private val valueHolderFactory: () -> QueryWithBindValues = {
+        object : QueryWithBindValues() {}
+    },
     private val onChanged: () -> Unit = {},
     private val onTableJoined: (TableRef<out E>) -> Unit = {},
 ) {
@@ -61,7 +64,7 @@ class JoinClauseDelegate<O, E : Entity>(
             joinType = joinType,
             joinedTable = TableRef(
                 entityClass = joinedEntity,
-                alias = joinedEntity.getTableAlias(),
+                alias = joinedEntity.getRelationAlias(),
             ),
             on = on,
         )
@@ -84,10 +87,10 @@ class JoinClauseDelegate<O, E : Entity>(
         onChanged()
         onTableJoined(joinedTable)
 
-        val joinedTableName = joinedTable.entityClass.getTableName()
+        val joinedTableName = joinedTable.entityClass.getRelationName()
         val joinedTableAlias = joinedTable.alias
 
-        val valueHolder = object : QueryWithBindValues() {}
+        val valueHolder = valueHolderFactory()
         val joinConditions = ConditionBuilder(valueHolder).apply(on).buildList()
 
         joinBindValues.addAll(valueHolder.bindValues)
@@ -115,7 +118,7 @@ class JoinClauseDelegate<O, E : Entity>(
             joinType = joinType,
             joinedTable = TableRef(
                 entityClass = joinedEntity,
-                alias = joinedEntity.getTableAlias(),
+                alias = joinedEntity.getRelationAlias(),
             ),
         )
 

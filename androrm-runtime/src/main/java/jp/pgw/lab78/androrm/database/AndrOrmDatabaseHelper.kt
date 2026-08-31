@@ -2,6 +2,7 @@ package jp.pgw.lab78.androrm.database
 
 import android.content.Context
 import android.database.Cursor
+import android.database.SQLException
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.SystemClock
@@ -30,6 +31,7 @@ import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueType
 import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.reference.TableRef
@@ -86,6 +88,47 @@ open class AndrOrmDatabaseHelper(
         version: Int,
         vararg entities: KClass<out TableDefinitionEntity>,
     ) : this(context, databaseName, version, entities.asList())
+
+    /**
+     * ## VIEW 付き AndrORM データベースヘルパー生成
+     * @param context Android システムのコンテキスト
+     * @param databaseName データベース名
+     * @param version データベースのバージョン
+     * @param entities 生成・移行対象テーブルを定義する Entity
+     * @param views 作成・再作成する VIEW
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    constructor(
+        context: Context,
+        databaseName: String? = "app.db",
+        version: Int,
+        entities: List<KClass<out TableDefinitionEntity>>,
+        views: List<CreateView<out ViewDefinitionEntity>>,
+    ) : this(context, databaseName, version, entities) {
+        this.views = views
+    }
+
+    /**
+     * ## VIEW 付き AndrORM データベースヘルパー生成
+     * @param context Android システムのコンテキスト
+     * @param databaseName データベース名
+     * @param version データベースのバージョン
+     * @param views 作成・再作成する VIEW
+     * @param entities 生成・移行対象テーブルを定義する Entity
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    constructor(
+        context: Context,
+        databaseName: String = "app.db",
+        version: Int,
+        views: List<CreateView<out ViewDefinitionEntity>>,
+        vararg entities: KClass<out TableDefinitionEntity>,
+    ) : this(context, databaseName, version, entities.asList(), views)
+
+    /** 参照元テーブル作成後に生成し、アップグレード時に再作成する VIEW */
+    private var views: List<CreateView<out ViewDefinitionEntity>> = emptyList()
 
     /**
      * ## 標準カラムマッピング保持領域
@@ -161,6 +204,7 @@ open class AndrOrmDatabaseHelper(
             val create = Create(entity)
             create.build() to create.buildIndexQueries(0, usedIndexNames)
         }
+        val createViewQueries = views.map { view -> view.build() }
         // テーブル作成
         entities.forEach { entity ->
             val (createTableQuery, createIndexQueries) = createQueriesByEntity.getValue(entity)
@@ -170,6 +214,8 @@ open class AndrOrmDatabaseHelper(
                 db.execSQL(createIndexQuery)
             }
         }
+        // VIEW作成
+        executeQuery(db, createViewQueries)
     }
 
     /**
@@ -188,8 +234,30 @@ open class AndrOrmDatabaseHelper(
         oldVersion: Int,
         newVersion: Int,
     ) {
+        val createViewQueries = views.map { view -> view.build() }
+        val dropViewQueries = buildList {
+            addAll(views.asReversed().map { view -> view.buildDropQuery() })
+            addAll(
+                obsoleteViewNames(oldVersion, newVersion)
+                    .map { viewName -> CreateView.buildDropQuery(viewName) }
+            )
+        }.distinct()
+        executeQuery(db, dropViewQueries)
         migrateDatabase(db, newVersion)
+        executeQuery(db, createViewQueries)
     }
+
+    /**
+     * ## 廃止 VIEW 名解決
+     * ### 現在の views へ登録されなくなった旧 VIEW をアップグレード時に削除するための拡張点
+     * @param oldVersion 適用前データベースバージョン
+     * @param newVersion 適用後データベースバージョン
+     * @return DROP VIEW 対象名
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    protected open fun obsoleteViewNames(oldVersion: Int, newVersion: Int): List<String> =
+        emptyList()
 
     /**
      * ## DB 移行処理
@@ -439,6 +507,7 @@ open class AndrOrmDatabaseHelper(
      * @author Masahiro Inoue
      * @since 2026-07-18
      */
+    @Suppress("TooGenericExceptionCaught")
     fun <T> savepoint(
         marker: Any? = null,
         block: () -> T,
@@ -484,7 +553,7 @@ open class AndrOrmDatabaseHelper(
         init {
             try {
                 database.execSQL("SAVEPOINT $name")
-            } catch (e: Exception) {
+            } catch (e: SQLException) {
                 throw NotCreatedSavepointException(
                     AE00034.format(name),
                     e,
@@ -508,7 +577,7 @@ open class AndrOrmDatabaseHelper(
             try {
                 database.execSQL("ROLLBACK TO SAVEPOINT $name")
                 state = State.ROLLED_BACK
-            } catch (e: Exception) {
+            } catch (e: SQLException) {
                 throw FailureRollbackException(
                     AE00035.format(name),
                     e,
@@ -543,7 +612,7 @@ open class AndrOrmDatabaseHelper(
             try {
                 database.execSQL("RELEASE SAVEPOINT $name")
                 state = State.RELEASED
-            } catch (e: Exception) {
+            } catch (e: SQLException) {
                 throw FailureReleaseException(
                     AE00036.format(name),
                     e,

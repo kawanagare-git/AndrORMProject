@@ -11,6 +11,8 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
@@ -20,6 +22,7 @@ import jp.pgw.lab78.androrm.database.interfaces.SqlExpression
 import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
+import jp.pgw.lab78.androrm.database.view.SqlValueRendererOwner
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -198,7 +201,7 @@ object EntityManager {
      */
     @Synchronized
     fun <T : SelectEntity> KClass<out T>.getSelectColumnTargets(): List<SelectColumnTarget> =
-        TableRef(this, this.getTableAlias()).getSelectColumnTargets()
+        TableRef(this, this.getRelationAlias()).getSelectColumnTargets()
 
     /**
      * ## SELECT 結果カラム紐づけ取得
@@ -306,7 +309,7 @@ object EntityManager {
      * @author Masahiro Inoue
      * @since 2025-08-01
      */
-    fun <T : Entity> KClass<T>.getAlias(): String = this.getTableAlias()
+    fun <T : Entity> KClass<T>.getAlias(): String = this.getRelationAlias()
 
     /**
      * Kotlin型とSQLite型の変換処理を保持する。
@@ -447,7 +450,9 @@ object EntityManager {
         valueHolder: QueryWithBindValues,
         value: Any,
         enableAlias: Boolean = true
-    ): String =
+    ): String = if (valueHolder is SqlValueRendererOwner) {
+        valueHolder.renderSqlValue(value, enableAlias)
+    } else {
         when (value) {
             is KProperty1<*, *> -> {
                 (value as KProperty1<out Entity, *>).toColumnString(enableAlias)
@@ -466,6 +471,7 @@ object EntityManager {
                 "?"
             }
         }
+    }
 
     /**
      * ## プロパティ→カラム変換
@@ -479,9 +485,9 @@ object EntityManager {
     fun KProperty1<out Entity, *>.toColumnString(enableAlias: Boolean): String {
         val entityClass = this.extractClassFromProperty()
         val tableIdentify = if (enableAlias) {
-            entityClass.getTableAlias()
+            entityClass.getRelationAlias()
         } else {
-            entityClass.getTableName()
+            entityClass.getRelationName()
         }
         return "${tableIdentify}.${entityClass.getColumnName(this.name)}"
     }

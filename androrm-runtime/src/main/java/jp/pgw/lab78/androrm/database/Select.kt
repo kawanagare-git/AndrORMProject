@@ -333,6 +333,7 @@ class Select<T : SelectEntity>(
      * @since 2026-04-28
      */
     @InfoLog
+    @Suppress("SpreadOperator")
     private fun buildSelectExpression(
         entityMeta: EntityMeta,
         tableAlias: String,

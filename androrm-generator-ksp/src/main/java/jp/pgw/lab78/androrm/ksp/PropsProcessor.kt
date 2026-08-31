@@ -1,6 +1,7 @@
 package jp.pgw.lab78.androrm.ksp
 
 import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.getAllSuperTypes
 import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
@@ -10,11 +11,13 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.ClassName
 import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
+import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.common.meta.EntityMetaValidator
 import jp.pgw.lab78.androrm.ksp.factory.ColumnPropertyFactory
 import jp.pgw.lab78.androrm.ksp.factory.FunctionPropertyFactory
 import jp.pgw.lab78.androrm.ksp.factory.TableAnnotationFactory
+import jp.pgw.lab78.androrm.ksp.factory.ViewAnnotationFactory
 import jp.pgw.lab78.androrm.ksp.helper.AnnotationHelper
 import jp.pgw.lab78.androrm.ksp.helper.ImportHelper
 import jp.pgw.lab78.androrm.ksp.helper.TypeHelper
@@ -29,6 +32,8 @@ import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
 import jp.pgw.lab78.androrm.ksp.validator.ColumnDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.validator.MigrationDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
+import jp.pgw.lab78.androrm.ksp.Constants.TABLE
+import jp.pgw.lab78.androrm.ksp.Constants.VIEW
 
 /**
  * ## AndrORM プロパティプロセッサクラス
@@ -76,6 +81,9 @@ class PropsProcessor(
 
     /** Table アノテーション生成 */
     private val tableAnnotationFactory = TableAnnotationFactory()
+
+    /** View アノテーション生成 */
+    private val viewAnnotationFactory = ViewAnnotationFactory()
 
     /** 自動生成するために必要な全プロパティ名 */
     private val allClassProperties = mutableMapOf<String, List<String>>()
@@ -146,9 +154,24 @@ class PropsProcessor(
                 return@forEach
             }
             val annotations = projectionExtractor.extractFromClass(classDecl)
+            val definitions = annotations.map { annotation ->
+                projectionArgumentParser.parse(annotation)
+            }
+            val isViewDefinition = classDecl.annotations.any {
+                it.shortName.asString() == VIEW
+            }
+            val hasViewDefinitionMarker = classDecl.getAllSuperTypes().any {
+                it.declaration.qualifiedName?.asString() == ViewDefinitionEntity::class.qualifiedName
+            }
+            if (isViewDefinition != hasViewDefinitionMarker) {
+                logError("@View and ViewDefinitionEntity must be specified together.")
+                return@forEach
+            }
+            if (isViewDefinition && !validateViewDefinition(classDecl, definitions)) {
+                return@forEach
+            }
             // 全アノテーションを捜査
-            for (annotation in annotations) {
-                val definition = projectionArgumentParser.parse(annotation)
+            for (definition in definitions) {
                 // ヴァリデータにかけて定期内容を検査
                 projectionValidator.validateAggregateConflicts(classDecl, definition)
                 projectionValidator.validateProperties(
@@ -208,7 +231,11 @@ class PropsProcessor(
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
         val createClassName = classDecl.simpleName.asString() + definition.entityNameExtend
         // @Table の生成
-        val tableAnnotationSpec = tableAnnotationFactory.create(classDecl, definition.aliasExtend)
+        val tableAnnotationSpec = if (classDecl.annotations.any { it.shortName.asString() == VIEW }) {
+            viewAnnotationFactory.create(classDecl, definition.aliasExtend)
+        } else {
+            tableAnnotationFactory.create(classDecl, definition.aliasExtend)
+        }
         // プロパティ名一覧と、プロパティ名 → hideFromSelect のマップを生成
         val selectedPropertyNames = definition.properties.map { it.property }.toSet()
         val hideFromSelectByProperty = definition.properties.associate {
@@ -244,6 +271,40 @@ class PropsProcessor(
             interfaces = interfaces
         )
         logTraceExiting(createClassName)
+    }
+
+    /**
+     * ## VIEW 定義 Projection 検証
+     * ### VIEW では SELECT または NOT_USE だけを許可し、少なくとも一つの SELECT Entity 生成を要求する
+     * @param classDecl VIEW 定義クラス
+     * @param definitions Projection 定義一覧
+     * @return 生成を継続できる場合 true
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun validateViewDefinition(
+        classDecl: KSClassDeclaration,
+        definitions: List<ProjectionDefinition>,
+    ): Boolean {
+        if (classDecl.annotations.any { it.shortName.asString() == TABLE }) {
+            logError("A VIEW definition cannot have both @Table and @View.")
+            return false
+        }
+        val unsupported = definitions.flatMap { it.commonInterfaces }
+            .filterNot { it == DMLInterfaceEnum.SELECT || it == DMLInterfaceEnum.NOT_USE }
+            .distinct()
+        if (unsupported.isNotEmpty()) {
+            logError(
+                "ViewDefinitionEntity supports only SELECT or NOT_USE projections. " +
+                        "Unsupported: ${unsupported.joinToString()}"
+            )
+            return false
+        }
+        if (definitions.none { DMLInterfaceEnum.SELECT in it.commonInterfaces }) {
+            logError("ViewDefinitionEntity requires at least one SELECT projection.")
+            return false
+        }
+        return true
     }
 
     /**

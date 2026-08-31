@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.ksp
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.View
 
 /**
  * ## 定数クラス
@@ -13,6 +14,9 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
 object Constants {
     /** @Table のシンプルネーム */
     val TABLE = Table::class.simpleName!!
+
+    /** @View のシンプルネーム */
+    val VIEW = View::class.simpleName!!
 
     /** @Table の変数名定義（name） */
     const val TABLE_NAME = "name"

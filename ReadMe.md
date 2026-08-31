@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中のアルファ版です。  
-> 本資料の対象バージョンは`0.1.5-alpha`です。  
+> 本資料の対象バージョンは`0.1.6-alpha`です。  
 > 今後、APIや仕様が変更される可能性があります。
 
 ## AndrORMとは
@@ -65,6 +65,7 @@ AndrORMは、次のようなAndroid開発者を想定しています。
 - Kotlinの`data class`によるテーブル定義
 - KSPによるSELECT・INSERT・UPDATEなどの用途別Entity生成
 - Entityの手作業による定義にも対応
+- `@View`・`ViewSelect`・`CreateView`によるSQLite VIEW定義
 - SELECT／INSERT／UPDATE／DELETE／UPSERT／ABSERTのSQL生成
 - INNER JOIN／LEFT JOIN／CROSS JOIN／NATURAL JOIN
 - WHERE／GROUP BY／HAVING／ORDER BY
@@ -75,7 +76,7 @@ AndrORMは、次のようなAndroid開発者を想定しています。
 - Entity／Map／Cursor形式でのSELECT結果取得
 - Entity定義からのSQLiteテーブル作成
 - データベース更新時のテーブル再構築とデータ移行
-- トランザクションおよびSAVEPOINT
+- トランザクションおよび SAVEPOINT
 - 独自型とSQLite型の相互変換
 - AndrORM専用Detektルールによる静的検証
 
@@ -84,6 +85,9 @@ Detektでは、主に次の問題をSQL実行前に検出します。
 - 明示したテーブル名の重複
 - FROM元またはJOIN先に存在しないEntityプロパティの参照
 - FROM元とJOIN先における同一Entityの重複指定
+- `@View`と`ViewDefinitionEntity`の不整合
+- `@Table`と`@View`の併用
+- 明示したVIEW名の重複、および明示したテーブル名との衝突
 
 ## 5～10分で動かす
 
@@ -111,9 +115,9 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.2-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.2-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.2-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.6-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.6-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.6-alpha")
 }
 ```
 
