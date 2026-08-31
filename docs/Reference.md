@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 本ReadMeの対象バージョンは`0.1.5-alpha`です。
+> 本ReadMeの対象バージョンは`0.1.6-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
@@ -94,6 +94,13 @@ androrm-common
 - `@ColumnOldName`
 - `@MigrationDefault`
 
+### VIEW定義
+
+- `@View`
+- `ViewDefinitionEntity`
+- `ViewSelect`
+- `CreateView`
+
 ### KSP Entity生成
 
 - `@Projection`
@@ -110,13 +117,18 @@ androrm-common
 - 同一ソース内の`@Table`で明示したテーブル名の重複を検出
 - `Select`、`join`、`where`、`having`、`on`、`order`で参照するEntityプロパティが、FROM元またはJOIN済みEntityに属しているかを検証
 - FROM元とJOIN先に、同じEntityを重複指定していないかを検出
+- `@View`と`ViewDefinitionEntity`の不整合を検出
+- `@Table`と`@View`の併用を検出
+- 明示したVIEW名の重複、および明示したテーブル名との衝突を検出
 
 Detektは、SQLを実行する前にEntity定義やSELECT DSLの参照ミスを検出するために使用します。
 
 ### SQL生成
 
 - `Create`
+- `CreateView`
 - `Select`
+- `ViewSelect`
 - `Insert`
 - `Update`
 - `Delete`
@@ -131,7 +143,172 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 
 「Insert if absent」の意味で使用しています。
 
-### SELECT
+### CREATE VIEW
+
+AndrORMでは、SQLiteのVIEWを`@View`、`ViewDefinitionEntity`、`ViewSelect`、`CreateView`で定義できます。
+
+### VIEW定義Entity
+
+VIEWの列構造は、`@View`を付与し、`ViewDefinitionEntity`を実装した`data class`として定義します。
+
+```kotlin
+@View(name = "ACTIVE_EMPLOYEE", alias = "AV")
+data class ActiveEmployeeViewDefinition(
+    @Column(name = "ID")
+    val id: Int,
+
+    @Column(name = "NAME")
+    val name: String,
+) : ViewDefinitionEntity
+```
+
+`ViewDefinitionEntity`は`TableDefinitionEntity`および`SelectEntity`とは独立した、CREATE VIEW専用のマーカーインターフェースです。
+
+`@View.name`を省略した場合はクラス名をスネークケースへ変換した名称を使用し、`alias`を省略した場合はVIEW名をaliasとして使用します。
+
+VIEW定義では、次の制約があります。
+
+- `@View`と`ViewDefinitionEntity`は組み合わせて使用する
+- `@Table`と`@View`は同一クラスへ指定できない
+- VIEW定義のプロパティへ`@Function`は指定できない
+- VIEW定義のカラムへ`hideFromSelect = true`は指定できない
+- 同一VIEW内で物理カラム名を重複できない
+
+### VIEW用EntityのKSP生成
+
+`ViewDefinitionEntity`へ`@Projection`または`@Projections`を指定すると、VIEWを通常の`Select`から参照するためのEntityをKSPで生成できます。
+
+VIEW定義のProjectionで指定できる`commonInterface`は`SELECT`または`NOT_USE`のみです。Projectionを指定する場合は、少なくとも1つの`SELECT` Projectionが必要です。
+
+INSERT、UPDATE、DELETE、UPSERT、ABSERT用EntityはVIEW定義から生成できません。
+
+### `ViewSelect`
+
+CREATE VIEWのSELECT本体には、通常の`Select`とは別に`ViewSelect`を使用します。
+
+```kotlin
+val viewSelect = ViewSelect(EmployeeSelect::class)
+    .where {
+        EmployeeSelect::enabled eq true
+    }
+```
+
+通常の`Select`は条件値をバインド値として保持します。
+
+```sql
+WHERE E.ENABLED = ?
+```
+
+`ViewSelect`はSQLiteのVIEW定義でバインドパラメータを使用できないため、条件値をSQLリテラルへ展開します。
+
+```sql
+WHERE E.ENABLED = 1
+```
+
+`ViewSelect.bindValues`は空のまま保持されます。
+
+主な値は次の形式へ変換されます。
+
+| Kotlin値 | VIEW SQL |
+|---|---|
+| `null` | `NULL` |
+| `Boolean` | `false = 0`、`true = 1` |
+| `Byte`／`Short`／`Int`／`Long` | 数値リテラル |
+| `Float`／`Double` | 数値リテラル |
+| `String` | シングルクォート付き文字列 |
+| `LocalDate`／`LocalTime`／`LocalDateTime` | シングルクォート付き文字列 |
+| `ByteArray` | `X'...'`形式のBLOBリテラル |
+
+文字列中のシングルクォートはSQLiteの規則に従ってエスケープします。`NaN`、無限大、NUL文字を含む文字列、未対応型はVIEW SQLリテラルとして使用できません。
+
+生成SQLにSQLiteのバインドパラメータが残っている場合はエラーになります。検査対象は`?`、`?123`、`:name`、`@name`、`$name`です。文字列リテラル、引用された識別子、SQLコメント内の同じ文字列はバインドパラメータとして扱いません。
+
+### `CreateView`
+
+`CreateView`へVIEW定義Entityと`ViewSelect`を指定します。
+
+```kotlin
+val createView = CreateView(
+    ActiveEmployeeViewDefinition::class,
+    ViewSelect(EmployeeSelect::class)
+        .where {
+            EmployeeSelect::enabled eq true
+        },
+)
+
+val createViewSql = createView.build()
+```
+
+`CreateView`はVIEW定義Entityの主コンストラクタ順で明示的なVIEWカラムリストを生成します。
+
+```sql
+CREATE VIEW "ACTIVE_EMPLOYEE" ("ID", "NAME") AS SELECT ...
+```
+
+VIEW定義Entityのカラム数と`ViewSelect`のSELECT出力列数が一致しない場合はエラーになります。
+
+DROP VIEW文は次のように生成できます。
+
+```kotlin
+val dropViewSql = createView.buildDropQuery()
+val dropViewSqlByName = CreateView.buildDropQuery("ACTIVE_EMPLOYEE")
+```
+
+### VIEWをSELECTする
+
+KSPで生成したSELECT用Entityは、通常の`Select`のFROM元またはJOIN先として使用できます。
+
+```kotlin
+val select = Select(ActiveEmployeeViewSelect::class)
+```
+
+### DBヘルパーへのVIEW登録
+
+VIEWをデータベース生成・更新時に管理する場合は、`AndrOrmDatabaseHelper`の`views`へ`CreateView`を登録します。
+
+```kotlin
+class AppDatabaseHelper(
+    context: Context,
+) : AndrOrmDatabaseHelper(
+    context = context,
+    databaseName = "app.db",
+    version = 2,
+    entities = listOf(
+        Employee::class,
+    ),
+    views = listOf(
+        CreateView(
+            ActiveEmployeeViewDefinition::class,
+            ViewSelect(EmployeeSelect::class)
+                .where {
+                    EmployeeSelect::enabled eq true
+                },
+        ),
+    ),
+)
+```
+
+新規作成時は、テーブルとINDEXを作成した後に、`views`の登録順でVIEWを作成します。
+
+アップグレード時は、登録済みVIEWを逆順で`DROP VIEW IF EXISTS`し、テーブル移行後に登録順でVIEWを再作成します。
+
+削除・改名され、現在の`views`へ登録されなくなった旧VIEWは`obsoleteViewNames()`で指定します。
+
+```kotlin
+override fun obsoleteViewNames(
+    oldVersion: Int,
+    newVersion: Int,
+): List<String> =
+    if (oldVersion < 2) {
+        listOf("OLD_EMPLOYEE_VIEW")
+    } else {
+        emptyList()
+    }
+```
+
+VIEWが別のVIEWを参照する場合は、参照されるVIEWを先に`views`へ登録してください。削除時は逆順で処理されます。
+
+## SELECT
 
 - DISTINCT
 - INNER JOIN
@@ -453,6 +630,13 @@ AndrORMのEntity定義、`@Projection`、`@Projections`などを追加・変更�
 .\gradlew.bat :app:kspDebugKotlin --rerun-tasks
 ```
 通常のKSP実行でEntityが生成されない場合でも、すぐにソースやGradle設定を変更せず、最初にこのコマンドを試行する。
+
+
+### ルートパッケージへのEntity生成
+
+KSPで解決された生成先がルートパッケージの場合、生成コードには`package`宣言を出力しません。
+
+そのため、ルートパッケージのクラスへ`@Projection`または`@Projections`を指定した場合でも、生成コードをコンパイルできます。
 
 ## AndrORM Entityの配置先
 
@@ -1019,6 +1203,10 @@ KSP処理では、主に次の内容を検証します。
 - `@Column(default)`の型整合性
 - `@MigrationDefault`の型整合性
 - 生成インターフェースと用途の整合性
+- `@View`と`ViewDefinitionEntity`の組み合わせ
+- VIEW定義での`@Table`併用禁止
+- VIEW Projectionでは`SELECT`または`NOT_USE`のみを許可
+- VIEW定義から更新系Entityを生成しないこと
 
 `FunctionProjection.returnHint`は、自動推論できない場合だけ指定します。
 
@@ -1041,8 +1229,13 @@ ReturnHint.DATETIME
 - `AndrOrmDuplicateTableNameRule`
   - `TableDefinitionEntity`を実装するEntityを対象に、`@Table(name = ...)`で明示したテーブル名の重複を検出
 - `AndrOrmEntityRefRule`
-  - `Select`のFROM元とJOIN先に、同じEntityが重複していないかを検出
+  - `Select`および`ViewSelect`のFROM元とJOIN先に、同じEntityが重複していないかを検出
   - `join`、`where`、`having`、`on`、`order`内のプロパティ参照が、FROM元またはJOIN済みEntityに属しているかを検証
+- `AndrOrmViewDefinitionRule`
+  - `@View`と`ViewDefinitionEntity`の対応を検証
+  - `@Table`と`@View`の併用を検出
+  - `@View(name = ...)`で明示したVIEW名の重複を検出
+  - 明示したVIEW名と明示したテーブル名の衝突を検出
 
 ## テスト
 

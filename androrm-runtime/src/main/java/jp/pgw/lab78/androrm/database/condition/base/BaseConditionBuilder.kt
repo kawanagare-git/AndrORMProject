@@ -4,6 +4,8 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00002
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.database.Select
+import jp.pgw.lab78.androrm.database.ViewExistsSelect
+import jp.pgw.lab78.androrm.database.ViewSelect
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.LogicalConditionDelegate
 import jp.pgw.lab78.androrm.database.condition.interfaces.ConditionBuilderLike
@@ -18,6 +20,8 @@ import jp.pgw.lab78.androrm.database.reference.ColumnRef
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager.formatValue
 import jp.pgw.lab78.androrm.database.utility.EntityManager.toColumnString
+import jp.pgw.lab78.androrm.database.view.SqlValueRendererOwner
+import jp.pgw.lab78.androrm.database.view.ViewSqlLiteralRenderer
 import kotlin.reflect.KProperty1
 
 /**
@@ -662,6 +666,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity, V> KProperty1<T, V>.inSelect(subQuery: Select<out SelectEntity>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
         list.add(Compare.InSelect(this.toColumnString(enableAlias), subQuery))
     }
@@ -674,7 +679,18 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2026-05-13
      */
     infix fun <T : Entity, V> ColumnRef<T, V>.inSelect(subQuery: Select<out SelectEntity>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.InSelect(this.build(), subQuery))
+    }
+
+    /** VIEW 定義用 IN サブクエリを追加する。 */
+    infix fun <T : Entity, V> KProperty1<T, V>.inSelect(subQuery: ViewSelect<out SelectEntity>) {
+        list.add(Compare.InSelect(this.toColumnString(enableAlias), subQuery))
+    }
+
+    /** VIEW 定義用 IN サブクエリを追加する。 */
+    infix fun <T : Entity, V> ColumnRef<T, V>.inSelect(subQuery: ViewSelect<out SelectEntity>) {
         list.add(Compare.InSelect(this.build(), subQuery))
     }
 
@@ -686,6 +702,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity, V> KProperty1<T, V>.notInSelect(subQuery: Select<out SelectEntity>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
         list.add(Compare.NotInSelect(this.toColumnString(enableAlias), subQuery))
     }
@@ -698,7 +715,18 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     infix fun <T : Entity, V> ColumnRef<T, V>.notInSelect(subQuery: Select<out SelectEntity>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
+        list.add(Compare.NotInSelect(this.build(), subQuery))
+    }
+
+    /** VIEW 定義用 NOT IN サブクエリを追加する。 */
+    infix fun <T : Entity, V> KProperty1<T, V>.notInSelect(subQuery: ViewSelect<out SelectEntity>) {
+        list.add(Compare.NotInSelect(this.toColumnString(enableAlias), subQuery))
+    }
+
+    /** VIEW 定義用 NOT IN サブクエリを追加する。 */
+    infix fun <T : Entity, V> ColumnRef<T, V>.notInSelect(subQuery: ViewSelect<out SelectEntity>) {
         list.add(Compare.NotInSelect(this.build(), subQuery))
     }
 
@@ -815,7 +843,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun <T : SelectEntity> exists(subQuery: Select<T>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
+        list += Compare.Exists(subQuery)
+    }
+
+    /** VIEW 定義用 EXISTS サブクエリを追加する。 */
+    fun <T : SelectEntity> exists(subQuery: ViewSelect<T>) {
         list += Compare.Exists(subQuery)
     }
 
@@ -830,9 +864,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
         from: TableRef<T>,
         block: ConditionBuilder.() -> Unit
     ) {
+        if (valueHolder is SqlValueRendererOwner) {
+            list += Compare.Exists(ViewExistsSelect(from).where(block))
+        } else {
         val subQuery = ExistsSelect(from).where(block)
         valueHolder.addBindValues(subQuery.bindValues)
         list += Compare.Exists(subQuery)
+    }
     }
 
     /**
@@ -842,7 +880,13 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun <T : SelectEntity> notExists(subQuery: Select<T>) {
+        requireNormalSelectAllowed()
         valueHolder.addBindValues(subQuery.bindValues)
+        list += Compare.NotExists(subQuery)
+    }
+
+    /** VIEW 定義用 NOT EXISTS サブクエリを追加する。 */
+    fun <T : SelectEntity> notExists(subQuery: ViewSelect<T>) {
         list += Compare.NotExists(subQuery)
     }
 
@@ -940,6 +984,10 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @since 2025-10-19
      */
     fun condition(text: String, vararg values: Any) {
+        if (valueHolder is SqlValueRendererOwner) {
+            list.add(FreeText(ViewSqlLiteralRenderer.expandAnonymousParameters(text, values.toList())))
+            return
+        }
         // プレースホルダとバインド値の個数を検査
         val placeholderCount = text.count { it == '?' }
         // プレースホルダの個数とバインド値の個数が一致しない場合は例外をスロー
@@ -949,6 +997,18 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
         // 条件式をリストに追加し、バインド値を管理オブジェクトに登録
         list.add(FreeText(text))
         values.forEach { value -> valueHolder.addBindValue(value) }
+    }
+
+    /**
+     * ## 通常 SELECT サブクエリ使用可否検証
+     * ### VIEW 定義内へ bind 値を持つ Select が混入することを拒否する
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun requireNormalSelectAllowed() {
+        require(valueHolder !is SqlValueRendererOwner) {
+            "A normal Select cannot be used inside ViewSelect. Use ViewSelect instead."
+        }
     }
 
     /**

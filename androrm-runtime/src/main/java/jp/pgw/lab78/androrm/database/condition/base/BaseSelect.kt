@@ -51,9 +51,12 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
 
     /** WHERE 句生成委譲 */
     protected val whereDelegate =
-        WhereClauseDelegate<BaseSelect<T, R>>(owner = this, ownerName = this.javaClass.simpleName) {
-            isBuild = false
-        }
+        WhereClauseDelegate<BaseSelect<T, R>>(
+            owner = this,
+            ownerName = this.javaClass.simpleName,
+            onChanged = { isBuild = false },
+            valueHolderFactory = { createConditionValueHolder() },
+        )
 
     /** JOIN 句生成委譲 */
     protected open val joinDelegate =
@@ -68,6 +71,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
                     joinedTable,
                 )
             },
+            valueHolderFactory = { createConditionValueHolder() },
         )
 
     /** Select クラスで使用するエンティティクラスのリスト */
@@ -109,6 +113,16 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
 
     /** ビルドフラグ */
     protected var isBuild: Boolean = false
+
+    /**
+     * ## 条件値保持領域生成
+     * ### 通常 SELECT では bind 値保持領域を生成し、派生クラスで値表現を差し替え可能にする
+     * @return 条件値保持領域
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    protected open fun createConditionValueHolder(): QueryWithBindValues =
+        object : QueryWithBindValues() {}
 
     /**
      * ## 結合尾テーブル収集
@@ -218,7 +232,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
         self.also {
             duplicateMethodCallValidator.validateNoDuplicateMethodCall(SelectClause.HAVING)
             isBuild = false
-            val valueHolder = object : QueryWithBindValues() {}
+            val valueHolder = createConditionValueHolder()
             val builder = HavingConditionBuilder(valueHolder).apply(block)
             havingConditions += builder.buildList()
             // バインド変数の設定

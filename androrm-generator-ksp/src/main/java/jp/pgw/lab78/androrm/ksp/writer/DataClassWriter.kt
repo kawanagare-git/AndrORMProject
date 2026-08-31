@@ -67,8 +67,10 @@ class DataClassWriter(
                 interfaces
             )
             // クラスの package 名、インポート文、クラス宣言を出力する
-            writer.appendLine("package ${classNameFQN.packageName}")
-            writer.appendLine()
+            if (classNameFQN.packageName.isNotBlank()) {
+                writer.appendLine("package ${classNameFQN.packageName}")
+                writer.appendLine()
+            }
             // インポート文を出力する
             imports.sorted().forEach { importFqn ->
                 writer.appendLine("import $importFqn")

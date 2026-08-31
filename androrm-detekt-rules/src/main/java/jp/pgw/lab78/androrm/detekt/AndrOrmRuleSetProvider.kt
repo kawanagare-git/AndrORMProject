@@ -40,6 +40,7 @@ class AndrOrmRuleSetProvider : RuleSetProvider {
             listOf(
                 AndrOrmEntityRefRule(config),
                 AndrOrmDuplicateTableNameRule(config),
+                AndrOrmViewDefinitionRule(config),
             )
         )
     }

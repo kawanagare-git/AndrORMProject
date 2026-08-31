@@ -16,6 +16,7 @@ import jp.pgw.lab78.androrm.ksp.Constants.FUNCTION
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_ALIAS
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE_NAME
+import jp.pgw.lab78.androrm.ksp.Constants.VIEW
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
 import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
@@ -44,7 +45,7 @@ class KspEntityMetaFactory(private val columnAnnotationResolver: KspColumnAnnota
         logTraceEntered(classDecl, definition)
         // テーブル情報の解決
         val tableAnnotation = classDecl.annotations.firstOrNull {
-            it.shortName.asString() == TABLE
+            it.shortName.asString() == TABLE || it.shortName.asString() == VIEW
         }
         // テーブル名とエイリアスの解決
         val tableName = resolveTableName(classDecl, tableAnnotation)

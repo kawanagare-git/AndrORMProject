@@ -2,10 +2,9 @@ package jp.pgw.lab78.androrm.database.condition.sealed
 
 import jp.pgw.lab78.androrm.common.Constants.LogicalOperator
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
-import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationAlias
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
-import jp.pgw.lab78.androrm.database.Select
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.interfaces.SelectBody
 import jp.pgw.lab78.androrm.database.condition.operator.ComparisonOperator
@@ -136,7 +135,7 @@ sealed class Compare : Condition() {
      */
     data class InSelect(
         val lhsProperty: String,
-        val subQuery: Select<out SelectEntity>,
+        val subQuery: SelectBody<out SelectEntity, *>,
     ) : Condition() {
         /**
          * IN句へサブクエリを組み込んだ条件文字列を生成する。
@@ -158,7 +157,7 @@ sealed class Compare : Condition() {
      */
     data class NotInSelect(
         val lhsProperty: String,
-        val subQuery: Select<out SelectEntity>,
+        val subQuery: SelectBody<out SelectEntity, *>,
     ) : Condition() {
         /**
          * NOT IN句へサブクエリを組み込んだ条件文字列を生成する。
@@ -202,7 +201,7 @@ sealed class Compare : Condition() {
      * @since 2025-10-03
      */
     class NotExists<T : SelectEntity>(
-        private val subQuery: Select<T>,
+        private val subQuery: SelectBody<T, *>,
     ) : Condition() {
 
         /**
@@ -332,7 +331,7 @@ data class GroupByColumn(
      */
     override fun build(): String {
         return column.let {
-            "${it.extractClassFromProperty().getTableAlias()}.${it.getColumnName()}"
+            "${it.extractClassFromProperty().getRelationAlias()}.${it.getColumnName()}"
         }
     }
 }

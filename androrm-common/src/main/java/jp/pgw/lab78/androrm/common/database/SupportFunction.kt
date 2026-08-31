@@ -6,6 +6,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.CE00009
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.View
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
 import jp.pgw.lab78.shared.library.Utils.isNotNull
 import java.util.Locale
@@ -60,6 +61,61 @@ object SupportFunction {
      */
     fun <T : Entity> KClass<out T>.getTableName() = this.getTableAnnotation().name
         .ifEmpty { this.simpleNameToSnakeCase() }
+
+    /**
+     * ## SELECT 元アノテーション取得
+     * ### Entity に付与された `@Table` または `@View` を検証する
+     * @receiver SELECT 元として使用する Entity クラス
+     * @return `@Table` の場合 true、`@View` の場合 false
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun <T : Entity> KClass<out T>.isTableRelation(): Boolean {
+        val hasTable = this.findAnnotation<Table>() != null
+        val hasView = this.findAnnotation<View>() != null
+        require(!(hasTable && hasView)) {
+            "Class `${this.qualifiedName}` cannot have both `@Table` and `@View`."
+        }
+        return !hasView
+    }
+
+    /**
+     * ## SELECT 元名称取得
+     * ### `@Table` または `@View` の名称を既存命名規則で解決する
+     * @receiver SELECT 元として使用する Entity クラス
+     * @return テーブル名または VIEW 名
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    fun <T : Entity> KClass<out T>.getRelationName(): String =
+        if (isTableRelation()) {
+            findAnnotation<Table>()?.name
+                ?.takeIf { it.isNotBlank() }
+                ?: simpleNameToSnakeCase()
+        } else {
+            findAnnotation<View>()?.name
+                ?.takeIf { it.isNotBlank() }
+                ?: simpleNameToSnakeCase()
+        }
+
+    /**
+     * ## SELECT 元エイリアス取得
+     * ### `@Table` または `@View` のエイリアスを既存命名規則で解決する
+     * @receiver SELECT 元として使用する Entity クラス
+     * @return テーブルまたは VIEW のエイリアス
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    fun <T : Entity> KClass<out T>.getRelationAlias(): String =
+        if (isTableRelation()) {
+            findAnnotation<Table>()?.alias
+                ?.takeIf { it.isNotBlank() }
+                ?: getRelationName()
+        } else {
+            findAnnotation<View>()?.alias
+                ?.takeIf { it.isNotBlank() }
+                ?: getRelationName()
+        }
 
     /**
      * ## カラム名のエイリアスを取得

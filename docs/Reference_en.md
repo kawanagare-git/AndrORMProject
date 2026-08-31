@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> This README targets version `0.1.5-alpha`.
+> This README targets version `0.1.6-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
@@ -94,6 +94,13 @@ androrm-common
 - `@ColumnOldName`
 - `@MigrationDefault`
 
+### VIEW Definitions
+
+- `@View`
+- `ViewDefinitionEntity`
+- `ViewSelect`
+- `CreateView`
+
 ### KSP Entity Generation
 
 - `@Projection`
@@ -110,13 +117,18 @@ androrm-common
 - Detect duplicate table names explicitly declared with `@Table` in the same source set
 - Verify that entity properties referenced by `Select`, `join`, `where`, `having`, `on`, and `order` belong to the FROM entity or an entity that has already been joined
 - Detect duplicate use of the same entity as the FROM entity and a JOIN target
+- Detect mismatches between `@View` and `ViewDefinitionEntity`
+- Detect classes annotated with both `@Table` and `@View`
+- Detect duplicate explicitly declared VIEW names and collisions with explicitly declared table names
 
 Detekt is used to catch entity-definition and SELECT DSL reference errors before SQL is executed.
 
 ### SQL Generation
 
 - `Create`
+- `CreateView`
 - `Select`
+- `ViewSelect`
 - `Insert`
 - `Update`
 - `Delete`
@@ -131,7 +143,172 @@ INSERT ... ON CONFLICT (...) DO NOTHING
 
 The name means "Insert if absent."
 
-### SELECT
+### CREATE VIEW
+
+AndrORM supports SQLite VIEW definitions using `@View`, `ViewDefinitionEntity`, `ViewSelect`, and `CreateView`.
+
+### VIEW Definition Entity
+
+Define the VIEW column schema as a `data class` annotated with `@View` and implementing `ViewDefinitionEntity`.
+
+```kotlin
+@View(name = "ACTIVE_EMPLOYEE", alias = "AV")
+data class ActiveEmployeeViewDefinition(
+    @Column(name = "ID")
+    val id: Int,
+
+    @Column(name = "NAME")
+    val name: String,
+) : ViewDefinitionEntity
+```
+
+`ViewDefinitionEntity` is a marker interface dedicated to CREATE VIEW definitions and is independent of `TableDefinitionEntity` and `SelectEntity`.
+
+If `@View.name` is omitted, the class name converted to snake case is used. If `alias` is omitted, the VIEW name is used as the alias.
+
+VIEW definitions have the following restrictions.
+
+- `@View` and `ViewDefinitionEntity` must be used together
+- `@Table` and `@View` cannot be specified on the same class
+- `@Function` cannot be used on VIEW definition properties
+- `hideFromSelect = true` cannot be used for VIEW definition columns
+- Duplicate physical column names are not allowed within the same VIEW
+
+### KSP Generation for VIEW Entities
+
+When `@Projection` or `@Projections` is applied to a `ViewDefinitionEntity`, KSP can generate an entity used to query the VIEW with the normal `Select` builder.
+
+Only `SELECT` and `NOT_USE` can be specified in `commonInterface` for VIEW projections. When projections are specified, at least one `SELECT` projection is required.
+
+INSERT, UPDATE, DELETE, UPSERT, and ABSERT entities cannot be generated from a VIEW definition.
+
+### `ViewSelect`
+
+Use `ViewSelect` instead of the normal `Select` builder for the SELECT statement inside CREATE VIEW.
+
+```kotlin
+val viewSelect = ViewSelect(EmployeeSelect::class)
+    .where {
+        EmployeeSelect::enabled eq true
+    }
+```
+
+The normal `Select` builder stores condition values as bind values.
+
+```sql
+WHERE E.ENABLED = ?
+```
+
+Because SQLite does not allow bind parameters in VIEW definitions, `ViewSelect` renders condition values as SQL literals.
+
+```sql
+WHERE E.ENABLED = 1
+```
+
+`ViewSelect.bindValues` remains empty.
+
+The main literal conversions are as follows.
+
+| Kotlin value | VIEW SQL |
+|---|---|
+| `null` | `NULL` |
+| `Boolean` | `false = 0`, `true = 1` |
+| `Byte` / `Short` / `Int` / `Long` | Numeric literal |
+| `Float` / `Double` | Numeric literal |
+| `String` | Single-quoted string |
+| `LocalDate` / `LocalTime` / `LocalDateTime` | Single-quoted string |
+| `ByteArray` | BLOB literal in `X'...'` format |
+
+Single quotes in strings are escaped according to SQLite rules. `NaN`, infinite values, strings containing a NUL character, and unsupported types cannot be used as VIEW SQL literals.
+
+An error is raised if the generated SQL still contains an SQLite bind parameter. The checked forms are `?`, `?123`, `:name`, `@name`, and `$name`. The same characters inside string literals, quoted identifiers, or SQL comments are not treated as bind parameters.
+
+### `CreateView`
+
+Pass a VIEW definition entity and a `ViewSelect` to `CreateView`.
+
+```kotlin
+val createView = CreateView(
+    ActiveEmployeeViewDefinition::class,
+    ViewSelect(EmployeeSelect::class)
+        .where {
+            EmployeeSelect::enabled eq true
+        },
+)
+
+val createViewSql = createView.build()
+```
+
+`CreateView` generates an explicit VIEW column list in the primary-constructor order of the VIEW definition entity.
+
+```sql
+CREATE VIEW "ACTIVE_EMPLOYEE" ("ID", "NAME") AS SELECT ...
+```
+
+An error is raised when the number of columns in the VIEW definition entity does not match the number of columns output by `ViewSelect`.
+
+DROP VIEW statements can be generated as follows.
+
+```kotlin
+val dropViewSql = createView.buildDropQuery()
+val dropViewSqlByName = CreateView.buildDropQuery("ACTIVE_EMPLOYEE")
+```
+
+### Querying a VIEW
+
+A SELECT entity generated by KSP can be used as the FROM source or JOIN target of the normal `Select` builder.
+
+```kotlin
+val select = Select(ActiveEmployeeViewSelect::class)
+```
+
+### Registering VIEWs with the Database Helper
+
+Register `CreateView` instances in the `views` argument of `AndrOrmDatabaseHelper` when VIEWs should be managed during database creation and upgrades.
+
+```kotlin
+class AppDatabaseHelper(
+    context: Context,
+) : AndrOrmDatabaseHelper(
+    context = context,
+    databaseName = "app.db",
+    version = 2,
+    entities = listOf(
+        Employee::class,
+    ),
+    views = listOf(
+        CreateView(
+            ActiveEmployeeViewDefinition::class,
+            ViewSelect(EmployeeSelect::class)
+                .where {
+                    EmployeeSelect::enabled eq true
+                },
+        ),
+    ),
+)
+```
+
+When a database is created, VIEWs are created in registration order after the tables and indexes.
+
+During an upgrade, registered VIEWs are dropped in reverse registration order, the table migration runs, and the latest VIEWs are recreated in registration order.
+
+Specify removed or renamed VIEWs that are no longer registered in `views` by overriding `obsoleteViewNames()`.
+
+```kotlin
+override fun obsoleteViewNames(
+    oldVersion: Int,
+    newVersion: Int,
+): List<String> =
+    if (oldVersion < 2) {
+        listOf("OLD_EMPLOYEE_VIEW")
+    } else {
+        emptyList()
+    }
+```
+
+When one VIEW depends on another VIEW, register the referenced VIEW first. VIEWs are dropped in reverse order.
+
+## SELECT
 
 - DISTINCT
 - INNER JOIN
@@ -454,6 +631,13 @@ When AndrORM entity definitions, `@Projection`, `@Projections`, or related decla
 .\gradlew.bat :app:kspDebugKotlin --rerun-tasks
 ```
 If entities are not generated by a normal KSP run, try this command first instead of immediately changing the source code or Gradle configuration.
+
+
+### Generating Entities into the Root Package
+
+When KSP resolves the generated destination to the root package, the generated source does not emit a `package` declaration.
+
+Therefore, classes in the root package annotated with `@Projection` or `@Projections` can generate compilable source code.
 
 ## Location of AndrORM Entities
 
@@ -1020,6 +1204,10 @@ KSP processing mainly validates the following.
 - Type compatibility of `@Column(default)`
 - Type compatibility of `@MigrationDefault`
 - Compatibility between generated interfaces and their purposes
+- Matching `@View` with `ViewDefinitionEntity`
+- Rejecting `@Table` on a VIEW definition
+- Allowing only `SELECT` or `NOT_USE` projections for VIEW definitions
+- Rejecting generation of write-DML entities from VIEW definitions
 
 Specify `FunctionProjection.returnHint` only when the return type cannot be inferred automatically.
 
@@ -1042,8 +1230,13 @@ The following rules are implemented in `androrm-detekt-rules`.
 - `AndrOrmDuplicateTableNameRule`
   - For entities implementing `TableDefinitionEntity`, detects duplicate table names explicitly declared with `@Table(name = ...)`
 - `AndrOrmEntityRefRule`
-  - Detects duplicate use of the same entity as the `Select` FROM entity and a JOIN target
+  - Detects duplicate use of the same entity as the FROM source and a JOIN target in `Select` and `ViewSelect`
   - Verifies that property references in `join`, `where`, `having`, `on`, and `order` belong to the FROM entity or an entity that has already been joined
+- `AndrOrmViewDefinitionRule`
+  - Verifies the relationship between `@View` and `ViewDefinitionEntity`
+  - Detects classes annotated with both `@Table` and `@View`
+  - Detects duplicate VIEW names explicitly declared with `@View(name = ...)`
+  - Detects collisions between explicitly declared VIEW names and explicitly declared table names
 
 ## Tests
 

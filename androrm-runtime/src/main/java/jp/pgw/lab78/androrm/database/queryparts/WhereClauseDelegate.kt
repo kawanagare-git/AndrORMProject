@@ -25,6 +25,9 @@ class WhereClauseDelegate<O>(
     private val owner: O,
     private val ownerName: String,
     private var enableAlias: Boolean = true,
+    private val valueHolderFactory: () -> QueryWithBindValues = {
+        object : QueryWithBindValues() {}
+    },
     private val onChanged: () -> Unit = {},
 ) {
     /** WHERE 条件リスト */
@@ -64,7 +67,7 @@ class WhereClauseDelegate<O>(
 
         onChanged()
 
-        val valueHolder = object : QueryWithBindValues() {}
+        val valueHolder = valueHolderFactory()
         val builder = ConditionBuilder(valueHolder, enableAlias).apply(block)
 
         whereConditions += builder.buildList()

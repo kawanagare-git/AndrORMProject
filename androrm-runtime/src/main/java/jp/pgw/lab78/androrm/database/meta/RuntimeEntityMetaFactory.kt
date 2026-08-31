@@ -8,6 +8,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCas
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.View
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
@@ -45,13 +46,18 @@ class RuntimeEntityMetaFactory {
      */
     fun <T : SelectEntity> create(entityClass: KClass<out T>): EntityMeta {
         // テーブル情報の解決
+        // SELECT 元が VIEW の場合は View 情報を解決
         val tableAnnotation = entityClass.findAnnotation<Table>()
+        val viewAnnotation = entityClass.findAnnotation<View>()
+        require(!(tableAnnotation != null && viewAnnotation != null)) {
+            "Class `${entityClass.qualifiedName}` cannot have both `@Table` and `@View`."
+        }
         // テーブル名の解決
-        val tableName = tableAnnotation?.name
+        val tableName = (tableAnnotation?.name ?: viewAnnotation?.name)
             ?.takeIf { it.isNotBlank() }
             ?: entityClass.simpleNameToSnakeCase()
         // テーブルエイリアスの解決
-        val tableAlias = tableAnnotation?.alias
+        val tableAlias = (tableAnnotation?.alias ?: viewAnnotation?.alias)
             ?.takeIf { it.isNotBlank() }
             ?: tableName
         // クラスの主コンストラクタを取得。存在しない場合はエラー

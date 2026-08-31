@@ -67,6 +67,9 @@ class AndrOrmEntityRefRule(
     /** 報告済み位置情報の集合（重複報告防止用） */
     private val reportedPositions = mutableSetOf<String>()
 
+    /** 変数化された相関サブクエリへ外側 SELECT から参照を許可する Entity */
+    private val correlatedEntityNamesByProperty = mutableMapOf<KtProperty, MutableSet<String>>()
+
     /** ルール定義情報 */
     override val issue: Issue = Issue(
         id = "AndrOrmEntityRefRule",
@@ -84,6 +87,8 @@ class AndrOrmEntityRefRule(
      * @since 2025-11-30
      */
     override fun visitKtFile(file: KtFile) {
+        correlatedEntityNamesByProperty.clear()
+        collectCorrelatedEntityNames(file)
         super.visitKtFile(file)
         AndrOrmLogger.log.info("[AndrOrmEntityRefRule] visitKtFile: ${file.name}")
     }
@@ -174,7 +179,7 @@ class AndrOrmEntityRefRule(
         val messageDebug = logDebug(name, call.text.take(80))
         return when (name) {
             // ① Select(...) を見つけたら fromEntity を取得してコンテキスト作成
-            "Select" -> {
+            "Select", "ViewSelect" -> {
                 AndrOrmLogger.debug(messageDebug)
                 createContextFromSelect(call)
             }
@@ -265,12 +270,19 @@ class AndrOrmEntityRefRule(
         context: SelectChainContext
     ) {
         val lambda = extractLambda(call) ?: return
-        val allowedEntityNames = context.allEntityNames
+        val allowedEntityNames = context.allEntityNames + resolveCorrelatedEntityNames(call)
 
         // ここで見るのは「XxxEntity::prop」のような callable reference だけ。
         // fromTable.prop("id") のような動的なものはそもそもここに現れないので対象外になる。
         lambda.bodyExpression?.accept(
             object : KtTreeVisitorVoid() {
+
+                /** ネストした SELECT チェーンは、そのチェーン自身の検査へ委ねる。 */
+                override fun visitDotQualifiedExpression(expression: KtDotQualifiedExpression) {
+                    if (!expression.startsWithSelect()) {
+                        super.visitDotQualifiedExpression(expression)
+                    }
+                }
 
                 /**
                  * ## Callable 参照式の検査
@@ -305,6 +317,143 @@ class AndrOrmEntityRefRule(
                 }
             }
         )
+    }
+
+    /**
+     * ## 変数化された相関サブクエリ解析
+     * ### exists／notExists に渡される Select 変数へ外側 SELECT の Entity を関連付ける
+     * @param file 解析対象 Kotlin ファイル
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun collectCorrelatedEntityNames(file: KtFile) {
+        val propertiesByName = mutableMapOf<String, MutableList<KtProperty>>()
+        file.accept(
+            object : KtTreeVisitorVoid() {
+                override fun visitProperty(property: KtProperty) {
+                    property.name?.let { propertyName ->
+                        propertiesByName.getOrPut(propertyName) { mutableListOf() } += property
+                    }
+                    super.visitProperty(property)
+                }
+            }
+        )
+        file.accept(
+            object : KtTreeVisitorVoid() {
+                override fun visitCallExpression(expression: KtCallExpression) {
+                    if (expression.calleeName() in setOf("exists", "notExists")) {
+                        val outerEntityNames = findOuterSelectEntityNames(expression)
+                        expression.valueArguments.forEach { argument ->
+                            val propertyName =
+                                (argument.getArgumentExpression() as? KtNameReferenceExpression)
+                                    ?.getReferencedName()
+                                    ?: return@forEach
+                            propertiesByName[propertyName]
+                                ?.filter { property ->
+                                    property.textOffset < expression.textOffset &&
+                                            containingFunction(property) == containingFunction(expression)
+                                }
+                                ?.maxByOrNull { property -> property.textOffset }
+                                ?.let { property ->
+                                    correlatedEntityNamesByProperty
+                                        .getOrPut(property) { mutableSetOf() }
+                                        .addAll(outerEntityNames)
+                                }
+                        }
+                    }
+                    super.visitCallExpression(expression)
+                }
+            }
+        )
+    }
+
+    /**
+     * ## 相関参照可能 Entity 解決
+     * ### 変数化されたサブクエリとインラインサブクエリの外側 Entity を取得する
+     * @param call 検査対象条件呼び出し
+     * @return 相関参照を許可する Entity 名
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun resolveCorrelatedEntityNames(call: KtCallExpression): Set<String> {
+        val property = generateSequence(call.parent) { parent -> parent.parent }
+            .filterIsInstance<KtProperty>()
+            .firstOrNull()
+        return correlatedEntityNamesByProperty[property].orEmpty() +
+                findOuterSelectEntityNames(call)
+    }
+
+    /**
+     * ## 外側 SELECT Entity 解決
+     * ### 相関サブクエリを内包する where／having／on の受信側から Entity を抽出する
+     * @param call サブクエリまたは exists 呼び出し
+     * @return 外側 SELECT が FROM／JOIN で使用する Entity 名
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun findOuterSelectEntityNames(call: KtCallExpression): Set<String> {
+        val outerClauseCall = generateSequence(call.parent) { parent -> parent.parent }
+            .filterIsInstance<KtCallExpression>()
+            .firstOrNull { ancestorCall ->
+                ancestorCall.calleeName() in setOf("where", "having", "on")
+            }
+            ?: return emptySet()
+        val outerChain = outerClauseCall.parent as? KtDotQualifiedExpression
+            ?: return emptySet()
+        return collectSelectEntityNames(outerChain.receiverExpression)
+    }
+
+    /**
+     * ## SELECT チェーン Entity 収集
+     * ### FROM と JOIN の KClass リテラルから Entity 名を収集する
+     * @param expression SELECT チェーン式
+     * @return チェーンが使用する Entity 名
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun collectSelectEntityNames(expression: KtExpression): Set<String> {
+        val entityNames = mutableSetOf<String>()
+        expression.accept(
+            object : KtTreeVisitorVoid() {
+                override fun visitCallExpression(call: KtCallExpression) {
+                    val target = when (call.calleeName()) {
+                        "Select", "ViewSelect" -> extractEntityExpression(call)
+                        "join" -> extractEntityExpression(call, JoinedEntity)
+                        else -> null
+                    }
+                    target?.let(::extractEntityNameFromKClassLiteral)?.let(entityNames::add)
+                    super.visitCallExpression(call)
+                }
+            }
+        )
+        return entityNames
+    }
+
+    /**
+     * ## 所属関数取得
+     * @param element 所属関数を検索する Kotlin 要素
+     * @return 最も近い名前付き関数
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun containingFunction(element: KtElement): KtNamedFunction? =
+        generateSequence(element.parent) { parent -> parent.parent }
+            .filterIsInstance<KtNamedFunction>()
+            .firstOrNull()
+
+    /**
+     * ## SELECT チェーン開始判定
+     * @receiver 判定対象ドットチェーン
+     * @return Select／ViewSelect から始まる場合 true
+     * @author Masahiro Inoue
+     * @since 2026-08-31
+     */
+    private fun KtDotQualifiedExpression.startsWithSelect(): Boolean {
+        var root: KtExpression = this
+        while (root is KtDotQualifiedExpression) {
+            root = root.receiverExpression
+        }
+        return (root as? KtCallExpression)?.calleeName() in setOf("Select", "ViewSelect")
     }
 
     /**
