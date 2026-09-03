@@ -15,6 +15,7 @@ import jp.pgw.lab78.androrm.database.condition.HavingConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryStructureLike
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
 import jp.pgw.lab78.androrm.database.condition.interfaces.SelectBody
+import jp.pgw.lab78.androrm.database.condition.interfaces.SelectQuery
 import jp.pgw.lab78.androrm.database.condition.sealed.Condition
 import jp.pgw.lab78.androrm.database.condition.sealed.GroupByColumn
 import jp.pgw.lab78.androrm.database.interfaces.JoinConditionModel
@@ -44,7 +45,8 @@ import kotlin.reflect.full.memberProperties
  * @since 2026-07-10
  */
 abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBindValues(),
-    SelectBody<T, R> {
+    SelectBody<T, R>,
+    SelectQuery<T> {
     /** 自分自身をキャストして返す */
     @Suppress("UNCHECKED_CAST")
     val self = this as R

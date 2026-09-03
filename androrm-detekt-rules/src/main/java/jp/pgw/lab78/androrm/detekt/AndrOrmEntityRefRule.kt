@@ -179,7 +179,7 @@ class AndrOrmEntityRefRule(
         val messageDebug = logDebug(name, call.text.take(80))
         return when (name) {
             // ① Select(...) を見つけたら fromEntity を取得してコンテキスト作成
-            "Select", "ViewSelect" -> {
+            "Select", "ViewSelect", "UnionAll", "unionAll" -> {
                 AndrOrmLogger.debug(messageDebug)
                 createContextFromSelect(call)
             }
@@ -417,7 +417,8 @@ class AndrOrmEntityRefRule(
             object : KtTreeVisitorVoid() {
                 override fun visitCallExpression(call: KtCallExpression) {
                     val target = when (call.calleeName()) {
-                        "Select", "ViewSelect" -> extractEntityExpression(call)
+                        "Select", "ViewSelect", "UnionAll", "unionAll" ->
+                            extractEntityExpression(call)
                         "join" -> extractEntityExpression(call, JoinedEntity)
                         else -> null
                     }
@@ -451,9 +452,14 @@ class AndrOrmEntityRefRule(
     private fun KtDotQualifiedExpression.startsWithSelect(): Boolean {
         var root: KtExpression = this
         while (root is KtDotQualifiedExpression) {
+            val selectorCall = root.selectorExpression as? KtCallExpression
+            if (selectorCall?.calleeName() == "unionAll") {
+                return true
+            }
             root = root.receiverExpression
         }
-        return (root as? KtCallExpression)?.calleeName() in setOf("Select", "ViewSelect")
+        return (root as? KtCallExpression)?.calleeName() in
+                setOf("Select", "ViewSelect", "UnionAll", "unionAll")
     }
 
     /**

@@ -18,6 +18,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.condition.interfaces.SelectQuery
 import jp.pgw.lab78.androrm.database.entities.define.SalaryEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestAllEntity
 import jp.pgw.lab78.androrm.database.entities.define.TestLargeEntity
@@ -1154,6 +1155,123 @@ class AndrOrmDatabaseHelperTest {
 
         Mockito.verify(db).rawQuery(expectedSql, null)
         Mockito.verify(cursor).close()
+    }
+
+    /**
+     * UnionAllインスタンスのSQLとバインド値をMap取得処理へ渡せることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun testExecuteSelectAsMapList_withUnionAll_passesSqlAndBindValues() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(TestAndrOrmDatabaseHelper())
+        val unionAll = UnionAll.unionAll(
+            EmployeeEntityIdSelection::class,
+            Select(EmployeeEntityIdSelection::class).where {
+                EmployeeEntityIdSelection::employeeId eq "EMP001"
+            },
+            Select(EmployeeEntityIdSelection::class).where {
+                EmployeeEntityIdSelection::employeeId eq "EMP002"
+            },
+        )
+        val expectedSql = unionAll.build()
+
+        Mockito.doReturn(db).`when`(helper).readableDatabase
+        Mockito.`when`(
+            db.rawQuery(Mockito.eq(expectedSql), Mockito.any<Array<String>>()),
+        ).thenReturn(cursor)
+        Mockito.`when`(cursor.columnNames).thenReturn(arrayOf("EMP_ID_EMPLOYEE_ID"))
+        Mockito.`when`(cursor.moveToNext()).thenReturn(true, false)
+        Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_STRING)
+        Mockito.`when`(cursor.getString(0)).thenReturn("EMP001")
+
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeSelectAsMapList(unionAll)
+        }
+
+        val selectionArgs = ArgumentCaptor.forClass(Array<String>::class.java)
+        assertEquals(
+            listOf(linkedMapOf("EMP_ID_EMPLOYEE_ID" to "EMP001")),
+            actual,
+        )
+        Mockito.verify(db).rawQuery(Mockito.eq(expectedSql), selectionArgs.capture())
+        assertArrayEquals(arrayOf("EMP001", "EMP002"), selectionArgs.value)
+        Mockito.verify(cursor).close()
+    }
+
+    /**
+     * UnionAllインスタンスの実行結果がresultEntityのEntity一覧へ変換されることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun testExecuteSelectAsEntityList_withUnionAll_returnsResultEntityListMap() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(TestAndrOrmDatabaseHelper())
+        val unionAll = UnionAll.unionAll(
+            EmployeeEntityIdSelection::class,
+            Select(EmployeeEntityIdSelection::class),
+            Select(EmployeeEntityIdSelection::class),
+        )
+        val expectedSql = unionAll.build()
+
+        Mockito.doReturn(db).`when`(helper).readableDatabase
+        Mockito.`when`(db.rawQuery(expectedSql, null)).thenReturn(cursor)
+        Mockito.`when`(cursor.columnNames).thenReturn(arrayOf("EMP_ID_EMPLOYEE_ID"))
+        Mockito.`when`(cursor.moveToNext()).thenReturn(true, true, false)
+        Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_STRING)
+        Mockito.`when`(cursor.getString(0)).thenReturn("EMP001", "EMP002")
+
+        val actual = withMockedElapsedRealtimeNanos {
+            helper.executeSelectAsEntityList(unionAll)
+        }
+
+        assertEquals(
+            listOf(
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(employeeId = "EMP001"),
+                ),
+                mapOf(
+                    "EMP_ID" to EmployeeEntityIdSelection(employeeId = "EMP002"),
+                ),
+            ),
+            actual,
+        )
+        Mockito.verify(db).rawQuery(expectedSql, null)
+        Mockito.verify(cursor).close()
+    }
+
+    /**
+     * UnionAllインスタンスをCursor取得処理へ直接渡せることを検証する。
+     *
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun testExecuteSelectAsCursor_withUnionAll_returnsRawQueryCursor() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
+        val helper = Mockito.spy(TestAndrOrmDatabaseHelper())
+        val unionAll = UnionAll.unionAll(
+            EmployeeEntityIdSelection::class,
+            Select(EmployeeEntityIdSelection::class),
+            Select(EmployeeEntityIdSelection::class),
+        )
+        val expectedSql = unionAll.build()
+
+        Mockito.doReturn(db).`when`(helper).readableDatabase
+        Mockito.`when`(db.rawQuery(expectedSql, null)).thenReturn(cursor)
+
+        val selectQuery: SelectQuery<SelectEntity> = unionAll
+        val actual = helper.executeSelectAsCursor(selectQuery)
+
+        assertSame(cursor, actual)
+        Mockito.verify(db).rawQuery(expectedSql, null)
     }
 
     /**

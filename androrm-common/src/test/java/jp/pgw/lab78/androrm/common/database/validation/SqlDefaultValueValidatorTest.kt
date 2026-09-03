@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.database.validation
 
+import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

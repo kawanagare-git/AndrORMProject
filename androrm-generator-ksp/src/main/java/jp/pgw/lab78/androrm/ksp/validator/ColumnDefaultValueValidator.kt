@@ -4,8 +4,8 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
-import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueType
-import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns_controller.SqlValueType
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_DEFAULT_VALUE
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger
@@ -74,7 +74,7 @@ class ColumnDefaultValueValidator(private val columnAnnotationResolver: KspColum
     private fun KSPropertyDeclaration.isValidDefaultValue(
         defaultValue: String,
     ): Boolean = SqlDefaultValueValidator.isValid(
-        type = SqlDefaultValueType.fromQualifiedName(typeName()),
+        type = SqlValueType.fromQualifiedName(typeName()),
         nullable = isNullable(),
         value = defaultValue,
         allowBlank = false,

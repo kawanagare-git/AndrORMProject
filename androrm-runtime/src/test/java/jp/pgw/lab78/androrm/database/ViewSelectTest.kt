@@ -8,6 +8,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.View
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
+import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.view.ViewSqlLiteralRenderer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -42,6 +43,27 @@ class ViewSelectTest {
 
         assertEquals(expected, query.build())
         assertEquals(expected, query.build())
+        assertEquals(emptyList<Any?>(), query.bindValues)
+    }
+
+    /** 独立したViewExistsSelectが相関EXISTSとSQLリテラルを生成することを確認する。 */
+    @Test
+    fun viewSelectBuildsCorrelatedExistsWithSqlLiterals() {
+        val outerTable = TableRef(EmployeeSelect::class, "OUTER_E")
+        val existsTable = TableRef(EmployeeSelect::class, "EXISTS_E")
+        val query = ViewSelect(outerTable).where {
+            exists(existsTable) {
+                existsTable[EmployeeSelect::id] eq outerTable[EmployeeSelect::id]
+                existsTable[EmployeeSelect::name] eq "active"
+            }
+        }
+
+        assertEquals(
+            "select OUTER_E.ID as OUTER_E_ID, OUTER_E.NAME as OUTER_E_NAME " +
+                    "from EMPLOYEE OUTER_E where exists (select 1 from EMPLOYEE EXISTS_E " +
+                    "where EXISTS_E.ID = OUTER_E.ID and EXISTS_E.NAME = 'active')",
+            query.build(),
+        )
         assertEquals(emptyList<Any?>(), query.bindValues)
     }
 

@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database.condition.sealed
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.api.Test
 import jp.pgw.lab78.androrm.database.entities.RuntimeEmployeeEntity as EmployeeEntity
 
 /**
@@ -35,5 +36,21 @@ class OrderTest {
             nullsLast,
         )
         assertEquals(expected, order.build())
+    }
+
+    /**
+     * 呼び出し元が解決した列式を使用してORDER BY要素を構築できることを検証する。
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun build_withResolvedColumnExpression_usesSpecifiedExpression() {
+        val order = Order(
+            column = EmployeeEntity::employeeId,
+            ascending = false,
+            nullsLast = true,
+        )
+
+        assertEquals("RESULT_ID desc nulls last", order.build("RESULT_ID"))
     }
 }
