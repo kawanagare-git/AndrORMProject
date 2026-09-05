@@ -3,6 +3,7 @@ package jp.pgw.lab78.androrm.database
 import android.content.Context
 import android.database.Cursor
 import android.database.SQLException
+import android.database.sqlite.SQLiteCursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.SystemClock
@@ -11,8 +12,6 @@ import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
@@ -27,20 +26,22 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
-import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueType
-import jp.pgw.lab78.androrm.common.database.validation.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlValueType
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
 import jp.pgw.lab78.androrm.database.condition.interfaces.QueryWithBindValues
+import jp.pgw.lab78.androrm.database.condition.interfaces.SelectQuery
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
+import jp.pgw.lab78.androrm.database.meta.RuntimeEntityMetaFactory
 import jp.pgw.lab78.androrm.database.reference.TableRef
 import jp.pgw.lab78.androrm.database.utility.EntityManager.DataConvertedMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.SelectColumnTarget
 import jp.pgw.lab78.androrm.database.utility.EntityManager.columnToFieldMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
-import jp.pgw.lab78.shared.library.Utils.isNotNull
+import jp.pgw.lab78.androrm.database.validation.ValueFromCursor
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.io.Closeable
 import java.util.concurrent.FutureTask
@@ -401,6 +402,46 @@ open class AndrOrmDatabaseHelper(
                 nullableByJoin = query.isNullableByJoin(usedEntity),
             )
         }
+        return executeSelectAsEntityList(query, entityResultTargets)
+    }
+
+    /**
+     * ## UNION ALL SELECT 実行
+     * ### UnionAllクラスで生成したSQLを実行し、resultEntityのEntityリストで返す
+     * @param query UNION ALLクエリのインスタンス
+     * @return SELECT結果Entityリスト
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    fun <T : SelectEntity> executeSelectAsEntityList(
+        query: UnionAll<T>,
+    ): List<Map<String, SelectEntity?>> {
+        val resultEntityMeta = RuntimeEntityMetaFactory().create(query.resultEntity)
+        val resultTableRef = TableRef(
+            entityClass = query.resultEntity,
+            alias = resultEntityMeta.tableAlias,
+        )
+        val entityResultTarget = EntityResultTarget(
+            tableRef = resultTableRef,
+            columnTargets = resultTableRef.createSelectColumnTargetsTask().get(),
+            nullableByJoin = false,
+        )
+        return executeSelectAsEntityList(query, listOf(entityResultTarget))
+    }
+
+    /**
+     * ## SELECT系クエリ実行結果変換
+     * ### Map形式の各行を指定されたEntity復元対象へ変換する
+     * @param query SELECT系クエリのインスタンス
+     * @param entityResultTargets Entity復元対象
+     * @return SELECT結果Entityリスト
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    private fun executeSelectAsEntityList(
+        query: SelectQuery<SelectEntity>,
+        entityResultTargets: List<EntityResultTarget>,
+    ): List<Map<String, SelectEntity?>> {
         // データの取得 ※マップ形式
         val mapList = executeSelectAsMapList(query)
         // エンティティの生成
@@ -412,6 +453,17 @@ open class AndrOrmDatabaseHelper(
     }
 
     /**
+     * ## SELECT系クエリ実行
+     * ### SELECT系クエリで生成したSQLを実行し、結果をMapのリストで返す
+     * @param query SELECT系クエリのインスタンス
+     * @return SELECT結果
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    fun executeSelectAsMapList(query: SelectQuery<SelectEntity>): List<Map<String, Any?>> =
+        executeSelectQueryAsMapList(query)
+
+    /**
      * ## SELECT 実行
      * ### Select クラスで生成した SQL を実行し、結果を Map のリストで返す
      * @param query Select クエリのインスタンス
@@ -420,7 +472,30 @@ open class AndrOrmDatabaseHelper(
      * @since 2026-06-04
      */
     fun executeSelectAsMapList(query: Select<out SelectEntity>): List<Map<String, Any?>> =
-        executeSelectAsMapList(query.build(), query.bindValues)
+        executeSelectQueryAsMapList(query)
+
+    /**
+     * ## UNION ALL SELECT 実行
+     * ### UnionAllクラスで生成したSQLを実行し、結果をMapのリストで返す
+     * @param query UNION ALLクエリのインスタンス
+     * @return SELECT結果
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    fun executeSelectAsMapList(query: UnionAll<out SelectEntity>): List<Map<String, Any?>> =
+        executeSelectQueryAsMapList(query)
+
+    /**
+     * ## SELECT系Map取得共通処理
+     * ### SELECT系クエリのSQLとバインド値を既存の文字列実行経路へ渡す
+     * @param query SELECT系クエリのインスタンス
+     * @return SELECT結果
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    private fun executeSelectQueryAsMapList(
+        query: SelectQuery<SelectEntity>,
+    ): List<Map<String, Any?>> = executeSelectAsMapList(query.build(), query.bindValues)
 
     /**
      * ## SELECT 実行
@@ -454,19 +529,68 @@ open class AndrOrmDatabaseHelper(
      * @since 2026-06-03
      */
     fun executeSelectAsCursor(query: Select<out SelectEntity>): Cursor =
-        executeSelectAsCursor(query.build(), query.bindValues)
+        executeSelectQueryAsCursor(query)
+
+    /**
+     * ## UNION ALL SELECT 実行
+     * ### UnionAllクラスで生成したSQLを読み出し用DBで実行し、Cursorを返す
+     * @param query UNION ALLクエリのインスタンス
+     * @return 検索結果Cursor
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    fun executeSelectAsCursor(query: UnionAll<out SelectEntity>): Cursor =
+        executeSelectQueryAsCursor(query)
+
+    /**
+     * ## SELECT系クエリ実行
+     * ### SELECT系クエリで生成したSQLを読み出し用DBで実行し、Cursorを返す
+     * @param query SELECT系クエリのインスタンス
+     * @return 検索結果Cursor
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    fun executeSelectAsCursor(query: SelectQuery<SelectEntity>): Cursor =
+        executeSelectQueryAsCursor(query)
+
+    /**
+     * ## SELECT系Cursor取得共通処理
+     * ### SELECT系クエリのSQLとバインド値を既存の文字列実行経路へ渡す
+     * @param query SELECT系クエリのインスタンス
+     * @return 検索結果Cursor
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    private fun executeSelectQueryAsCursor(
+        query: SelectQuery<SelectEntity>,
+    ): Cursor = executeSelectAsCursor(query.build(), query.bindValues)
 
     /**
      * ## SELECT 実行
      * ### 生成済み SELECT 文字列を読み出し用 DB で実行し、Cursor を返す
-     * @param query 実行クエリ文字列
+     * @param queryString 実行クエリ文字列
      * @param bindValues 実行クエリ用バインド変数
      * @return 検索結果 Cursor
      * @author Masahiro Inoue
      * @since 2026-06-03
      */
-    fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor {
-        return readableDatabase.rawQuery(query, bindValues.toSelectionArgs())
+    fun executeSelectAsCursor(queryString: String, bindValues: List<*> = emptyList<Any>()): Cursor {
+        return readableDatabase.rawQueryWithFactory(
+            { _, cursorDriver, editTable, query ->
+                bindValues.forEachIndexed { index, value ->
+                    val indexInc = index + 1
+                    if (value.isNull()) {
+                        query.bindNull(indexInc)
+                    }else{
+                       ValueFromCursor.identifyType(value).setBind(query,indexInc,value)
+                    }
+                }
+                SQLiteCursor(cursorDriver, editTable, query)
+            },
+            queryString,
+            emptyArray<String>(),
+            null,
+        )
     }
 
     /**
@@ -756,7 +880,7 @@ open class AndrOrmDatabaseHelper(
         }
         val typeName = (property.returnType.classifier as? KClass<*>)?.qualifiedName.orEmpty()
         val isValid = SqlDefaultValueValidator.isValid(
-            type = SqlDefaultValueType.fromQualifiedName(typeName),
+            type = SqlValueType.fromQualifiedName(typeName),
             nullable = property.returnType.isMarkedNullable,
             value = migrationDefault.value,
             allowBlank = false,
@@ -765,27 +889,6 @@ open class AndrOrmDatabaseHelper(
             AE00033.format(entity.qualifiedName, property.name, migrationDefault.value, typeName)
         }
         return SqlDefaultValueValidator.normalize(migrationDefault.value)
-    }
-
-    /**
-     * ## SELECT 用バインド値変換
-     * ### rawQuery の selectionArgs に渡すため、値を String 配列へ変換する
-     * @receiver バインド値リスト
-     * @return rawQuery に渡す selectionArgs。バインド値なしの場合は null
-     * @author Masahiro Inoue
-     * @since 2026-06-03
-     */
-    private fun List<*>.toSelectionArgs(): Array<String>? {
-        if (this.isEmpty()) return null
-        return this.mapIndexed { index, value ->
-            val bindIndex = index + 1
-            require(value.isNotNull()) { AE00023.format(bindIndex) }
-            require(value !is ByteArray) { AE00024.format(bindIndex) }
-            when (value) {
-                is Boolean -> if (value) "1" else "0"
-                else -> value.toString()
-            }
-        }.toTypedArray()
     }
 
     /**

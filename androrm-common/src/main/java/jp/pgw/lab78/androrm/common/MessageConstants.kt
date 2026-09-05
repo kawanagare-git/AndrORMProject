@@ -318,6 +318,69 @@ object MessageConstants {
      */
     const val AE00038 = "Delete requires a WHERE condition or deleteAll()."
 
+    /**
+     * ## AE00039
+     * ### UnionAll に2件以上のSelectが指定されていない場合
+     */
+    const val AE00039 = "UnionAll requires at least two Select queries."
+
+    /**
+     * ## AE00040
+     * ### UnionAll の結果列数が一致しない場合
+     *
+     * 第1引数: Selectの指定位置
+     * 第2引数: 結果Entityの列数
+     * 第3引数: Selectの列数
+     */
+    const val AE00040 = "UnionAll column count mismatch. selectIndex=%s, expected=%s, actual=%s"
+
+    /**
+     * ## AE00041
+     * ### UnionAll のORDERに結果Entity以外のプロパティが指定された場合
+     *
+     * 第1引数: プロパティ名
+     * 第2引数: 結果Entity名
+     */
+    const val AE00041 =
+        "UnionAll order property '%s' is not a selectable property of result entity '%s'."
+
+    /**
+     * ## AE00042
+     * ### UnionAllの構成SelectにORDER、LIMITまたはOFFSETが指定された場合
+     *
+     * 第1引数: 不正な句
+     * 第2引数: Selectの指定位置
+     */
+    const val AE00042 =
+        "UnionAll component Select must not contain %s. selectIndex=%s"
+
+    /**
+     * ## AE00043
+     * ### UnionAll結果Entityの出力カラム名が重複する場合
+     *
+     * 第1引数: 重複したカラム名
+     * 第2引数: 結果Entity名
+     */
+    const val AE00043 = "Duplicate UnionAll result column '%s' in entity '%s'."
+
+    /**
+     * ## AE00044
+     * ### データベースのカラム型と変換した型が不一致の場合
+     *
+     * 第1引数: ミスマッチだったカラム名
+     * 第2引数: DB カラムの型
+     * 第3引数: 実際に変換された型
+     */
+    const val AE00044 = "Column type mismatch. column=%s, actual=%s, expected=%s"
+
+    /**
+     * ## AE00045
+     * ### ブーリアンに変換できない場合
+     *
+     * 第1引数: 変更不可のカラム名
+     * 第2引数: 実際の値
+     */
+    const val AE00045 = "Invalid Boolean value. column=%s, value=%s. Expected 0 or 1."
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
      * 現時点の app/src/main には Warning 用メッセージは用途無。

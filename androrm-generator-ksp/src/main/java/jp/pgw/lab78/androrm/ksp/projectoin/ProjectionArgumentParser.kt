@@ -8,7 +8,7 @@ import jp.pgw.lab78.androrm.common.Constants.UNKNOWN
 import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
-import jp.pgw.lab78.androrm.common.annotation.ReturnHint
+import jp.pgw.lab78.androrm.common.database.columns.base.AndrOrmValueType
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction.CUSTOM
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
@@ -133,8 +133,8 @@ class ProjectionArgumentParser() : LoggerLike by logger {
                                 args = ksAnn.argumentOf<List<String>>(FP_ARGS)?.toTypedArray()
                                     ?: emptyArray(),
                                 alias = ksAnn.argumentOf<String>(FP_ALIAS) ?: EMPTY_STRING,
-                                returnHint = ksAnn.argumentOf<ReturnHint>(FP_RETURN_HINT)
-                                    ?: ReturnHint.AUTO,
+                                returnHint = ksAnn.argumentOf<AndrOrmValueType>(FP_RETURN_HINT)
+                                    ?: AndrOrmValueType.AUTO,
                                 raw = raw,
                                 hideFromSelect = ksAnn.argumentOf<Boolean>(FP_HIDE_FROM_SELECT)
                                     ?: false

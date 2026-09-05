@@ -12,6 +12,103 @@ import kotlin.test.assertEquals
 class AndrOrmEntityRefRuleTest {
 
     /**
+     * ## unionAllの正しい結果Entity参照検証
+     * ### unionAllのORDERで結果Entityのプロパティ参照を許可することを確認する
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun `unionAll result entity property reference is allowed`() {
+        val code = """
+            /** UNION ALL結果Entity */
+            class ResultEntity(val employeeId: Int)
+            /** UNION ALL元AのEntity */
+            class SourceAEntity(val employeeId: Int)
+            /** UNION ALL元BのEntity */
+            class SourceBEntity(val employeeId: Int)
+
+            /** 正しいORDERを持つUNION ALLを構築する */
+            fun query() {
+                UnionAll.unionAll(
+                    ResultEntity::class,
+                    Select(SourceAEntity::class),
+                    Select(SourceBEntity::class),
+                ).order { ResultEntity::employeeId.asc }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(0, findings.size)
+    }
+
+    /**
+     * ## companion unionAllのネスト判定検証
+     * ### 外側SELECTの検査がネストしたUnionAllの結果Entityを誤検出しないことを確認する
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun `nested companion unionAll is analyzed as its own select chain`() {
+        val code = """
+            /** 外側Entity */
+            class OuterEntity(val employeeId: Int)
+            /** UNION ALL結果Entity */
+            class ResultEntity(val employeeId: Int)
+            /** UNION ALL元AのEntity */
+            class SourceAEntity(val employeeId: Int)
+            /** UNION ALL元BのEntity */
+            class SourceBEntity(val employeeId: Int)
+
+            /** ネストしたUNION ALLを構築する */
+            fun query() {
+                Select(OuterEntity::class).where {
+                    UnionAll.unionAll(
+                        ResultEntity::class,
+                        Select(SourceAEntity::class),
+                        Select(SourceBEntity::class),
+                    ).order { ResultEntity::employeeId.asc }
+                }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(0, findings.size)
+    }
+
+    /**
+     * ## unionAllの対象外Entity参照検証
+     * ### unionAllのORDERで結果Entity以外のプロパティ参照を検出することを確認する
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    @Test
+    fun `unionAll source entity property reference is detected`() {
+        val code = """
+            /** UNION ALL結果Entity */
+            class ResultEntity(val employeeId: Int)
+            /** UNION ALL元AのEntity */
+            class SourceAEntity(val employeeId: Int)
+            /** UNION ALL元BのEntity */
+            class SourceBEntity(val employeeId: Int)
+
+            /** 不正なORDERを持つUNION ALLを構築する */
+            fun query() {
+                UnionAll(
+                    ResultEntity::class,
+                    Select(SourceAEntity::class),
+                    Select(SourceBEntity::class),
+                ).order { SourceAEntity::employeeId.asc }
+            }
+        """
+
+        val findings = AndrOrmEntityRefRule().compileAndLint(code)
+
+        assertEquals(1, findings.size)
+    }
+
+    /**
      * ## 変数化された相関 EXISTS の検証
      * ### 外側 SELECT の Entity 参照が誤検出されないことを確認する
      * @author Masahiro Inoue

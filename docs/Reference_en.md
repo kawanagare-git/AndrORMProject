@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> This README targets version `0.1.6-alpha`.
+> This reference targets version `0.1.7-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
@@ -57,8 +57,6 @@ The first public release was `0.1.0-alpha`.
 | `androrm-generator-ksp` | Generates purpose-specific entities based on `@Projection` |
 | `androrm-detekt-rules` | Custom Detekt rules for AndrORM |
 | `shared-library` | Utilities shared between modules |
-| `test-support` | Test support such as shared unit-test converters |
-| `ksp-fixtures` | Sources used to test KSP error cases |
 
 The main dependencies are as follows.
 
@@ -377,9 +375,9 @@ Add the AndrORM runtime, KSP processor, and Detekt rules.
 - Target module: `build.gradle.kts (:<module-name>)`
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.2-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.2-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.2-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.7-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.7-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.7-alpha")
 }
 ```
 Enable Core Library Desugaring.
@@ -598,7 +596,7 @@ data class UserMaster(
 | `properties` | Properties to generate |
 | `functions` | SQL function properties to generate |
 | `commonInterface` | Common interfaces such as SELECT and INSERT |
-| `customInterface` | Generated subpackage appended to `basePackage` when `commonInterface = [NOT_USE]` or when `commonInterface` is omitted |
+| `customInterface` | Generated subpackage appended to `basePackage` when `commonInterface = [NOT_USE]` |
 
 Generated class names generally use the following format.
 
@@ -1182,8 +1180,12 @@ The common validator validates the following values for each type.
 | `LocalDate` | `'yyyy-MM-dd'`, `CURRENT_DATE` |
 | `LocalTime` | `'HH:mm:ss'`, `CURRENT_TIME` |
 | `LocalDateTime` | `'yyyy-MM-ddTHH:mm:ss'`, `'yyyy-MM-dd HH:mm:ss'`, `CURRENT_TIMESTAMP`, `CURRENT_TIMESTAMP_ISO` |
-| `ByteArray` | DEFAULT values are not supported |
+| `ByteArray` | BLOB literal in `X'<an even number of hexadecimal digits>'` format; `X''` is an empty BLOB |
 | Nullable types | `NULL` is allowed |
+
+The BLOB rules apply to both `@Column(default = ...)` and `@MigrationDefault(...)`. The prefix and hexadecimal digits are case-insensitive (for example, `X'00FF'` and `x'00ff'`). Odd digit counts, non-hexadecimal characters, and ordinary string literals are rejected. `NULL` is allowed only for nullable columns and differs from the empty BLOB `X''`.
+
+`@Column(default = "")` produces no DEFAULT clause. A new nullable column without `@MigrationDefault` is excluded from the transfer; a new non-nullable column requires the annotation. `@MigrationDefault("X'00FF'")` supplies the transfer value for existing rows and does not produce a CREATE TABLE DEFAULT clause.
 
 `CURRENT_TIMESTAMP_ISO` is converted to the following expression when executed by SQLite.
 
@@ -1212,16 +1214,20 @@ KSP processing mainly validates the following.
 Specify `FunctionProjection.returnHint` only when the return type cannot be inferred automatically.
 
 ```kotlin
-ReturnHint.AUTO
-ReturnHint.STRING
-ReturnHint.INT
-ReturnHint.LONG
-ReturnHint.DOUBLE
-ReturnHint.BOOLEAN
-ReturnHint.DECIMAL
-ReturnHint.DATE
-ReturnHint.DATETIME
+AndrOrmValueType.AUTO
+AndrOrmValueType.INT
+AndrOrmValueType.LONG
+AndrOrmValueType.FLOAT
+AndrOrmValueType.DOUBLE
+AndrOrmValueType.BOOLEAN
+AndrOrmValueType.STRING
+AndrOrmValueType.LOCAL_DATE
+AndrOrmValueType.LOCAL_TIME
+AndrOrmValueType.LOCAL_DATE_TIME
+AndrOrmValueType.BYTE_ARRAY
 ```
+
+With `AndrOrmValueType.AUTO`, the return type is inferred from the function kind and argument types. When a `raw` expression or a CUSTOM-equivalent expression returns a BLOB whose type cannot be inferred automatically, specify `returnHint = AndrOrmValueType.BYTE_ARRAY` to generate a `ByteArray` property. An explicit `returnHint` takes precedence over automatic inference.
 
 ## Custom Detekt Rules
 

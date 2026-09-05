@@ -35,8 +35,20 @@ data class Order(
     override fun build(): String {
         val columnName =
             "${column.extractClassFromProperty().getRelationAlias()}.${column.getColumnName()}"
+        return build(columnName)
+    }
+
+    /**
+     * ## 任意列式による SQL 文字列生成
+     * ### 並び順と NULL 配置を維持したまま、呼び出し元が解決した列式で ORDER BY 要素を生成する
+     * @param columnExpression ORDER BY に使用する列式
+     * @return ORDER BY 句の SQL 文字列
+     * @author Masahiro Inoue
+     * @since 2026-09-01
+     */
+    internal fun build(columnExpression: String): String {
         val orderDir = if (ascending) "asc" else "desc"
         val nullsClause = if (nullsLast) "nulls last" else "nulls first"
-        return "$columnName $orderDir $nullsClause"
+        return "$columnExpression $orderDir $nullsClause"
     }
-}
+    }

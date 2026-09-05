@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 本ReadMeの対象バージョンは`0.1.6-alpha`です。
+> 本資料の対象バージョンは`0.1.7-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
@@ -57,8 +57,6 @@ AndrORMは、SQLiteを直接扱う際の可読性・保守性を高めること�
 | `androrm-generator-ksp` | `@Projection`を基に用途別Entityを生成 |
 | `androrm-detekt-rules` | AndrORM専用Detektルール |
 | `shared-library` | モジュール間共通ユーティリティ |
-| `test-support` | Unit Test共通コンバーターなどのテスト支援 |
-| `ksp-fixtures` | KSP異常系検証用ソース |
 
 主な依存関係は次のとおりです。
 
@@ -377,9 +375,9 @@ AndrORMのランタイム、KSP Processor、Detektルールを追加します。
 - 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.2-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.2-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.2-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.7-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.7-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.7-alpha")
 }
 ```
 Core Library Desugaringを有効にします。
@@ -597,7 +595,7 @@ data class UserMaster(
 | `properties` | 生成対象プロパティ |
 | `functions` | 生成対象SQL関数プロパティ |
 | `commonInterface` | SELECT／INSERTなどの共通インターフェース |
-| `customInterface` | `commonInterface = [NOT_USE]`又は省略した場合に、`basePackage`へ追加する生成先サブパッケージ |
+| `customInterface` | `commonInterface = [NOT_USE]`の場合に、`basePackage`へ追加する生成先サブパッケージ |
 
 生成クラス名は、原則として次の形式です。
 
@@ -1181,8 +1179,12 @@ AndrORMの標準型変換では、`LocalDate`、`LocalTime`、`LocalDateTime`を
 | `LocalDate` | `'yyyy-MM-dd'`、`CURRENT_DATE` |
 | `LocalTime` | `'HH:mm:ss'`、`CURRENT_TIME` |
 | `LocalDateTime` | `'yyyy-MM-ddTHH:mm:ss'`、`'yyyy-MM-dd HH:mm:ss'`、`CURRENT_TIMESTAMP`、`CURRENT_TIMESTAMP_ISO` |
-| `ByteArray` | DEFAULT値非対応 |
+| `ByteArray` | `X'<偶数桁の16進数>'`形式のBLOBリテラル。`X''`は空BLOB |
 | nullable型 | `NULL`を指定可能 |
+
+BLOBの規則は`@Column(default = ...)`と`@MigrationDefault(...)`の双方に適用します。接頭辞と16進数の大文字・小文字を区別しません（例：`X'00FF'`、`x'00ff'`）。奇数桁、16進数以外の文字、通常の文字列リテラルは拒否します。`NULL`はnullable列だけに指定でき、空BLOBの`X''`とは異なります。
+
+`@Column(default = "")`はDEFAULT句を生成しません。`@MigrationDefault`を省略したnullable追加列は転送対象から除外され、non-null追加列では指定が必須です。`@MigrationDefault("X'00FF'")`は既存行への転送値を指定し、CREATE TABLEのDEFAULT句にはなりません。
 
 `CURRENT_TIMESTAMP_ISO`は、SQLite実行時に次の式へ変換されます。
 
@@ -1211,16 +1213,20 @@ KSP処理では、主に次の内容を検証します。
 `FunctionProjection.returnHint`は、自動推論できない場合だけ指定します。
 
 ```kotlin
-ReturnHint.AUTO
-ReturnHint.STRING
-ReturnHint.INT
-ReturnHint.LONG
-ReturnHint.DOUBLE
-ReturnHint.BOOLEAN
-ReturnHint.DECIMAL
-ReturnHint.DATE
-ReturnHint.DATETIME
+AndrOrmValueType.AUTO
+AndrOrmValueType.INT
+AndrOrmValueType.LONG
+AndrOrmValueType.FLOAT
+AndrOrmValueType.DOUBLE
+AndrOrmValueType.BOOLEAN
+AndrOrmValueType.STRING
+AndrOrmValueType.LOCAL_DATE
+AndrOrmValueType.LOCAL_TIME
+AndrOrmValueType.LOCAL_DATE_TIME
+AndrOrmValueType.BYTE_ARRAY
 ```
+
+`AndrOrmValueType.AUTO`では、関数種別と引数型から戻り値型を自動推論します。`raw`式や`CUSTOM`相当の式など、自動推論できないBLOB結果を`ByteArray`として生成する場合は、`returnHint = AndrOrmValueType.BYTE_ARRAY`を指定します。明示した`returnHint`は自動推論結果より優先されます。
 
 ## Detekt独自ルール
 
