@@ -112,6 +112,11 @@ class ColumnDefaultValueValidatorTest {
             ),
             arguments("LocalDateTime? / NULL", TYPE_LOCAL_DATE_TIME, true, "NULL"),
 
+            arguments("ByteArray / BLOB リテラル", TYPE_BYTE_ARRAY, false, "X'00'"),
+            arguments("ByteArray / BLOB 複数バイト", TYPE_BYTE_ARRAY, false, "X'010203ABACAF'"),
+            arguments("ByteArray? / BLOB リテラル", TYPE_BYTE_ARRAY, true, "X'00'"),
+            arguments("ByteArray? / BLOB リテラル", TYPE_BYTE_ARRAY, true, "X''"),
+
             arguments("ByteArray / defaultValue 未指定", TYPE_BYTE_ARRAY, false, ""),
             arguments("ByteArray? / NULL", TYPE_BYTE_ARRAY, true, "NULL"),
         )
@@ -163,8 +168,11 @@ class ColumnDefaultValueValidatorTest {
             arguments("LocalDateTime / NULL 非nullable", TYPE_LOCAL_DATE_TIME, false, "NULL"),
 
             arguments("ByteArray / NULL 非nullable", TYPE_BYTE_ARRAY, false, "NULL"),
-            arguments("ByteArray? / BLOB リテラル", TYPE_BYTE_ARRAY, true, "X'00'"),
-        )
+
+            arguments("ByteArray / 16進数奇数桁", TYPE_BYTE_ARRAY, false, "X'0'"),
+            arguments("ByteArray / 16進数以外", TYPE_BYTE_ARRAY, false, "X'GG'"),
+            arguments("ByteArray / Xなし", TYPE_BYTE_ARRAY, false, "'00'"),
+            arguments("ByteArray / クォートなし", TYPE_BYTE_ARRAY, false, "X00"),        )
     }
 
     /**

@@ -2,8 +2,8 @@ package jp.pgw.lab78.androrm.ksp.validator
 
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlValueType
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlValueType
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.MIGRATION_DEFAULT
 import jp.pgw.lab78.androrm.ksp.Constants.MIGRATION_DEFAULT_FQN

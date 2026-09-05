@@ -4,7 +4,7 @@ import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import jp.pgw.lab78.androrm.common.Constants.DIRECTORY_DELIMITER
 import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
-import jp.pgw.lab78.androrm.common.annotation.ReturnHint
+import jp.pgw.lab78.androrm.common.database.columns.base.AndrOrmValueType
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.ksp.factory.FunctionPropertyFactory
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger
@@ -21,6 +21,38 @@ import java.lang.reflect.InvocationTargetException
  * @since 2026-05-03
  */
 class FunctionPropertyFactoryTest {
+
+    /** 型推論不能なraw BLOB関数は要件7.2のreturnHintからByteArrayを生成する。 */
+    @Test
+    fun createAll_rawBlobFunction_usesByteArrayReturnHint() {
+        val projection = FunctionProjection(
+            function = ColumnFunction.CUSTOM,
+            args = arrayOf(),
+            alias = "BINARY_VALUE",
+            raw = "substr(X'00017F80FF', 1, 5)",
+            returnHint = AndrOrmValueType.BYTE_ARRAY,
+        )
+        val actual = target.createAll(listOf(projection), emptyMap()).single()
+        assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY, actual.propertySpec.type)
+        assertEquals("binaryValue", actual.propertySpec.name)
+        assertTrue(actual.propertySpec.annotations.single().toString().contains(projection.raw))
+    }
+
+    /** 非表示のBLOB関数でも戻り値ヒントを維持し、生成型のみnullableにする。 */
+    @Test
+    fun createAll_hiddenRawBlobFunction_usesNullableByteArrayReturnHint() {
+        val projection = FunctionProjection(
+            function = ColumnFunction.CUSTOM,
+            args = arrayOf(),
+            alias = "BINARY_VALUE",
+            raw = "substr(X'00017F80FF', 1, 5)",
+            returnHint = AndrOrmValueType.BYTE_ARRAY,
+            hideFromSelect = true,
+        )
+        val actual = target.createAll(listOf(projection), emptyMap()).single()
+        assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY.copy(nullable = true), actual.propertySpec.type)
+        assertTrue(actual.hideFromSelect)
+    }
 
     private lateinit var target: FunctionPropertyFactory
     private lateinit var mockKspLogger: KSPLogger
@@ -76,7 +108,7 @@ class FunctionPropertyFactoryTest {
             function = function,
             args = arrayOf(*args),
             alias = alias,
-            returnHint = ReturnHint.AUTO,
+            returnHint = AndrOrmValueType.AUTO,
             hideFromSelect = false,
             raw = "",
         )

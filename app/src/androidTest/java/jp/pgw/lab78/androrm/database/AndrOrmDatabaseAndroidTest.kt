@@ -13,6 +13,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.toSnakeCase
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
+import jp.pgw.lab78.androrm.common.database.annotation.View
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.*
 import jp.pgw.lab78.androrm.database.entities.*
@@ -133,6 +134,21 @@ class AndrOrmDatabaseAndroidTest {
 
         /** step25のLEFT JOIN集計バインド値 */
         private var cumulativeJoinBindValues: List<Any?> = emptyList()
+
+        /** step27で登録するBLOB値 */
+        private val step27BlobPayload = byteArrayOf(0x00, 0x01, 0x7F, 0x80.toByte(), 0xFF.toByte())
+
+        /** step28のView検証結果 */
+        private var step28ViewResult: List<Map<String, Any?>> = emptyList()
+
+        /** step29のBLOB検索結果 */
+        private var step29BlobSearchResult: List<Map<String, Any?>> = emptyList()
+
+        /** step29のBLOB検索SQL */
+        private var step29BlobSearchQuery = EMPTY_STRING
+
+        /** step29のBLOB検索バインド値 */
+        private var step29BlobSearchBindValues: List<Any?> = emptyList()
 
         private var isUpgrade = false
         private var version = if (isUpgrade) 2 else 1
@@ -1177,6 +1193,98 @@ class AndrOrmDatabaseAndroidTest {
     }
 
     /**
+     * ## step27 BLOBテーブルとView作成
+     * ### BLOBデータを保持するテーブルを作成し、データ登録後にBLOB列を含むViewを作成する
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @Test
+    fun step27_createBlobTableAndView() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            helper.writableDatabase.execSQL(Create(Step27BlobTable::class).build())
+            helper.executeDml(
+                Insert(Step27BlobTable::class).addEntity(
+                    Step27BlobTable(id = 2701, payload = step27BlobPayload)
+                )
+            )
+            helper.writableDatabase.execSQL(
+                CreateView(
+                    Step27BlobViewDefinition::class,
+                    ViewSelect(Step27BlobTable::class),
+                ).build()
+            )
+        }
+    }
+
+    /**
+     * ## step28 View検証
+     * ### step27で作成したViewからBLOB値を読み出し、内容が一致することを検証する
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @Test
+    fun step28_verifyBlobView() {
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            step28ViewResult = helper.executeSelectAsMapList(
+                Select(Step27BlobViewSelect::class)
+            )
+        }
+
+        assertEquals(1, step28ViewResult.size)
+        assertEquals(2701L, (step28ViewResult.single().getValue("S27V_ID") as Number).toLong())
+        assertArrayEquals(
+            step27BlobPayload,
+            step28ViewResult.single().getValue("S27V_PAYLOAD") as ByteArray,
+        )
+    }
+
+    /**
+     * ## step29 BLOBデータ検索
+     * ### ByteArrayを検索条件へバインドして一致するBLOB行を取得する
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @Test
+    fun step29_searchBlobData() {
+        val query = Select(Step27BlobTable::class).where {
+            Step27BlobTable::payload eq step27BlobPayload
+        }
+        val databaseHelper = createDatabaseHelper(version, *currentTableDefinitions)
+
+        databaseHelper.use { helper ->
+            step29BlobSearchResult = helper.executeSelectAsMapList(query)
+            step29BlobSearchQuery = query.query
+            step29BlobSearchBindValues = query.bindValues.toList()
+        }
+    }
+
+    /**
+     * ## step30 BLOBデータ検索検証
+     * ### step29の検索結果、SQLおよびBLOBバインド値を検証する
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @Test
+    fun step30_verifyBlobSearch() {
+        assertEquals(1, step29BlobSearchResult.size)
+        assertEquals(2701L, (step29BlobSearchResult.single().getValue("S27_ID") as Number).toLong())
+        assertArrayEquals(
+            step27BlobPayload,
+            step29BlobSearchResult.single().getValue("S27_PAYLOAD") as ByteArray,
+        )
+        assertEquals(
+            "select S27.ID as S27_ID, S27.PAYLOAD as S27_PAYLOAD " +
+                    "from STEP27_BLOB_TABLE S27 where S27.PAYLOAD = ?",
+            step29BlobSearchQuery,
+        )
+        assertEquals(listOf(step27BlobPayload), step29BlobSearchBindValues)
+    }
+
+    /**
      * ## SeedData投入
      * ### SeedDataが生成したEntityからInsertを構築し、9テーブルへ投入する
      * @param databaseHelper DB操作ヘルパー
@@ -2159,6 +2267,42 @@ class AndrOrmDatabaseAndroidTest {
         @Column(hideFromSelect = true) val level: Int = 0,
         @Column(hideFromSelect = true) val value: Int = 0,
         @Column(hideFromSelect = true) val updateMethod: String = EMPTY_STRING,
+    ) : SelectEntity
+
+    /**
+     * ## step27 BLOBテーブルEntity
+     * ### BLOB検索とView作成の元となるテーブル定義を表す
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @Table(name = "STEP27_BLOB_TABLE", alias = "S27")
+    data class Step27BlobTable(
+        val id: Int,
+        val payload: ByteArray,
+    ) : SelectEntity, InsertEntity
+
+    /**
+     * ## step27 BLOB View定義Entity
+     * ### BLOB列を含むSQLite VIEWの定義を表す
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @View(name = "STEP27_BLOB_VIEW", alias = "S27V")
+    data class Step27BlobViewDefinition(
+        @Column(name = "ID") val id: Int,
+        @Column(name = "PAYLOAD") val payload: ByteArray,
+    ) : ViewDefinitionEntity
+
+    /**
+     * ## step28 BLOB ViewSelect Entity
+     * ### step27で作成したVIEWを通常SELECTで読み出す結果定義を表す
+     * @author Masahiro Inoue
+     * @since 2026-09-04
+     */
+    @View(name = "STEP27_BLOB_VIEW", alias = "S27V")
+    data class Step27BlobViewSelect(
+        @Column(name = "ID") val id: Int,
+        @Column(name = "PAYLOAD") val payload: ByteArray,
     ) : SelectEntity
 
     /**

@@ -1,63 +1,73 @@
-package jp.pgw.lab78.androrm.common.database.columns_controller
+package jp.pgw.lab78.androrm.common.database.columns.controller
 
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator.dateTimeSpaceFormatter
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator.validFormat
-import jp.pgw.lab78.androrm.common.database.columns_controller.interfaces.ColumnControllerModel
+import jp.pgw.lab78.androrm.common.MessageConstants.AE00009
+import jp.pgw.lab78.androrm.common.database.columns.base.AndrOrmValueType
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator.dateTimeSpaceFormatter
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator.validFormat
+import jp.pgw.lab78.androrm.common.database.columns.interfaces.ColumnControllerModel
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.ResolverStyle
-import kotlin.reflect.KClass
 import kotlin.reflect.safeCast
 
 /**
  * ## SQL既定値の対応型
  * ### AndrORMがDEFAULT値として検証できるKotlin型を表す
- * @property type KotlinまたはJava上の完全修飾型名
+ * @param valueType AndrORM 対応型
+ * @param regex 整合性確認の為の正規表現
  * @author Masahiro Inoue
  * @since 2026-07-18
  */
-enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnControllerModel {
+enum class SqlValueType(val valueType: AndrOrmValueType, vararg val regex: String) :
+    ColumnControllerModel {
     /** Int / number */
-    INT(Int::class, "^[+-]?\\d+$") {
-        override fun <Long> toColumnValue(value: Any): Long = LONG.toColumnValue(value)
+    INT(AndrOrmValueType.INT, "^[+-]?\\d+$") {
+        override fun <T> toColumnValue(value: Any): T = LONG.toColumnValue(value)
     },
 
     /** Long / INTEGER */
-    LONG(Long::class, "^[+-]?\\d+$") {
+    LONG(AndrOrmValueType.LONG, "^[+-]?\\d+$") {
         @Suppress("UNCHECKED_CAST")
-        override fun <Long> toColumnValue(value: Any): Long =
-            (type.safeCast(value) ?: value.toString().toLong()) as Long
+        override fun <T> toColumnValue(value: Any): T =
+            (valueType.type?.safeCast(value) ?: value.toString().toLong()) as T
     },
 
     /** Float / REAL */
-    FLOAT(Float::class, "^[+-]?\\d+(\\.\\d+)?$") {
-        override fun <Double> toColumnValue(value: Any): Double = DOUBLE.toColumnValue(value)
+    FLOAT(AndrOrmValueType.FLOAT, "^[+-]?\\d+(\\.\\d+)?$") {
+        override fun <T> toColumnValue(value: Any): T = DOUBLE.toColumnValue(value)
     },
 
     /** Double / REAL */
-    DOUBLE(Double::class, "^[+-]?\\d+(\\.\\d+)?$") {
+    DOUBLE(AndrOrmValueType.DOUBLE, "^[+-]?\\d+(\\.\\d+)?$") {
         @Suppress("UNCHECKED_CAST")
-        override fun <Double> toColumnValue(value: Any): Double =
-            (type.safeCast(value) ?: value.toString().toDouble()) as Double
+        override fun <T> toColumnValue(value: Any): T =
+            (valueType.type?.safeCast(value) ?: value.toString().toDouble()) as T
     },
 
     /** Boolean / INTEGER */
-    BOOLEAN(Boolean::class, "^[01]$") {
+    BOOLEAN(AndrOrmValueType.BOOLEAN, "^[01]$") {
+        override fun toEntity(value: Any): Boolean = value != 0
+
         @Suppress("UNCHECKED_CAST")
-        override fun <Long> toColumnValue(value: Any): Long =
-            (if (type.safeCast(value) == true) 1L else 0L) as Long
+        override fun <T> toColumnValue(value: Any): T =
+            (when (valueType.type?.safeCast(value) as? Boolean) {
+                null,
+                false -> 0
+
+                else -> 1
+            }) as T
     },
 
     /** String / TEXT */
-    STRING(String::class, "^'(?:''|[^'])*'$") {
+    STRING(AndrOrmValueType.STRING, "^'(?:''|[^'])*'$") {
         @Suppress("UNCHECKED_CAST")
         override fun <String> toColumnValue(value: Any): String = value.toString() as String
     },
 
     /** LocalDate / DATETIME */
-    LOCAL_DATE(LocalDate::class, "^CURRENT_DATE$", "^'\\d{4}-\\d{2}-\\d{2}'$") {
+    LOCAL_DATE(AndrOrmValueType.LOCAL_DATE, "^CURRENT_DATE$", "^'\\d{4}-\\d{2}-\\d{2}'$") {
         override fun matches(candidate: Any): Boolean {
             val candidateUpper = candidate.toString().uppercase()
             if (regex[0].toRegex().matches(candidateUpper)) return true
@@ -69,21 +79,19 @@ enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnC
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun <String> toColumnValue(value: Any): String =
+        override fun <T> toColumnValue(value: Any): T =
             (if (regex[0].toRegex().matches(value.toString().uppercase())) {
                 LocalDate.now()
             } else {
                 value.toString().trim('\'')
-            }).toString() as String
+            }).toString() as T
 
         override fun toEntity(value: Any): Any = LocalDate.parse(value.toString())
     },
 
     /** LocalTime / DATETIME */
     LOCAL_TIME(
-        LocalTime::class,
-        "^CURRENT_TIME$",
-        "^'\\d{2}:\\d{2}:\\d{2}'$"
+        AndrOrmValueType.LOCAL_TIME, "^CURRENT_TIME$", "^'\\d{2}:\\d{2}:\\d{2}'$"
     ) {
         override fun matches(candidate: Any): Boolean {
             val candidateUpper = candidate.toString().uppercase()
@@ -96,19 +104,19 @@ enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnC
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun <String> toColumnValue(value: Any): String =
+        override fun <T> toColumnValue(value: Any): T =
             (if (regex[0].toRegex().matches(value.toString().uppercase())) {
                 LocalTime.now()
             } else {
                 value.toString().trim('\'')
-            }).toString() as String
+            }).toString() as T
 
         override fun toEntity(value: Any): Any = LocalTime.parse(value.toString())
     },
 
     /** LocalDateTime / DATETIME */
     LOCAL_DATE_TIME(
-        LocalDateTime::class,
+        AndrOrmValueType.LOCAL_DATE_TIME,
         "^(CURRENT_TIMESTAMP|CURRENT_TIMESTAMP_ISO)$",
         "^'\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}'$"
     ) {
@@ -127,37 +135,34 @@ enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnC
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun <String> toColumnValue(value: Any): String {
+        override fun <T> toColumnValue(value: Any): T {
             val input = value.toString().uppercase()
             val matched = regex[0].toRegex().matchEntire(input)?.groupValues?.get(1)
             return when (matched) {
                 "CURRENT_TIMESTAMP" -> LocalDateTime.now().format(dateTimeSpaceFormatter)
                 "CURRENT_TIMESTAMP_ISO" -> LocalDateTime.now().toString()
                 else -> input.trim('\'')
-            } as String
+            } as T
         }
 
         override fun toEntity(value: Any): Any = LocalDateTime.parse(value.toString())
     },
 
     /** ByteArray / BLOB */
-    BYTE_ARRAY(ByteArray::class, "^X'(?:[0-9A-F]{2})+'$") {
+    BYTE_ARRAY(AndrOrmValueType.BYTE_ARRAY, "^X'(?:[0-9A-F]{2})*'$") {
+        override fun matches(candidate: Any): Boolean =
+            regex[0].toRegex().matches(candidate.toString().uppercase())
+
         override fun toEntity(value: Any): Any =
             value as? ByteArray
-                ?: value.toString().removePrefix("X'").removeSuffix("'").chunked(2)
+                ?: value.toString().uppercase().removePrefix("X'").removeSuffix("'").chunked(2)
                     .map { it.toInt(16).toByte() }.toByteArray()
 
         @Suppress("UNCHECKED_CAST")
-        override fun <ByteArray> toColumnValue(value: Any): ByteArray =
-            value as? ByteArray ?: ByteArray(0) as ByteArray
+        override fun <T> toColumnValue(value: Any): T =
+            requireNotNull(value as? ByteArray) { AE00009.format(value::class.qualifiedName) } as T
     },
-
-    /** null / NULL */
-    NULL_VALUE(Any::class, "^null$") {
-        override fun matches(candidate: Any): Boolean = true
-        @Suppress("UNCHECKED_CAST")
-        override fun <String> toColumnValue(value: Any): String = "null" as String
-    }, ;
+    ;
 
     companion object {
         /**
@@ -168,7 +173,7 @@ enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnC
          * @since 2026-07-18
          */
         fun fromQualifiedName(qualifiedName: String): SqlValueType? =
-            SqlValueType.entries.firstOrNull { it.type.qualifiedName == qualifiedName }
+            SqlValueType.entries.firstOrNull { it.valueType.type?.qualifiedName == qualifiedName }
     }
 
     /**
@@ -189,7 +194,8 @@ enum class SqlValueType(val type: KClass<*>, vararg val regex: String) : ColumnC
      * @author Masahiro Inoue
      * @since 2026-09-01
      */
-    open fun toEntity(value: Any) = type.safeCast(value) ?: type.safeCast(value.toString())
+    open fun toEntity(value: Any) =
+        valueType.type?.safeCast(value) ?: valueType.type?.safeCast(value.toString())
 }
 
 /**

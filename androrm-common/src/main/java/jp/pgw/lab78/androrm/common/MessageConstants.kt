@@ -332,8 +332,7 @@ object MessageConstants {
      * 第2引数: 結果Entityの列数
      * 第3引数: Selectの列数
      */
-    const val AE00040 =
-        "UnionAll column count mismatch. selectIndex=%s, expected=%s, actual=%s"
+    const val AE00040 = "UnionAll column count mismatch. selectIndex=%s, expected=%s, actual=%s"
 
     /**
      * ## AE00041
@@ -362,9 +361,26 @@ object MessageConstants {
      * 第1引数: 重複したカラム名
      * 第2引数: 結果Entity名
      */
-    const val AE00043 =
-        "Duplicate UnionAll result column '%s' in entity '%s'."
+    const val AE00043 = "Duplicate UnionAll result column '%s' in entity '%s'."
 
+    /**
+     * ## AE00044
+     * ### データベースのカラム型と変換した型が不一致の場合
+     *
+     * 第1引数: ミスマッチだったカラム名
+     * 第2引数: DB カラムの型
+     * 第3引数: 実際に変換された型
+     */
+    const val AE00044 = "Column type mismatch. column=%s, actual=%s, expected=%s"
+
+    /**
+     * ## AE00045
+     * ### ブーリアンに変換できない場合
+     *
+     * 第1引数: 変更不可のカラム名
+     * 第2引数: 実際の値
+     */
+    const val AE00045 = "Invalid Boolean value. column=%s, value=%s. Expected 0 or 1."
     /*
      * AW00001 以降は、app モジュールで Warning が必要になった時点で追加する。
      * 現時点の app/src/main には Warning 用メッセージは用途無。

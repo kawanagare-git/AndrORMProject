@@ -12,7 +12,6 @@ import jp.pgw.lab78.androrm.common.Constants.NEW_TABLE_SUFFIX
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00025
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00028
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00029
@@ -27,8 +26,8 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getColumnName
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.ColumnOldName
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlValueType
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlValueType
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
@@ -43,7 +42,6 @@ import jp.pgw.lab78.androrm.database.utility.EntityManager.columnToFieldMap
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getSelectColumnTargets
 import jp.pgw.lab78.androrm.database.validation.ValueFromCursor
-import jp.pgw.lab78.shared.library.Utils.isNotNull
 import jp.pgw.lab78.shared.library.Utils.isNull
 import java.io.Closeable
 import java.util.concurrent.FutureTask
@@ -570,15 +568,15 @@ open class AndrOrmDatabaseHelper(
     /**
      * ## SELECT 実行
      * ### 生成済み SELECT 文字列を読み出し用 DB で実行し、Cursor を返す
-     * @param query 実行クエリ文字列
+     * @param queryString 実行クエリ文字列
      * @param bindValues 実行クエリ用バインド変数
      * @return 検索結果 Cursor
      * @author Masahiro Inoue
      * @since 2026-06-03
      */
-    fun executeSelectAsCursor(query: String, bindValues: List<*> = emptyList<Any>()): Cursor {
+    fun executeSelectAsCursor(queryString: String, bindValues: List<*> = emptyList<Any>()): Cursor {
         return readableDatabase.rawQueryWithFactory(
-            { _, masterQuery, editTable, query ->
+            { _, cursorDriver, editTable, query ->
                 bindValues.forEachIndexed { index, value ->
                     val indexInc = index + 1
                     if (value.isNull()) {
@@ -587,9 +585,9 @@ open class AndrOrmDatabaseHelper(
                        ValueFromCursor.identifyType(value).setBind(query,indexInc,value)
                     }
                 }
-                SQLiteCursor(masterQuery, editTable, query)
+                SQLiteCursor(cursorDriver, editTable, query)
             },
-            query,
+            queryString,
             emptyArray<String>(),
             null,
         )

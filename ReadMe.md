@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中のアルファ版です。  
-> 本資料の対象バージョンは`0.1.6-alpha`です。  
+> 本資料の対象バージョンは`0.1.7-alpha`です。  
 > 今後、APIや仕様が変更される可能性があります。
 
 ## AndrORMとは
@@ -115,9 +115,9 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.6-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.6-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.6-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.7-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.7-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.7-alpha")
 }
 ```
 
@@ -180,7 +180,7 @@ val select = Select(ProductSelect::class)
 
 ここまでで、Entity定義とAndrORMによるSQL構築を開始できます。
 
-DBヘルパー、SQLの実行方法、Entity生成、データベース移行などの詳細は、READMEの各章を参照してください。
+DBヘルパー、SQLの実行方法、Entity生成、データベース移行などの詳細は、下記の詳細資料を参照してください。
 
 ## 詳細資料
 

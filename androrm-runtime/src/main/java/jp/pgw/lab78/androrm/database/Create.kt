@@ -13,7 +13,7 @@ import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.PrimaryKey
 import jp.pgw.lab78.androrm.common.database.annotation.Unique
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.interfaces.QueryBuilderLike
 import jp.pgw.lab78.androrm.database.utility.EntityManager.getConstructorOrderedProperties

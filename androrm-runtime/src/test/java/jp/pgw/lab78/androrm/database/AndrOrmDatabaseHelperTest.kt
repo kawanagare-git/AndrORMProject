@@ -9,8 +9,6 @@ import android.os.SystemClock
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00020
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00021
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00022
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00023
-import jp.pgw.lab78.androrm.common.MessageConstants.AE00024
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Index
 import jp.pgw.lab78.androrm.common.database.annotation.MigrationDefault
@@ -520,7 +518,7 @@ class AndrOrmDatabaseHelperTest {
      * @since 2026-05-31
      */
     @Test
-    fun testExecuteSelectAsCursor_withoutBindValues_rawQuery() {
+    fun testExecuteSelectAsCursor_withoutBindValues_usesTypedCursorFactory() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val cursor = Mockito.mock(Cursor::class.java)
         val helper = Mockito.spy(
@@ -533,24 +531,22 @@ class AndrOrmDatabaseHelperTest {
         Mockito.doReturn(db)
             .`when`(helper)
             .readableDatabase
-        Mockito.`when`(
-            db.rawQuery(sql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, sql, cursor)
 
         val actual = helper.executeSelectAsCursor(sql)
 
         assertSame(cursor, actual)
-        Mockito.verify(db).rawQuery(sql, null)
+        verifySelectCursor(db, sql)
     }
 
     /**
-     * SELECTのバインド値がselectionArgsへ変換されることを検証する。
+     * SELECTのバインド値が型付きCursorFactory経路へ渡されることを検証する。
      *
      * @author Masahiro Inoue
      * @since 2026-05-31
      */
     @Test
-    fun testExecuteSelectAsCursor_withBindValues_rawQueryWithSelectionArgs() {
+    fun testExecuteSelectAsCursor_withBindValues_usesTypedCursorFactory() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
         val cursor = Mockito.mock(Cursor::class.java)
         val helper = Mockito.spy(
@@ -565,36 +561,27 @@ class AndrOrmDatabaseHelperTest {
         Mockito.doReturn(db)
             .`when`(helper)
             .readableDatabase
-        Mockito.`when`(
-            db.rawQuery(Mockito.eq(sql), Mockito.any<Array<String>>()),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, sql, cursor)
 
         val actual = helper.executeSelectAsCursor(
             sql,
             listOf(100L, true, registeredAt),
         )
 
-        val bindArgsCaptor = ArgumentCaptor.forClass(Array<String>::class.java)
         assertSame(cursor, actual)
-        Mockito.verify(db).rawQuery(
-            Mockito.eq(sql),
-            bindArgsCaptor.capture(),
-        )
-        assertEquals(
-            listOf("100", "1", registeredAt.toString()),
-            bindArgsCaptor.value.toList(),
-        )
+        verifySelectCursor(db, sql)
     }
 
     /**
-     * Cursor取得時にnullのバインド値を拒否することを検証する。
+     * Cursor取得時にnullのバインド値をbindNullで渡すことを検証する。
      *
      * @author Masahiro Inoue
      * @since 2026-05-31
      */
     @Test
-    fun testExecuteSelectAsCursor_withNullBindValue_throwsIllegalArgumentException() {
+    fun testExecuteSelectAsCursor_withNullBindValue_usesBindNull() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
         val helper = Mockito.spy(
             TestAndrOrmDatabaseHelper(
                 TestLargeEntity::class,
@@ -606,26 +593,27 @@ class AndrOrmDatabaseHelperTest {
             .`when`(helper)
             .readableDatabase
 
-        val actual = assertThrows<IllegalArgumentException> {
+        stubSelectCursor(db, sql, cursor)
             helper.executeSelectAsCursor(sql, listOf(null))
-        }
 
-        assertEquals(AE00023.format(1), actual.message)
-        Mockito.verify(db, Mockito.never()).rawQuery(
-            Mockito.anyString(),
+        Mockito.verify(db).rawQueryWithFactory(
+            Mockito.any(SQLiteDatabase.CursorFactory::class.java),
+            Mockito.eq(sql),
             Mockito.any<Array<String>>(),
+            Mockito.isNull(),
         )
     }
 
     /**
-     * Cursor取得時にByteArrayのバインド値を拒否することを検証する。
+     * Cursor取得時にByteArrayのバインド値を型付きCursorFactory経路へ渡すことを検証する。
      *
      * @author Masahiro Inoue
      * @since 2026-05-31
      */
     @Test
-    fun testExecuteSelectAsCursor_withByteArrayBindValue_throwsIllegalArgumentException() {
+    fun testExecuteSelectAsCursor_withByteArrayBindValue_usesTypedCursorFactory() {
         val db = Mockito.mock(SQLiteDatabase::class.java)
+        val cursor = Mockito.mock(Cursor::class.java)
         val helper = Mockito.spy(
             TestAndrOrmDatabaseHelper(
                 TestLargeEntity::class,
@@ -636,16 +624,12 @@ class AndrOrmDatabaseHelperTest {
         Mockito.doReturn(db)
             .`when`(helper)
             .readableDatabase
+        stubSelectCursor(db, sql, cursor)
 
-        val actual = assertThrows<IllegalArgumentException> {
-            helper.executeSelectAsCursor(sql, listOf(byteArrayOf(1, 2, 3)))
-        }
+        val actual = helper.executeSelectAsCursor(sql, listOf(byteArrayOf(1, 2, 3)))
 
-        assertEquals(AE00024.format(1), actual.message)
-        Mockito.verify(db, Mockito.never()).rawQuery(
-            Mockito.anyString(),
-            Mockito.any<Array<String>>(),
-        )
+        assertSame(cursor, actual)
+        verifySelectCursor(db, sql)
     }
 
     /**
@@ -668,9 +652,7 @@ class AndrOrmDatabaseHelperTest {
         Mockito.doReturn(db)
             .`when`(helper)
             .readableDatabase
-        Mockito.`when`(
-            db.rawQuery(sql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, sql, cursor)
         Mockito.`when`(cursor.columnNames).thenReturn(
             arrayOf("ID", "NAME", "SCORE", "MEMO"),
         )
@@ -742,9 +724,7 @@ class AndrOrmDatabaseHelperTest {
             .`when`(helper)
             .readableDatabase
 
-        Mockito.`when`(
-            db.rawQuery(expectedSql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
 
         Mockito.`when`(cursor.columnNames).thenReturn(columnNames)
         Mockito.`when`(cursor.moveToNext()).thenReturn(true, false)
@@ -787,7 +767,7 @@ class AndrOrmDatabaseHelperTest {
             actual,
         )
 
-        Mockito.verify(db).rawQuery(expectedSql, null)
+        verifySelectCursor(db, expectedSql)
         Mockito.verify(cursor).close()
     }
 
@@ -814,9 +794,7 @@ class AndrOrmDatabaseHelperTest {
             .`when`(helper)
             .readableDatabase
 
-        Mockito.`when`(
-            db.rawQuery(expectedSql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
 
         Mockito.`when`(cursor.columnNames).thenReturn(
             arrayOf(
@@ -885,7 +863,7 @@ class AndrOrmDatabaseHelperTest {
             actual,
         )
 
-        Mockito.verify(db).rawQuery(expectedSql, null)
+        verifySelectCursor(db, expectedSql)
         Mockito.verify(cursor).close()
     }
 
@@ -970,9 +948,7 @@ class AndrOrmDatabaseHelperTest {
         Mockito.doReturn(db)
             .`when`(helper)
             .readableDatabase
-        Mockito.`when`(
-            db.rawQuery(sql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, sql, cursor)
         Mockito.`when`(cursor.columnNames).thenReturn(arrayOf("ID", "MEMO"))
         Mockito.`when`(cursor.moveToNext()).thenReturn(true, false)
         Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_INTEGER)
@@ -1012,9 +988,7 @@ class AndrOrmDatabaseHelperTest {
             .`when`(helper)
             .readableDatabase
 
-        Mockito.`when`(
-            db.rawQuery(expectedSql, null),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
 
         Mockito.`when`(cursor.columnNames).thenReturn(
             arrayOf(
@@ -1153,7 +1127,7 @@ class AndrOrmDatabaseHelperTest {
             actual,
         )
 
-        Mockito.verify(db).rawQuery(expectedSql, null)
+        verifySelectCursor(db, expectedSql)
         Mockito.verify(cursor).close()
     }
 
@@ -1180,9 +1154,7 @@ class AndrOrmDatabaseHelperTest {
         val expectedSql = unionAll.build()
 
         Mockito.doReturn(db).`when`(helper).readableDatabase
-        Mockito.`when`(
-            db.rawQuery(Mockito.eq(expectedSql), Mockito.any<Array<String>>()),
-        ).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
         Mockito.`when`(cursor.columnNames).thenReturn(arrayOf("EMP_ID_EMPLOYEE_ID"))
         Mockito.`when`(cursor.moveToNext()).thenReturn(true, false)
         Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_STRING)
@@ -1192,13 +1164,11 @@ class AndrOrmDatabaseHelperTest {
             helper.executeSelectAsMapList(unionAll)
         }
 
-        val selectionArgs = ArgumentCaptor.forClass(Array<String>::class.java)
         assertEquals(
             listOf(linkedMapOf("EMP_ID_EMPLOYEE_ID" to "EMP001")),
             actual,
         )
-        Mockito.verify(db).rawQuery(Mockito.eq(expectedSql), selectionArgs.capture())
-        assertArrayEquals(arrayOf("EMP001", "EMP002"), selectionArgs.value)
+        verifySelectCursor(db, expectedSql)
         Mockito.verify(cursor).close()
     }
 
@@ -1221,7 +1191,7 @@ class AndrOrmDatabaseHelperTest {
         val expectedSql = unionAll.build()
 
         Mockito.doReturn(db).`when`(helper).readableDatabase
-        Mockito.`when`(db.rawQuery(expectedSql, null)).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
         Mockito.`when`(cursor.columnNames).thenReturn(arrayOf("EMP_ID_EMPLOYEE_ID"))
         Mockito.`when`(cursor.moveToNext()).thenReturn(true, true, false)
         Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_STRING)
@@ -1242,7 +1212,7 @@ class AndrOrmDatabaseHelperTest {
             ),
             actual,
         )
-        Mockito.verify(db).rawQuery(expectedSql, null)
+        verifySelectCursor(db, expectedSql)
         Mockito.verify(cursor).close()
     }
 
@@ -1265,13 +1235,13 @@ class AndrOrmDatabaseHelperTest {
         val expectedSql = unionAll.build()
 
         Mockito.doReturn(db).`when`(helper).readableDatabase
-        Mockito.`when`(db.rawQuery(expectedSql, null)).thenReturn(cursor)
+        stubSelectCursor(db, expectedSql, cursor)
 
         val selectQuery: SelectQuery<SelectEntity> = unionAll
         val actual = helper.executeSelectAsCursor(selectQuery)
 
         assertSame(cursor, actual)
-        Mockito.verify(db).rawQuery(expectedSql, null)
+        verifySelectCursor(db, expectedSql)
     }
 
     /**
@@ -1318,6 +1288,50 @@ class AndrOrmDatabaseHelperTest {
          * @since 2026-05-31
          */
         override fun build(): String = queryString
+    }
+
+    /**
+     * ## SELECT Cursorスタブ設定
+     * ### 型付きCursorFactoryを使用するSELECT実行結果を設定する
+     * @param db スタブ対象データベース
+     * @param sql 実行対象SELECT文
+     * @param cursor 返却するCursor
+     * @author Masahiro Inoue
+     * @since 2026-09-03
+     */
+    private fun stubSelectCursor(
+        db: SQLiteDatabase,
+        sql: String,
+        cursor: Cursor,
+    ) {
+        Mockito.`when`(
+            db.rawQueryWithFactory(
+                Mockito.any(SQLiteDatabase.CursorFactory::class.java),
+                Mockito.eq(sql),
+                Mockito.any<Array<String>>(),
+                Mockito.isNull(),
+            ),
+        ).thenReturn(cursor)
+    }
+
+    /**
+     * ## SELECT Cursor実行検証
+     * ### 指定SELECT文が型付きCursorFactory経路へ渡されたことを検証する
+     * @param db 検証対象データベース
+     * @param sql 期待するSELECT文
+     * @author Masahiro Inoue
+     * @since 2026-09-03
+     */
+    private fun verifySelectCursor(
+        db: SQLiteDatabase,
+        sql: String,
+    ) {
+        Mockito.verify(db).rawQueryWithFactory(
+            Mockito.any(SQLiteDatabase.CursorFactory::class.java),
+            Mockito.eq(sql),
+            Mockito.any<Array<String>>(),
+            Mockito.isNull(),
+        )
     }
 
     /**

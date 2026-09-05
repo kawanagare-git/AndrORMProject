@@ -4,8 +4,8 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlDefaultValueValidator
-import jp.pgw.lab78.androrm.common.database.columns_controller.SqlValueType
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlDefaultValueValidator
+import jp.pgw.lab78.androrm.common.database.columns.controller.SqlValueType
 import jp.pgw.lab78.androrm.common.logging.interfaces.LoggerLike
 import jp.pgw.lab78.androrm.ksp.Constants.COLUMN_DEFAULT_VALUE
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger.logger

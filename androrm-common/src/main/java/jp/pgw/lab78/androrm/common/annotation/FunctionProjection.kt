@@ -1,5 +1,6 @@
 package jp.pgw.lab78.androrm.common.annotation
 
+import jp.pgw.lab78.androrm.common.database.columns.base.AndrOrmValueType
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 
 /**
@@ -18,17 +19,7 @@ annotation class FunctionProjection(
     val function: ColumnFunction,
     val args: Array<String>,
     val alias: String,
-    val returnHint: ReturnHint = ReturnHint.AUTO,
+    val returnHint: AndrOrmValueType = AndrOrmValueType.AUTO,
     val hideFromSelect: Boolean = false,
     val raw: String = ""
 )
-
-/**
- * ## 戻り値手掛かり
- * ### @FunctionProjection に指定する戻り値の型推論識別子
- * @author Masahiro Inoue
- * @since 2025-08-01
- */
-enum class ReturnHint {
-    AUTO, STRING, INT, LONG, DOUBLE, BOOLEAN, DECIMAL, DATE, DATETIME
-}

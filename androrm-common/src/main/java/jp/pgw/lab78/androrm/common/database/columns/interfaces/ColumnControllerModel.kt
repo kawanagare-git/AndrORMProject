@@ -1,4 +1,4 @@
-package jp.pgw.lab78.androrm.common.database.columns_controller.interfaces
+package jp.pgw.lab78.androrm.common.database.columns.interfaces
 
 /**
  * ## カラム制御モデル

@@ -112,6 +112,12 @@ class FunctionPropertyFactory : LoggerLike by logger {
         propsByName: Map<String, KSPropertyDeclaration>
     ): TypeName {
         logTraceEntered(func, propsByName)
+        // 明示されたreturnHintは、SQL関数の型推論結果より優先する。
+        func.returnHint.type?.qualifiedName?.let { hintedType ->
+            val hintedResult = ClassName.bestGuess(hintedType)
+            logTraceExiting(hintedResult)
+            return hintedResult
+        }
         // 関数の種類（ColumnFunction）と引数の型に基づいて、適切な戻り値の型を決定するロジックを実装する
         val argTypes = func.args.mapNotNull { arg ->
             propsByName[arg]?.type?.resolve()?.declaration?.qualifiedName?.asString()
