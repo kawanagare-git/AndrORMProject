@@ -1,0 +1,33 @@
+@startuml
+title AndrORM コンポーネント図（モジュール間の関係性のみ）
+
+skinparam componentStyle rectangle
+
+component "app" as app
+component "androrm-runtime" as runtime
+component "androrm-common" as common
+component "androrm-generator-ksp" as ksp
+component "androrm-detekt-rules" as detekt
+component "shared-library" as shared
+
+app --> runtime : implementation
+app --> common : implementation
+app --> shared : implementation
+app ..> ksp : ksp / kspTest / kspAndroidTest
+
+runtime --> common : api
+runtime --> shared : implementation
+
+ksp --> common : implementation
+ksp --> shared : implementation
+ksp ..> detekt : detektPlugins
+
+detekt --> common : implementation
+common --> shared : implementation
+
+legend right
+  この図だけがモジュール間関係を記述する。
+  クラス図・シーケンス図・アクティビティ図は
+  各モジュールの内部クラスだけで構成する。
+endlegend
+@enduml

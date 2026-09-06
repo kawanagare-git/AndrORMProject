@@ -1,0 +1,23 @@
+@startuml
+title androrm-runtime アクティビティ図（DBアップグレード）
+start
+:onUpgrade(db, oldVersion, newVersion);
+:登録VIEWのDROP文を作成;
+:廃止VIEW名のDROP文を作成;
+:DROP VIEWを実行;
+:migrateDatabase(db, newVersion);
+:各Entityの旧テーブル名・新テーブル名を作成;
+:<テーブル名>_new を事前削除;
+:旧カラム名 -> 新カラム名の標準マッピングを作成;
+:customColumnMappingsUpdate() を反映;
+:旧テーブルの実カラムとMigrationDefaultから転送列を解決;
+:新テーブルCREATE文とINDEX文を生成;
+:INSERT INTO 新テーブル SELECT ... FROM 旧テーブルを生成;
+:新テーブル作成;
+:データ転送;
+:INDEX作成;
+:旧テーブルDROP;
+:新テーブルを旧テーブル名へrename;
+:登録VIEWを再作成;
+stop
+@enduml

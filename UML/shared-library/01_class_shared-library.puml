@@ -1,0 +1,17 @@
+@startuml
+title shared-library クラス図（モジュール内のみ）
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+' 生成条件: src/main と src/debug の Kotlin/Java ソースから抽出
+' 制約: 他モジュールのクラスは描画しない
+
+package "jp.pgw.lab78.shared.library" {
+  object "Utils" as Utils {
+  }
+}
+
+
+@enduml

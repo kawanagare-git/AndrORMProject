@@ -1,0 +1,34 @@
+@startuml
+title androrm-runtime シーケンス図（SELECT生成〜実行）
+
+actor "利用コード" as Client
+participant "Select" as Select
+participant "BaseSelect" as BaseSelect
+participant "WhereClauseDelegate" as WhereDelegate
+participant "ConditionBuilder" as ConditionBuilder
+participant "AndrOrmDatabaseHelper" as Helper
+participant "ValueFromCursor" as ValueFromCursor
+
+Client -> Select: Select(Entity).where { ... }.order { ... }
+activate Select
+Select -> BaseSelect: 初期化 / validateEntityMeta()
+Select -> WhereDelegate: where(block)
+WhereDelegate -> ConditionBuilder: 条件DSLを構築
+ConditionBuilder --> WhereDelegate: 条件 + bindValues
+WhereDelegate --> Select: queryStructureMap 更新
+Client -> Select: build()
+Select -> BaseSelect: buildWhereClause()/buildHavingClause()
+BaseSelect --> Select: SELECT SQL + bindValues
+deactivate Select
+
+Client -> Helper: executeSelectAsMapList(select)
+activate Helper
+Helper -> Select: build()
+Helper -> Select: bindValues
+Helper -> Helper: executeSelectAsCursor(query, bindValues)
+Helper -> ValueFromCursor: bind値の型識別
+ValueFromCursor --> Helper: Cursor bind方法
+Helper -> Helper: Cursor.toMapList()
+Helper --> Client: List<Map<String, Any?>>
+deactivate Helper
+@enduml
