@@ -1,0 +1,27 @@
+@startuml
+title androrm-detekt-rules アクティビティ図（ルール検査）
+start
+:DetektからKtFileを受け取る;
+:AndrORM対象の構文要素を走査;
+fork
+  :Entity参照ルール;
+  :Select等のDSL内参照を検証;
+  if (不正参照あり?) then (はい)
+    :CodeSmellをreport;
+  endif
+fork again
+  :重複テーブル名ルール;
+  :@Tableのnameを収集;
+  if (重複あり?) then (はい)
+    :CodeSmellをreport;
+  endif
+fork again
+  :VIEW定義ルール;
+  :@View/@Table/関係定義を検証;
+  if (不整合あり?) then (はい)
+    :CodeSmellをreport;
+  endif
+end fork
+:検査終了;
+stop
+@enduml

@@ -1,0 +1,12 @@
+@startuml
+title shared-library アクティビティ図（null判定ユーティリティ）
+start
+:Any?.isNull() 呼び出し;
+if (this == null?) then (はい)
+  :trueを返す;
+else (いいえ)
+  :falseを返す;
+endif
+:Any?.isNotNull() 呼び出し時は isNull() の否定を返す;
+stop
+@enduml

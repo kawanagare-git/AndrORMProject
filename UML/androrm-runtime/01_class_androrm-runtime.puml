@@ -1,0 +1,751 @@
+@startuml
+title androrm-runtime クラス図（モジュール内のみ）
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+' 生成条件: src/main と src/debug の Kotlin/Java ソースから抽出
+' 制約: 他モジュールのクラスは描画しない
+
+package "jp.pgw.lab78.androrm.database" {
+  class "Absert" as Absert {
+    +entityClass: KClass
+    --
+    +addEntity()
+    +addEntities()
+    +onConflict()
+    +build()
+  }
+  class "AndrOrmDatabaseHelper" as AndrOrmDatabaseHelper {
+    +entities: List
+    +queryExecutionTime: Long
+    --
+    +onCreate()
+    +onUpgrade()
+    #obsoleteViewNames()
+    #migrateDatabase()
+    +executeDml()
+    +executeSelectAsEntityList()
+    +executeSelectAsMapList()
+    +executeSelectAsCursor()
+    +transaction()
+    +savepoint()
+    #resolveColumnMappings()
+  }
+  class "Create" as Create {
+    +entityClass: KClass
+    +tableNameOverride: String
+    --
+    +build()
+    +buildIndexQueries()
+  }
+  class "CreateView" as CreateView {
+    +entityClass: KClass
+    +select: ViewSelect
+    --
+    +build()
+    +buildDropQuery()
+  }
+  class "Delete" as Delete {
+    +entityClass: KClass
+    --
+    +where()
+    +additionalBindValues()
+    +deleteAll()
+    +build()
+  }
+  object "DmlConstant" as DmlConstant {
+  }
+  class "EntityResultTarget" as EntityResultTarget {
+    +tableRef: TableRef
+    +columnTargets: List
+    +nullableByJoin: Boolean
+    +alias: String
+    +entityClass: KClass
+  }
+  class "FailureReleaseException" as FailureReleaseException {
+  }
+  class "FailureRollbackException" as FailureRollbackException {
+  }
+  class "Insert" as Insert {
+    +entityClass: KClass
+    --
+    +addEntity()
+    +addEntities()
+    +build()
+  }
+  class "NotCreatedSavepointException" as NotCreatedSavepointException {
+  }
+  class "OrderDsl" as OrderDsl {
+  }
+  class "Savepoint" as Savepoint {
+    +database: SQLiteDatabase
+    +name: String
+    --
+    +rollback()
+    +close()
+  }
+  class "SavepointResult" as SavepointResult {
+    +result: T
+    +isSuccess: Boolean
+    +failure: Exception
+  }
+  class "Select" as Select {
+    +fromTable: TableRef
+    +isDistinct: Boolean
+    --
+    +onTableJoined()
+    +join()
+    +where()
+    +order()
+    +limit()
+    +additionalBindValues()
+    +build()
+  }
+  class "State" as State {
+    +executor: Any
+    --
+    +execute()
+  }
+  class "UnionAll" as UnionAll {
+    +resultEntity: KClass
+    --
+    +order()
+    +limit()
+    +additionalBindValues()
+    +build()
+  }
+  class "Update" as Update {
+    +targetTable: TableRef
+    --
+    +set()
+    +from()
+    +join()
+    +where()
+    +updateAll()
+    +additionalBindValues()
+    +build()
+  }
+  class "Upsert" as Upsert {
+    +entityClass: KClass
+    --
+    +addEntity()
+    +addEntities()
+    +onConflict()
+    +set()
+    +where()
+    +build()
+  }
+  class "ViewExistsSelect" as ViewExistsSelect {
+    +fromTable: TableRef
+    --
+    +createConditionValueHolder()
+    +build()
+  }
+  class "ViewSelect" as ViewSelect {
+    +fromTable: TableRef
+    +isDistinct: Boolean
+    ~outputColumnCount: Int
+    --
+    +createConditionValueHolder()
+    +onTableJoined()
+    +join()
+    +order()
+    +limit()
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition" {
+  class "ConditionBuilder" as ConditionBuilder {
+    +valueHolder: QueryWithBindValues
+    +enableAlias: Boolean
+  }
+  class "HavingConditionBuilder" as HavingConditionBuilder {
+    +valueHolder: QueryWithBindValues
+  }
+  class "LogicalConditionDelegate" as LogicalConditionDelegate {
+    +ownerFactory: Any
+    +targetList: MutableList
+    --
+    +getValue()
+    +and()
+    +or()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition.annotation" {
+  class "ConditionDslMarker" as ConditionDslMarker {
+  }
+  class "HavingDslMarker" as HavingDslMarker {
+  }
+  class "OrderDslMarker" as OrderDslMarker {
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition.base" {
+  class "BaseConditionBuilder" as BaseConditionBuilder {
+    +valueHolder: QueryWithBindValues
+    +enableAlias: Boolean
+    --
+    #createSelf()
+    +exists()
+    +notExists()
+    +condition()
+    +buildList()
+    +and()
+    +or()
+  }
+  class "BaseSelect" as BaseSelect {
+  }
+  class "NullMarker" as NullMarker {
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition.interfaces" {
+  interface "ConditionBuilderLike" as ConditionBuilderLike {
+    +buildList()
+  }
+  interface "LogicalConditionSupportLike" as LogicalConditionSupportLike {
+    +and()
+    +or()
+  }
+  interface "OrderBuilderLike" as OrderBuilderLike {
+    +buildList()
+  }
+  interface "QueryStructureLike" as QueryStructureLike {
+    +build()
+  }
+  class "QueryWithBindValues" as QueryWithBindValues {
+    +query: String
+    +bindValues: List
+    --
+    #additionalBindValues()
+    ~addBindValue()
+    ~addBindValues()
+    #clearBindValues()
+  }
+  interface "SelectBody" as SelectBody {
+    +join()
+    +where()
+    +having()
+    +build()
+  }
+  interface "SelectQuery" as SelectQuery {
+    +bindValues: List
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition.operator" {
+  class "ComparisonOperator" as ComparisonOperator {
+    +symbol: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.condition.sealed" {
+  class "Between" as Between {
+    +lhsProperty: String
+    +start: Any
+    +end: Any
+    --
+    +build()
+  }
+  class "BetweenBuilder" as BetweenBuilder {
+    +property: String
+    +start: Any
+    --
+    +and()
+  }
+  class "Compare" as Compare {
+  }
+  class "Condition" as Condition {
+    +build()
+  }
+  class "Exists" as Exists {
+    +subQuery: SelectBody<T
+    --
+    +build()
+  }
+  class "FreeText" as FreeText {
+    +text: String
+    --
+    +build()
+  }
+  class "GroupByColumn" as GroupByColumn {
+    +column: KProperty1<out Entity
+    --
+    +build()
+  }
+  class "InSelect" as InSelect {
+    +lhsProperty: String
+    +subQuery: SelectBody<out SelectEntity
+    --
+    +build()
+  }
+  class "IsNotNull" as IsNotNull {
+    +lhsProperty: String
+    --
+    +build()
+  }
+  class "IsNull" as IsNull {
+    +lhsProperty: String
+    --
+    +build()
+  }
+  class "LogicalCondition" as LogicalCondition {
+    +operator: String
+    +conditions: List
+    --
+    +build()
+  }
+  class "NotExists" as NotExists {
+    +subQuery: SelectBody<T
+    --
+    +build()
+  }
+  class "NotInSelect" as NotInSelect {
+    +lhsProperty: String
+    +subQuery: SelectBody<out SelectEntity
+    --
+    +build()
+  }
+  class "Order" as Order {
+    +column: KProperty1<out Entity
+    +ascending: Boolean
+    +nullsLast: Boolean
+    --
+    +build()
+  }
+  class "Value" as Value {
+    +lhsProperty: String
+    +operator: ComparisonOperator
+    +value: Any
+    --
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.expression" {
+  class "BinaryExpression" as BinaryExpression {
+    +lhs: SqlExpression
+    +operator: SqlArithmeticOperator
+    +rhs: SqlExpression
+    --
+    +build()
+  }
+  class "ColumnExpression" as ColumnExpression {
+    +columnRef: ColumnRef<out Entity
+    --
+    +build()
+  }
+  class "RawExpression" as RawExpression {
+    +expression: String
+    +bindValues: List
+    --
+    +build()
+  }
+  class "SqlArithmeticOperator" as SqlArithmeticOperator {
+    +symbol: String
+  }
+  class "ValueExpression" as ValueExpression {
+    +value: Any
+    --
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.function" {
+  class "AggregateFunction" as AggregateFunction {
+    +query: String
+  }
+  class "FunctionBuilder" as FunctionBuilder {
+    +query: String
+    --
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.function.interfaces" {
+  interface "FunctionBuilderLike" as FunctionBuilderLike {
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.interfaces" {
+  interface "JoinConditionModel" as JoinConditionModel {
+    +on()
+  }
+  interface "QueryBuilderLike" as QueryBuilderLike {
+    +build()
+  }
+  interface "SqlExpression" as SqlExpression {
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.meta" {
+  class "RuntimeEntityMetaFactory" as RuntimeEntityMetaFactory {
+    +create()
+  }
+  class "RuntimeViewMetaFactory" as RuntimeViewMetaFactory {
+    +create()
+  }
+  class "SelectClause" as SelectClause {
+    +sql: String
+    +methodName: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.queryparts" {
+  class "ExcludedColumnExpression" as ExcludedColumnExpression {
+    +entityClass: KClass
+    +property: KProperty1<T
+    --
+    +build()
+  }
+  class "ExistsSelect" as ExistsSelect {
+    +fromTable: TableRef
+    --
+    +build()
+  }
+  class "JoinClauseDelegate" as JoinClauseDelegate {
+    +owner: O
+    +valueHolderFactory: Any
+    +onChanged: Any
+    +onTableJoined: TableRef
+    +clauses: List
+    +bindValues: List
+    --
+    +join()
+    +buildClause()
+  }
+  class "JoinType" as JoinType {
+    +sql: String
+    +nullableByJoin: Boolean
+  }
+  interface "OnConflictClause" as OnConflictClause {
+    +onConflict()
+  }
+  class "OnConflictClauseBuilder" as OnConflictClauseBuilder {
+    +entityClass: KClass
+    --
+    +key()
+    +column()
+    +buildList()
+  }
+  class "OnConflictClauseDelegate" as OnConflictClauseDelegate {
+    +owner: O
+    +entityClass: KClass
+    +onChanged: Any
+    +hasColumns: Boolean
+    --
+    +onConflict()
+    +buildClause()
+  }
+  class "SetClauseBuilder" as SetClauseBuilder {
+    +targetEntityClass: KClass
+    +valueHolder: QueryWithBindValues
+    +valueFormatter: QueryWithBindValues
+    --
+    +buildList()
+  }
+  class "UpsertSetClauseBuilder" as UpsertSetClauseBuilder {
+    +excluded()
+    +column()
+  }
+  class "UpsertTargetColumnExpression" as UpsertTargetColumnExpression {
+    +entityClass: KClass
+    +property: KProperty1<T
+    --
+    +build()
+  }
+  class "WhereClauseDelegate" as WhereClauseDelegate {
+    +owner: O
+    +ownerName: String
+    +enableAlias: Boolean
+    +valueHolderFactory: Any
+    +onChanged: Any
+    +conditions: List
+    +bindValues: List
+    +hasCondition: Boolean
+    --
+    +where()
+    +buildCondition()
+    +buildClause()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.reference" {
+  class "ColumnRef" as ColumnRef {
+    +tableRef: TableRef
+    +property: KProperty1<E
+    --
+    +build()
+  }
+  class "TableRef" as TableRef {
+    +entityClass: KClass
+    +alias: String
+    --
+    +get()
+    +column()
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.utility" {
+  class "DataConverter" as DataConverter {
+    +columnType: String
+    +toBindValue: SQLiteStatement
+    +toProperty: Any
+    --
+    +toBind()
+    +toProp()
+  }
+  class "EntityDefinition" as EntityDefinition {
+    +alias: String
+    +entityClass: KClass
+    +columns: MutableMap<String
+  }
+  object "EntityManager" as EntityManager {
+    ~tableMetadata: Map
+    --
+    +mapKotlinTypeToSqlType()
+    +formatValue()
+  }
+  class "SelectColumnTarget" as SelectColumnTarget {
+    +propertyName: String
+    +resultColumnName: String
+  }
+  class "TableDefinition" as TableDefinition {
+    +tableName: String
+    +aliases: MutableMap<String
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.validation" {
+  class "ColumnTypeMismatchException" as ColumnTypeMismatchException {
+  }
+  class "DuplicateMethodCallValidator" as DuplicateMethodCallValidator {
+    +ownerName: String
+    --
+    +validateNoDuplicateMethodCall()
+  }
+  interface "QueryMethodCall" as QueryMethodCall {
+    +methodName: String
+  }
+  class "ValueFromCursor" as ValueFromCursor {
+    +reference: SqlValueType
+    +cursorType: Int
+    +columnType: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.database.view" {
+  interface "SqlValueRendererOwner" as SqlValueRendererOwner {
+    +renderSqlValue()
+  }
+  class "ViewLiteralValueHolder" as ViewLiteralValueHolder {
+    +renderSqlValue()
+  }
+  object "ViewSqlLiteralRenderer" as ViewSqlLiteralRenderer {
+    +renderValue()
+    +expandAnonymousParameters()
+    +hasSqlParameter()
+  }
+}
+
+' 関係（継承／実装、同一モジュール内 import 依存）
+Absert --|> OnConflictClause
+Absert --|> QueryBuilderLike
+Absert --|> QueryWithBindValues
+BaseConditionBuilder --|> ConditionBuilderLike
+BaseConditionBuilder --|> LogicalConditionSupportLike
+BaseSelect --|> QueryWithBindValues
+Between --|> Condition
+BinaryExpression --|> SqlExpression
+ColumnExpression --|> SqlExpression
+ColumnRef --|> QueryStructureLike
+Compare --|> Condition
+Condition --|> QueryStructureLike
+Create --|> QueryBuilderLike
+CreateView --|> QueryBuilderLike
+Delete --|> QueryBuilderLike
+Delete --|> QueryWithBindValues
+ExcludedColumnExpression --|> SqlExpression
+Exists --|> Condition
+ExistsSelect --|> BaseSelect
+FreeText --|> Condition
+FunctionBuilder --|> FunctionBuilderLike
+GroupByColumn --|> Condition
+InSelect --|> Condition
+Insert --|> QueryBuilderLike
+Insert --|> QueryWithBindValues
+IsNotNull --|> Condition
+IsNull --|> Condition
+LogicalCondition --|> Condition
+LogicalConditionDelegate --|> LogicalConditionSupportLike
+NotExists --|> Condition
+NotInSelect --|> Condition
+OnConflictClauseDelegate --|> OnConflictClause
+Order --|> QueryStructureLike
+RawExpression --|> SqlExpression
+Select --|> BaseSelect
+SelectBody --|> QueryStructureLike
+SelectClause --|> QueryMethodCall
+SelectQuery --|> QueryStructureLike
+UnionAll --|> QueryWithBindValues
+UnionAll --|> SelectQuery
+Update --|> QueryBuilderLike
+Update --|> QueryWithBindValues
+Upsert --|> OnConflictClause
+Upsert --|> QueryBuilderLike
+Upsert --|> QueryWithBindValues
+UpsertTargetColumnExpression --|> SqlExpression
+Value --|> Condition
+ValueExpression --|> SqlExpression
+ViewExistsSelect --|> BaseSelect
+ViewLiteralValueHolder --|> QueryWithBindValues
+ViewLiteralValueHolder --|> SqlValueRendererOwner
+ViewSelect --|> BaseSelect
+Absert ..> OnConflictClauseBuilder
+Absert ..> OnConflictClauseDelegate
+AggregateFunction ..> FunctionBuilderLike
+AndrOrmDatabaseHelper ..> QueryBuilderLike
+AndrOrmDatabaseHelper ..> QueryWithBindValues
+AndrOrmDatabaseHelper ..> RuntimeEntityMetaFactory
+AndrOrmDatabaseHelper ..> SelectColumnTarget
+AndrOrmDatabaseHelper ..> SelectQuery
+AndrOrmDatabaseHelper ..> TableRef
+AndrOrmDatabaseHelper ..> ValueFromCursor
+BaseConditionBuilder ..> ColumnRef
+BaseConditionBuilder ..> Compare
+BaseConditionBuilder ..> Condition
+BaseConditionBuilder ..> ConditionBuilder
+BaseConditionBuilder ..> ExistsSelect
+BaseConditionBuilder ..> FreeText
+BaseConditionBuilder ..> LogicalConditionDelegate
+BaseConditionBuilder ..> QueryWithBindValues
+BaseConditionBuilder ..> Select
+BaseConditionBuilder ..> SqlValueRendererOwner
+BaseConditionBuilder ..> TableRef
+BaseConditionBuilder ..> ViewExistsSelect
+BaseConditionBuilder ..> ViewSelect
+BaseConditionBuilder ..> ViewSqlLiteralRenderer
+BaseSelect ..> Condition
+BaseSelect ..> ConditionBuilder
+BaseSelect ..> DuplicateMethodCallValidator
+BaseSelect ..> GroupByColumn
+BaseSelect ..> HavingConditionBuilder
+BaseSelect ..> JoinClauseDelegate
+BaseSelect ..> JoinConditionModel
+BaseSelect ..> JoinType
+BaseSelect ..> QueryStructureLike
+BaseSelect ..> RuntimeEntityMetaFactory
+BaseSelect ..> SelectBody
+BaseSelect ..> SelectClause
+BaseSelect ..> SelectQuery
+BaseSelect ..> TableRef
+BaseSelect ..> WhereClauseDelegate
+Between ..> ColumnRef
+Between ..> ComparisonOperator
+Between ..> QueryStructureLike
+Between ..> SelectBody
+BetweenBuilder ..> ColumnRef
+BetweenBuilder ..> ComparisonOperator
+BetweenBuilder ..> QueryStructureLike
+BetweenBuilder ..> SelectBody
+BinaryExpression ..> QueryWithBindValues
+ColumnExpression ..> ColumnRef
+ColumnExpression ..> QueryWithBindValues
+Compare ..> ColumnRef
+Compare ..> ComparisonOperator
+Compare ..> QueryStructureLike
+Compare ..> SelectBody
+Condition ..> ColumnRef
+Condition ..> ComparisonOperator
+Condition ..> SelectBody
+ConditionBuilder ..> BaseConditionBuilder
+ConditionBuilder ..> ConditionDslMarker
+ConditionBuilder ..> QueryWithBindValues
+ConditionBuilderLike ..> Condition
+CreateView ..> RuntimeViewMetaFactory
+CreateView ..> ViewSqlLiteralRenderer
+DataConverter ..> ColumnRef
+DataConverter ..> QueryWithBindValues
+DataConverter ..> RuntimeEntityMetaFactory
+DataConverter ..> SqlExpression
+DataConverter ..> SqlValueRendererOwner
+DataConverter ..> TableRef
+Delete ..> ConditionBuilder
+Delete ..> WhereClauseDelegate
+EntityDefinition ..> ColumnRef
+EntityDefinition ..> QueryWithBindValues
+EntityDefinition ..> RuntimeEntityMetaFactory
+EntityDefinition ..> SqlExpression
+EntityDefinition ..> SqlValueRendererOwner
+EntityDefinition ..> TableRef
+EntityManager ..> ColumnRef
+EntityManager ..> QueryWithBindValues
+EntityManager ..> RuntimeEntityMetaFactory
+EntityManager ..> SqlExpression
+EntityManager ..> SqlValueRendererOwner
+EntityManager ..> TableRef
+EntityResultTarget ..> QueryBuilderLike
+EntityResultTarget ..> QueryWithBindValues
+EntityResultTarget ..> RuntimeEntityMetaFactory
+EntityResultTarget ..> SelectColumnTarget
+EntityResultTarget ..> SelectQuery
+EntityResultTarget ..> TableRef
+EntityResultTarget ..> ValueFromCursor
+ExcludedColumnExpression ..> QueryWithBindValues
+Exists ..> ColumnRef
+Exists ..> ComparisonOperator
+Exists ..> QueryStructureLike
+Exists ..> SelectBody
+ExistsSelect ..> SelectClause
+ExistsSelect ..> TableRef
+FailureReleaseException ..> QueryBuilderLike
+FailureReleaseException ..> QueryWithBindValues
+FailureReleaseException ..> RuntimeEntityMetaFactory
+FailureReleaseException ..> SelectColumnTarget
+FailureReleaseException ..> SelectQuery
+FailureReleaseException ..> TableRef
+FailureReleaseException ..> ValueFromCursor
+FailureRollbackException ..> QueryBuilderLike
+FailureRollbackException ..> QueryWithBindValues
+FailureRollbackException ..> RuntimeEntityMetaFactory
+FailureRollbackException ..> SelectColumnTarget
+FailureRollbackException ..> SelectQuery
+FailureRollbackException ..> TableRef
+FailureRollbackException ..> ValueFromCursor
+FreeText ..> ColumnRef
+FreeText ..> ComparisonOperator
+FreeText ..> QueryStructureLike
+FreeText ..> SelectBody
+GroupByColumn ..> ColumnRef
+GroupByColumn ..> ComparisonOperator
+GroupByColumn ..> QueryStructureLike
+GroupByColumn ..> SelectBody
+HavingConditionBuilder ..> BaseConditionBuilder
+HavingConditionBuilder ..> HavingDslMarker
+HavingConditionBuilder ..> QueryWithBindValues
+InSelect ..> ColumnRef
+InSelect ..> ComparisonOperator
+InSelect ..> QueryStructureLike
+InSelect ..> SelectBody
+IsNotNull ..> ColumnRef
+IsNotNull ..> ComparisonOperator
+IsNotNull ..> QueryStructureLike
+IsNotNull ..> SelectBody
+IsNull ..> ColumnRef
+IsNull ..> ComparisonOperator
+IsNull ..> QueryStructureLike
+IsNull ..> SelectBody
+JoinClauseDelegate ..> ConditionBuilder
+JoinClauseDelegate ..> QueryWithBindValues
+JoinClauseDelegate ..> TableRef
+JoinConditionModel ..> ConditionBuilder
+JoinConditionModel ..> SelectBody
+JoinType ..> ConditionBuilder
+
+@enduml

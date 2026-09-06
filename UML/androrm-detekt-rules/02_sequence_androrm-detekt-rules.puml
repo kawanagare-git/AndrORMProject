@@ -1,0 +1,31 @@
+@startuml
+title androrm-detekt-rules シーケンス図（Detektルール実行）
+
+actor "Detekt" as Detekt
+participant "AndrOrmRuleSetProvider" as Provider
+participant "AndrOrmEntityRefRule" as EntityRefRule
+participant "AndrOrmDuplicateTableNameRule" as DuplicateRule
+participant "AndrOrmViewDefinitionRule" as ViewRule
+participant "AndrOrmLogger" as Logger
+
+Detekt -> Provider: instance(config)
+Provider --> Detekt: RuleSet
+Detekt -> EntityRefRule: visitKtFile(file)
+activate EntityRefRule
+EntityRefRule -> EntityRefRule: Select/Where等のEntity参照を解析
+EntityRefRule -> Logger: 検出内容をログ出力
+EntityRefRule --> Detekt: CodeSmell report
+deactivate EntityRefRule
+
+Detekt -> DuplicateRule: visitKtFile(file)
+activate DuplicateRule
+DuplicateRule -> DuplicateRule: @Table名を収集
+DuplicateRule --> Detekt: 重複テーブル名をreport
+deactivate DuplicateRule
+
+Detekt -> ViewRule: visitKtFile(file)
+activate ViewRule
+ViewRule -> ViewRule: @View/@Table/参照関係を検証
+ViewRule --> Detekt: VIEW定義違反をreport
+deactivate ViewRule
+@enduml

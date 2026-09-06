@@ -1,0 +1,35 @@
+@startuml
+title androrm-common アクティビティ図（DEFAULT値検証）
+start
+:対象プロパティのKotlin型を取得;
+:DEFAULT / MigrationDefault の文字列を取得;
+if (値が未指定?) then (はい)
+  :検証対象外として終了;
+  stop
+endif
+:SqlValueTypeを決定;
+if (nullable型かつ NULL?) then (はい)
+  :許可;
+  stop
+endif
+switch (SqlValueType)
+case (INTEGER)
+  :整数形式を検証;
+case (REAL)
+  :整数または小数形式を検証;
+case (BOOLEAN)
+  :0 または 1 を検証;
+case (TEXT)
+  :SQL文字列リテラルを検証;
+case (DATETIME)
+  :日付/時刻形式またはCURRENT系を検証;
+case (BLOB)
+  :DEFAULT値非対応としてエラー;
+endswitch
+if (型と値が整合?) then (はい)
+  :検証成功;
+else (いいえ)
+  :検証エラー;
+endif
+stop
+@enduml

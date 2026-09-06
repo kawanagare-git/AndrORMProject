@@ -1,0 +1,335 @@
+@startuml
+title androrm-common クラス図（モジュール内のみ）
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+' 生成条件: src/main と src/debug の Kotlin/Java ソースから抽出
+' 制約: 他モジュールのクラスは描画しない
+
+package "jp.pgw.lab78.androrm.common" {
+  object "Constants" as Constants {
+  }
+  class "DMLInterfaceEnum" as DMLInterfaceEnum {
+    +kClass: KClass
+    +interfaceFQN: String
+  }
+  class "Element" as Element {
+    +tag: String
+  }
+  object "EntityConstants" as EntityConstants {
+  }
+  class "IndexType" as IndexType {
+    +query: String
+  }
+  class "LogPhase" as LogPhase {
+    +tag: String
+  }
+  class "LogicalOperator" as LogicalOperator {
+    +query: String
+  }
+  object "MessageConstants" as MessageConstants {
+  }
+  class "ModuleLabel" as ModuleLabel {
+    +tag: String
+    +logFilename: String
+  }
+  class "PackageInterfaceRelation" as PackageInterfaceRelation {
+    +relation: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.annotation" {
+  class "ColumnProjection" as ColumnProjection {
+    +property: String
+    +hideFromSelect: Boolean
+  }
+  class "EntityPackageInfo" as EntityPackageInfo {
+    +basePackage: String
+    +selectPackage: String
+    +insertPackage: String
+    +updatePackage: String
+    +upsertPackage: String
+    +absertPackage: String
+    +deletePackage: String
+  }
+  class "FunctionProjection" as FunctionProjection {
+    +function: ColumnFunction
+    +args: Array
+    +alias: String
+    +returnHint: AndrOrmValueType
+    +hideFromSelect: Boolean
+    +raw: String
+  }
+  class "Projection" as Projection {
+    +entityNameExtend: String
+    +aliasExtend: String
+    +properties: Array
+    +functions: Array
+    +commonInterface: Array
+    +customInterface: Array
+  }
+  class "Projections" as Projections {
+    +value: Array
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database" {
+  object "ColumnAnnotationResolver" as ColumnAnnotationResolver {
+    +find()
+  }
+  class "ColumnDefinition" as ColumnDefinition {
+    +name: String
+    +alias: String
+    +hideFromSelect: Boolean
+    +default: String
+  }
+  class "InterfaceColumnAnnotation" as InterfaceColumnAnnotation {
+    +interfaceClass: KClass
+    +annotation: Column
+  }
+  object "SupportFunction" as SupportFunction {
+    +buildAlias()
+    +getPropertyValue()
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database.annotation" {
+  class "Column" as Column {
+    +name: String
+    +alias: String
+    +hideFromSelect: Boolean
+    +default: String
+  }
+  class "ColumnOldName" as ColumnOldName {
+    +name: String
+  }
+  class "Function" as Function {
+    +columnFunction: ColumnFunction
+    +alias: String
+    +args: Array
+    +raw: String
+    +hideFromSelect: Boolean
+  }
+  class "Index" as Index {
+    +name: String
+    +properties: Array
+  }
+  class "MigrationDefault" as MigrationDefault {
+    +value: String
+  }
+  class "PrimaryKey" as PrimaryKey {
+  }
+  class "Table" as Table {
+    +name: String
+    +alias: String
+  }
+  class "Unique" as Unique {
+    +name: String
+    +properties: Array
+  }
+  class "View" as View {
+    +name: String
+    +alias: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database.columns.base" {
+  class "AndrOrmValueType" as AndrOrmValueType {
+    +type: KClass
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database.columns.controller" {
+  object "SqlDefaultValueValidator" as SqlDefaultValueValidator {
+    +dateTimeSpaceFormatter: DateTimeFormatter
+    --
+    +isValid()
+    +normalize()
+  }
+  class "SqlValueType" as SqlValueType {
+    +valueType: AndrOrmValueType
+    +regex: String
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database.columns.interfaces" {
+  interface "ColumnControllerModel" as ColumnControllerModel {
+    +toColumnValue()
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.database.function" {
+  class "ColumnFunction" as ColumnFunction {
+    +argumentArity: ArgumentArity
+    +returnType: String
+    +functionName: String
+    --
+    +getReturnType()
+    +build()
+    +widerType()
+    +resolveSumReturnType()
+  }
+  class "SqlAggregateFunction" as SqlAggregateFunction {
+    +getReturnType()
+    +build()
+  }
+  class "SqlScalarFunction" as SqlScalarFunction {
+    +getReturnType()
+    +build()
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.dml.interfaces" {
+  interface "AbsertEntity" as AbsertEntity {
+  }
+  class "ArgumentArity" as ArgumentArity {
+  }
+  interface "ComprehensiveEntity" as ComprehensiveEntity {
+  }
+  interface "DeleteEntity" as DeleteEntity {
+  }
+  interface "Entity" as Entity {
+  }
+  interface "InsertEntity" as InsertEntity {
+  }
+  interface "SelectEntity" as SelectEntity {
+  }
+  interface "SqlFunction" as SqlFunction {
+    +functionName: String
+    +argumentArity: ArgumentArity
+    --
+    +getReturnType()
+    +build()
+  }
+  interface "TableDefinitionEntity" as TableDefinitionEntity {
+  }
+  interface "UpdateEntity" as UpdateEntity {
+  }
+  interface "UpsertEntity" as UpsertEntity {
+  }
+  interface "ViewDefinitionEntity" as ViewDefinitionEntity {
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.logging" {
+  class "EnglishLevelFormatter" as EnglishLevelFormatter {
+    +format()
+  }
+  class "LogLevel" as LogLevel {
+    +levelOrder: Int
+    +level: Level
+    +tag: String
+    --
+    +isLoggable()
+  }
+  class "LogScope" as LogScope {
+    +moduleName: String
+    --
+    +create()
+    +log()
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.logging.aop" {
+  class "InfoLog" as InfoLog {
+  }
+  class "TraceLog" as TraceLog {
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.logging.interfaces" {
+  interface "AndrOrmLoggerLike" as AndrOrmLoggerLike {
+    +create()
+    +log()
+  }
+  interface "LoggerLike" as LoggerLike {
+    +logInfo()
+    +logInfoEntered()
+    +logInfoExiting()
+    +logWarning()
+    +logError()
+    +logDebug()
+    +logTraceEntered()
+    +logTraceExiting()
+  }
+}
+
+package "jp.pgw.lab78.androrm.common.meta" {
+  class "EntityMeta" as EntityMeta {
+    +defineEntityQualifiedName: String
+    +entityName: String
+    +tableName: String
+    +tableAlias: String
+    +properties: List
+  }
+  class "EntityMetaValidationResult" as EntityMetaValidationResult {
+    +errors: List
+    +warnings: List
+    +hasErrors: Boolean
+    +hasWarnings: Boolean
+  }
+  class "EntityMetaValidator" as EntityMetaValidator {
+    +validate()
+  }
+  class "PropertyMeta" as PropertyMeta {
+    +propertyName: String
+    +columnName: String
+    +aliasName: String
+    +isFunction: Boolean
+    +hideFromSelect: Boolean
+    +hasColumnAnnotation: Boolean
+    +hasFunctionAnnotation: Boolean
+    +functionType: ColumnFunction
+    +functionArgs: List
+    +rawFunction: String
+  }
+  class "ViewMeta" as ViewMeta {
+    +defineEntityQualifiedName: String
+    +entityName: String
+    +viewName: String
+    +viewAlias: String
+    +properties: List
+  }
+}
+
+' 関係（継承／実装、同一モジュール内 import 依存）
+AbsertEntity --|> TableDefinitionEntity
+ColumnFunction --|> SqlFunction
+ComprehensiveEntity --|> InsertEntity
+ComprehensiveEntity --|> SelectEntity
+ComprehensiveEntity --|> UpdateEntity
+ComprehensiveEntity --|> UpsertEntity
+DeleteEntity --|> TableDefinitionEntity
+InsertEntity --|> TableDefinitionEntity
+LogScope --|> AndrOrmLoggerLike
+SelectEntity --|> TableDefinitionEntity
+SqlAggregateFunction --|> SqlFunction
+SqlScalarFunction --|> SqlFunction
+TableDefinitionEntity --|> Entity
+UpdateEntity --|> TableDefinitionEntity
+UpsertEntity --|> TableDefinitionEntity
+ViewDefinitionEntity --|> Entity
+AndrOrmLoggerLike ..> LogLevel
+ColumnAnnotationResolver ..> Column
+ColumnDefinition ..> Column
+ColumnFunction ..> ArgumentArity
+EnglishLevelFormatter ..> AndrOrmLoggerLike
+Function ..> ColumnFunction
+FunctionProjection ..> AndrOrmValueType
+FunctionProjection ..> ColumnFunction
+InterfaceColumnAnnotation ..> Column
+Projection ..> DMLInterfaceEnum
+PropertyMeta ..> ColumnFunction
+SqlDefaultValueValidator ..> AndrOrmValueType
+SqlDefaultValueValidator ..> ColumnControllerModel
+SqlValueType ..> AndrOrmValueType
+SqlValueType ..> ColumnControllerModel
+SupportFunction ..> Column
+SupportFunction ..> Entity
+SupportFunction ..> Function
+SupportFunction ..> Table
+SupportFunction ..> View
+
+@enduml

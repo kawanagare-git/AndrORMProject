@@ -1,0 +1,17 @@
+@startuml
+title shared-library シーケンス図（Utils null判定）
+
+actor "呼び出し元" as Client
+participant "Utils" as Utils
+
+Client -> Utils: value.isNull()
+activate Utils
+Utils --> Client: value == null の結果
+deactivate Utils
+
+Client -> Utils: value.isNotNull()
+activate Utils
+Utils -> Utils: isNull() の否定
+Utils --> Client: value != null の結果
+deactivate Utils
+@enduml

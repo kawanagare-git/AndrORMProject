@@ -1,0 +1,217 @@
+@startuml
+title androrm-generator-ksp クラス図（モジュール内のみ）
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+' 生成条件: src/main と src/debug の Kotlin/Java ソースから抽出
+' 制約: 他モジュールのクラスは描画しない
+
+package "jp.pgw.lab78.androrm.ksp" {
+  object "Constants" as Constants {
+  }
+  class "PropsProcessor" as PropsProcessor {
+    +codeGenerator: CodeGenerator
+    --
+    +process()
+    +finish()
+    +onError()
+  }
+  class "PropsProcessorProvider" as PropsProcessorProvider {
+    +create()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.factory" {
+  class "ColumnPropertyFactory" as ColumnPropertyFactory {
+    +columnAnnotationResolver: KspColumnAnnotationResolver
+  }
+  class "FunctionPropertyFactory" as FunctionPropertyFactory {
+    +createAll()
+  }
+  class "GeneratedProperty" as GeneratedProperty {
+    +propertySpec: PropertySpec
+    +hideFromSelect: Boolean
+  }
+  class "TableAnnotationFactory" as TableAnnotationFactory {
+    +create()
+    +extractTableName()
+    +generateTableAlias()
+  }
+  class "ViewAnnotationFactory" as ViewAnnotationFactory {
+    +create()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.helper" {
+  class "AnnotationHelper" as AnnotationHelper {
+    +getSimpleName()
+  }
+  class "ImportHelper" as ImportHelper {
+    +collectImports()
+  }
+  class "TypeHelper" as TypeHelper {
+    +getSimpleName()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.logging" {
+  class "CompositeLogger" as CompositeLogger {
+    +logger: KSPLogger
+    +consoleLogLevel: LogLevel
+    +fullFilePath: Path
+    --
+    +logInfo()
+    +logInfoEntered()
+    +logInfoExiting()
+    +logWarning()
+    +logError()
+    +logDebug()
+    +logTraceEntered()
+    +logTraceExiting()
+    +close()
+  }
+  object "CreateLogger" as CreateLogger {
+    +logger: LoggerLike
+    --
+    +initialize()
+  }
+  object "DefaultLogMessageGenerator" as DefaultLogMessageGenerator {
+    +generateInfoMessage()
+    +generateWarningMessage()
+    +generateErrorMessage()
+    +generateDebugMessage()
+    +generateTraceMessage()
+  }
+  class "FileDelegatingLogger" as FileDelegatingLogger {
+    +logFilePath: Path
+    --
+    +logInfo()
+    +logInfoEntered()
+    +logInfoExiting()
+    +logWarning()
+    +logError()
+    +logDebug()
+    +logTraceEntered()
+    +logTraceExiting()
+    +close()
+  }
+  class "KspDelegatingLogger" as KspDelegatingLogger {
+    +logger: KSPLogger
+    +consoleLogLevel: LogLevel
+    --
+    +logInfo()
+    +logInfoEntered()
+    +logInfoExiting()
+    +logWarning()
+    +logError()
+    +logDebug()
+    +logTraceEntered()
+    +logTraceExiting()
+    +close()
+  }
+  object "LogUtils" as LogUtils {
+    +concat()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.meta" {
+  class "KspEntityMetaFactory" as KspEntityMetaFactory {
+    +columnAnnotationResolver: KspColumnAnnotationResolver
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.projectoin" {
+  class "ProjectionArgumentParser" as ProjectionArgumentParser {
+    +parse()
+  }
+  class "ProjectionDefinition" as ProjectionDefinition {
+    +entityNameExtend: String
+    +aliasExtend: String
+    +properties: List
+    +functions: List
+    +commonInterfaces: List
+    +customInterfaces: List
+  }
+  class "ProjectionExtractor" as ProjectionExtractor {
+    +findProjectionClasses()
+    +extractFromClass()
+  }
+  class "ProjectionValidator" as ProjectionValidator {
+    +validateProperties()
+    +validateAggregateConflicts()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.resolver" {
+  class "ColumnDefinition" as ColumnDefinition {
+    +name: String
+    +alias: String
+    +hideFromSelect: Boolean
+    +defaultValue: String
+  }
+  class "InterfaceColumnAnnotation" as InterfaceColumnAnnotation {
+    +interfaceClass: KSClassDeclaration
+    +annotation: KSAnnotation
+  }
+  class "InterfaceResolver" as InterfaceResolver {
+    +resolvePackageNameFromAnnotation()
+    +collectInterfaces()
+  }
+  class "KspColumnAnnotationResolver" as KspColumnAnnotationResolver {
+    +find()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.validator" {
+  class "ColumnDefaultValueValidator" as ColumnDefaultValueValidator {
+    +columnAnnotationResolver: KspColumnAnnotationResolver
+  }
+  class "MigrationDefaultValueValidator" as MigrationDefaultValueValidator {
+    +validate()
+  }
+}
+
+package "jp.pgw.lab78.androrm.ksp.writer" {
+  class "DataClassWriter" as DataClassWriter {
+    +codeGenerator: CodeGenerator
+    +importHelper: ImportHelper
+    +annotationHelper: AnnotationHelper
+    +typeHelper: TypeHelper
+    --
+    +write()
+  }
+}
+
+' 関係（継承／実装、同一モジュール内 import 依存）
+ColumnDefaultValueValidator ..> KspColumnAnnotationResolver
+ColumnDefaultValueValidator ..> ProjectionDefinition
+ColumnPropertyFactory ..> KspColumnAnnotationResolver
+DataClassWriter ..> AnnotationHelper
+DataClassWriter ..> GeneratedProperty
+DataClassWriter ..> ImportHelper
+DataClassWriter ..> TypeHelper
+InterfaceResolver ..> ProjectionDefinition
+KspEntityMetaFactory ..> KspColumnAnnotationResolver
+KspEntityMetaFactory ..> ProjectionDefinition
+PropsProcessor ..> AnnotationHelper
+PropsProcessor ..> ColumnDefaultValueValidator
+PropsProcessor ..> ColumnPropertyFactory
+PropsProcessor ..> DataClassWriter
+PropsProcessor ..> FunctionPropertyFactory
+PropsProcessor ..> ImportHelper
+PropsProcessor ..> InterfaceResolver
+PropsProcessor ..> KspColumnAnnotationResolver
+PropsProcessor ..> KspEntityMetaFactory
+PropsProcessor ..> MigrationDefaultValueValidator
+PropsProcessor ..> ProjectionArgumentParser
+PropsProcessor ..> ProjectionDefinition
+PropsProcessor ..> ProjectionExtractor
+PropsProcessor ..> ProjectionValidator
+PropsProcessor ..> TableAnnotationFactory
+PropsProcessor ..> TypeHelper
+PropsProcessor ..> ViewAnnotationFactory
+PropsProcessorProvider ..> CreateLogger
+
+@enduml

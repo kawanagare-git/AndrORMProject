@@ -1,0 +1,34 @@
+@startuml
+title androrm-generator-ksp アクティビティ図（Projection生成処理）
+start
+:process(resolver);
+:ProjectionExtractorで対象クラスを探索;
+if (対象クラスなし?) then (はい)
+  :emptyListを返す;
+  stop
+endif
+repeat
+  :@Projection/@Projectionsを抽出;
+  :ProjectionDefinitionへ変換;
+  if (@View と ViewDefinitionEntity の指定が不一致?) then (はい)
+    :エラーログを出力;
+    :次のクラスへ;
+  else (いいえ)
+    repeat
+      :集約関数・プロパティ指定を検証;
+      :Column default / MigrationDefaultを検証;
+      if (検証成功?) then (はい)
+        :KspEntityMetaFactoryでメタ情報作成;
+        :通常列PropertySpecを作成;
+        :Function列PropertySpecを作成;
+        :生成先パッケージと実装interfaceを解決;
+        :DataClassWriterでKotlinファイル出力;
+      else (いいえ)
+        :生成をスキップ;
+      endif
+    repeat while (次のProjectionDefinition?) is (あり)
+  endif
+repeat while (次の対象クラス?) is (あり)
+:emptyListを返す;
+stop
+@enduml

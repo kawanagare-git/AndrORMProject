@@ -1,0 +1,84 @@
+@startuml
+title androrm-detekt-rules クラス図（モジュール内のみ）
+
+skinparam linetype ortho
+skinparam packageStyle rectangle
+hide empty members
+
+' 生成条件: src/main と src/debug の Kotlin/Java ソースから抽出
+' 制約: 他モジュールのクラスは描画しない
+
+package "jp.pgw.lab78.androrm.detekt" {
+  object "AndrOrmDetektMessages" as AndrOrmDetektMessages {
+    +invalidPropertyReference()
+    +logDebug()
+    +logWarning()
+  }
+  class "AndrOrmDuplicateTableNameRule" as AndrOrmDuplicateTableNameRule {
+    +issue: Issue
+    --
+    +visitKtFile()
+  }
+  class "AndrOrmEntityRefRule" as AndrOrmEntityRefRule {
+    +issue: Issue
+    --
+    +visitKtFile()
+    +visitDotQualifiedExpression()
+  }
+  class "AndrOrmRuleSetProvider" as AndrOrmRuleSetProvider {
+    +ruleSetId: String
+    --
+    +instance()
+  }
+  class "AndrOrmViewDefinitionRule" as AndrOrmViewDefinitionRule {
+    +visitKtFile()
+  }
+  class "ExtractEntity" as ExtractEntity {
+    +index: Int
+    --
+    +toString()
+  }
+  class "RelationDefinition" as RelationDefinition {
+    +name: String
+    +kind: String
+    +className: String
+  }
+  class "SelectChainContext" as SelectChainContext {
+    +selectCall: KtCallExpression
+    +fromEntityName: String
+    +joinedEntityNames: MutableSet
+    +allEntityNames: Set get
+  }
+  class "TableDefinition" as TableDefinition {
+    +tableName: String
+    +normalizedTableName: String
+    +className: String
+    +identity: String
+    +declaration: KtClass
+  }
+}
+
+package "jp.pgw.lab78.androrm.detekt.log" {
+  object "AndrOrmLogger" as AndrOrmLogger {
+    +log: Logger
+    --
+    +initOnce()
+    +warning()
+    +debug()
+  }
+  class "EnglishLevelFormatter" as EnglishLevelFormatter {
+    +format()
+  }
+  class "LogLevel" as LogLevel {
+    +level: Level
+    +displayName: String
+  }
+}
+
+' 関係（継承／実装、同一モジュール内 import 依存）
+AndrOrmEntityRefRule ..> AndrOrmLogger
+AndrOrmRuleSetProvider ..> AndrOrmLogger
+ExtractEntity ..> AndrOrmLogger
+SelectChainContext ..> AndrOrmLogger
+
+@enduml

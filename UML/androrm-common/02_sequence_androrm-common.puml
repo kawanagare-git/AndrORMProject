@@ -1,0 +1,27 @@
+@startuml
+title androrm-common シーケンス図（EntityMeta検証）
+
+actor "検証呼び出し元" as Caller
+participant "EntityMetaValidator" as Validator
+participant "EntityMeta" as EntityMeta
+participant "PropertyMeta" as PropertyMeta
+participant "EntityMetaValidationResult" as Result
+
+Caller -> Validator: validate(entityMeta, requireSelectableProperties)
+activate Validator
+Validator -> EntityMeta: tableName / properties / aliases を参照
+EntityMeta --> Validator: メタ情報
+loop 各 PropertyMeta
+    Validator -> PropertyMeta: columnName / select対象 / null許容などを確認
+    PropertyMeta --> Validator: プロパティ定義
+end
+alt エラーあり
+    Validator -> Result: errors を追加
+else 警告あり
+    Validator -> Result: warnings を追加
+else 問題なし
+    Validator -> Result: 空の結果を生成
+end
+Validator --> Caller: EntityMetaValidationResult
+deactivate Validator
+@enduml

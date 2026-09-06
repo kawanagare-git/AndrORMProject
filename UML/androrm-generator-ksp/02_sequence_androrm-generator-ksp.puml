@@ -1,0 +1,38 @@
+@startuml
+title androrm-generator-ksp シーケンス図（Projectionからdata class生成）
+
+actor "KSP" as KSP
+participant "PropsProcessorProvider" as Provider
+participant "PropsProcessor" as Processor
+participant "ProjectionExtractor" as Extractor
+participant "ProjectionArgumentParser" as Parser
+participant "ProjectionValidator" as ProjectionValidator
+participant "ColumnDefaultValueValidator" as ColumnDefaultValidator
+participant "KspEntityMetaFactory" as MetaFactory
+participant "ColumnPropertyFactory" as ColumnFactory
+participant "FunctionPropertyFactory" as FunctionFactory
+participant "InterfaceResolver" as InterfaceResolver
+participant "DataClassWriter" as Writer
+
+KSP -> Provider: create(environment)
+Provider --> KSP: PropsProcessor
+KSP -> Processor: process(resolver)
+activate Processor
+Processor -> Extractor: findProjectionClasses(resolver)
+Extractor --> Processor: KSClassDeclaration一覧
+loop Projection対象クラス
+    Processor -> Extractor: extractFromClass(classDecl)
+    Extractor --> Processor: Projection annotation一覧
+    Processor -> Parser: parse(annotation)
+    Parser --> Processor: ProjectionDefinition
+    Processor -> ProjectionValidator: validateAggregateConflicts()/validateProperties()
+    Processor -> ColumnDefaultValidator: validate(classDecl, definition)
+    Processor -> MetaFactory: create(classDecl, definition)
+    Processor -> ColumnFactory: create(ownerClass, prop, hideFromSelect)
+    Processor -> FunctionFactory: createAll(functions, propsByName)
+    Processor -> InterfaceResolver: resolvePackageNameFromAnnotation()/collectInterfaces()
+    Processor -> Writer: write(ClassName, annotations, properties, interfaces)
+end
+Processor --> KSP: emptyList()
+deactivate Processor
+@enduml
