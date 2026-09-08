@@ -204,6 +204,26 @@ class ViewSelectTest {
         assertTrue(captor.allValues[1].startsWith("create view \"ACTIVE_EMPLOYEE\""))
     }
 
+    /** obsoleteViewNames で指定した廃止 VIEW をアップグレード時に削除することを確認する。 */
+    @Test
+    fun databaseHelperDropsObsoleteViewsOnUpgrade() {
+        val db = Mockito.mock(SQLiteDatabase::class.java)
+        val helper = object : AndrOrmDatabaseHelper(
+            context = Mockito.mock(Context::class.java),
+            databaseName = "obsolete_view_test.db",
+            version = 2,
+            entities = emptyList(),
+            views = emptyList(),
+        ) {
+            override fun obsoleteViewNames(oldVersion: Int, newVersion: Int): List<String> =
+                listOf("OLD_EMPLOYEE_VIEW")
+        }
+
+        helper.onUpgrade(db, 1, 2)
+
+        Mockito.verify(db).execSQL("drop view if exists \"OLD_EMPLOYEE_VIEW\"")
+    }
+
     @Table(name = "EMPLOYEE", alias = "E")
     private data class EmployeeSelect(
         @Column(name = "ID") val id: Int,

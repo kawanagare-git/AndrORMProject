@@ -1,5 +1,0 @@
-<aspectj>
-    <aspects>
-        <aspect name="jp.pgw.lab78.androrm.log.AopLogger"/>
-    </aspects>
-</aspectj>

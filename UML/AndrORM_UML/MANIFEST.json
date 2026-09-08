@@ -1,0 +1,49 @@
+{
+  "files": [
+    "app/01_class_app.puml",
+    "app/02_sequence_app.puml",
+    "app/03_activity_app.puml",
+    "androrm-runtime/01_class_androrm-runtime.puml",
+    "androrm-runtime/02_sequence_androrm-runtime.puml",
+    "androrm-runtime/03_activity_androrm-runtime.puml",
+    "androrm-common/01_class_androrm-common.puml",
+    "androrm-common/02_sequence_androrm-common.puml",
+    "androrm-common/03_activity_androrm-common.puml",
+    "androrm-generator-ksp/01_class_androrm-generator-ksp.puml",
+    "androrm-generator-ksp/02_sequence_androrm-generator-ksp.puml",
+    "androrm-generator-ksp/03_activity_androrm-generator-ksp.puml",
+    "androrm-detekt-rules/01_class_androrm-detekt-rules.puml",
+    "androrm-detekt-rules/02_sequence_androrm-detekt-rules.puml",
+    "androrm-detekt-rules/03_activity_androrm-detekt-rules.puml",
+    "shared-library/01_class_shared-library.puml",
+    "shared-library/02_sequence_shared-library.puml",
+    "shared-library/03_activity_shared-library.puml",
+    "00_component/01_component_modules.puml"
+  ],
+  "stats": {
+    "app": {
+      "source_files": 1,
+      "declarations": 1
+    },
+    "androrm-runtime": {
+      "source_files": 55,
+      "declarations": 92
+    },
+    "androrm-common": {
+      "source_files": 47,
+      "declarations": 59
+    },
+    "androrm-generator-ksp": {
+      "source_files": 27,
+      "declarations": 29
+    },
+    "androrm-detekt-rules": {
+      "source_files": 6,
+      "declarations": 12
+    },
+    "shared-library": {
+      "source_files": 1,
+      "declarations": 1
+    }
+  }
+}

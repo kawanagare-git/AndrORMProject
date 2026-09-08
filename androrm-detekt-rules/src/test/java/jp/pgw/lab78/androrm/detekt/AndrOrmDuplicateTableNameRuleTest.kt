@@ -1,10 +1,13 @@
 package jp.pgw.lab78.androrm.detekt
 
 import io.gitlab.arturbosch.detekt.test.compileAndLint
+import io.gitlab.arturbosch.detekt.test.lint
 import jp.pgw.lab78.androrm.detekt.AndrOrmDuplicateTableNameRule
 import jp.pgw.lab78.androrm.detekt.AndrOrmDetektMessages.duplicateTableName
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * ## テーブル名重複検査ルールテスト
@@ -13,6 +16,66 @@ import kotlin.test.assertEquals
  * @since 2026-07-20
  */
 class AndrOrmDuplicateTableNameRuleTest {
+
+    /** 別ファイルの1段間接継承をテーブル重複判定へ反映する。 */
+    @Test
+    fun indirectTableDefinitionMarkerInAnotherFileIsRecognized() {
+        val root = Files.createTempDirectory(Path.of("build"), "androrm-table-cross-file")
+        Files.createDirectories(root.resolve("kotlin"))
+        Files.writeString(
+            root.resolve("kotlin/CustomTable.kt"),
+            "interface CustomTable : TableDefinitionEntity",
+        )
+        Files.writeString(
+            root.resolve("kotlin/First.kt"),
+            """
+            @Table(name = "EMPLOYEE")
+            data class First(val id: Int) : CustomTable
+            """.trimIndent(),
+        )
+        val target = root.resolve("kotlin/Second.kt")
+        Files.writeString(
+            target,
+            """
+            @Table(name = "employee")
+            data class Second(val id: Int) : CustomTable
+            """.trimIndent(),
+        )
+
+        assertEquals(1, AndrOrmDuplicateTableNameRule().lint(target).size)
+    }
+
+    /** 別ファイルの複数段間接継承をテーブル重複判定へ反映する。 */
+    @Test
+    fun multiLevelTableDefinitionMarkerInAnotherFileIsRecognized() {
+        val root = Files.createTempDirectory(Path.of("build"), "androrm-table-cross-file-multi")
+        Files.createDirectories(root.resolve("kotlin"))
+        Files.writeString(
+            root.resolve("kotlin/RootTable.kt"),
+            "interface RootTable : TableDefinitionEntity",
+        )
+        Files.writeString(
+            root.resolve("kotlin/CustomTable.kt"),
+            "interface CustomTable : RootTable",
+        )
+        Files.writeString(
+            root.resolve("kotlin/First.kt"),
+            """
+            @Table(name = "EMPLOYEE")
+            data class First(val id: Int) : CustomTable
+            """.trimIndent(),
+        )
+        val target = root.resolve("kotlin/Second.kt")
+        Files.writeString(
+            target,
+            """
+            @Table(name = "employee")
+            data class Second(val id: Int) : CustomTable
+            """.trimIndent(),
+        )
+
+        assertEquals(1, AndrOrmDuplicateTableNameRule().lint(target).size)
+    }
 
     /**
      * ## 異なるテーブル名の検証
@@ -127,6 +190,36 @@ class AndrOrmDuplicateTableNameRuleTest {
 
         val findings = AndrOrmDuplicateTableNameRule().compileAndLint(code)
 
+        assertEquals(0, findings.size)
+    }
+    /** 正規TableDefinitionEntityのalias importと完全修飾名を解決する。 */
+    @Test
+    fun canonicalTableMarkerAliasAndFqnAreRecognized() {
+        val findings = AndrOrmDuplicateTableNameRule().compileAndLint(
+            """
+            import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity as TDE
+            @Table(name = "EMPLOYEE")
+            data class First(val id: Int) : TDE
+            @Table(name = "employee")
+            data class Second(val id: Int) : jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
+            """
+        )
+        assertEquals(1, findings.size)
+    }
+
+    /** 別packageの同名TableDefinitionEntityを正規マーカーと誤認しない。 */
+    @Test
+    fun sameNamedNonCanonicalTableMarkerIsIgnored() {
+        val findings = AndrOrmDuplicateTableNameRule().compileAndLint(
+            """
+            package unrelated
+            interface TableDefinitionEntity
+            @Table(name = "EMPLOYEE")
+            data class First(val id: Int) : TableDefinitionEntity
+            @Table(name = "employee")
+            data class Second(val id: Int) : TableDefinitionEntity
+            """
+        )
         assertEquals(0, findings.size)
     }
 }

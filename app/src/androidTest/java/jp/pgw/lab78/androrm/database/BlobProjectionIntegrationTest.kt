@@ -56,6 +56,7 @@ class BlobProjectionIntegrationTest {
     /** 実際にKSP生成したEntityの型、null許容性と取得内容を検証する。 */
     @Test
     fun generatedColumns_preserveByteArrayTypesAndValues() {
+        assertTrue(BlobProjectionDefinitionSelect is CursorEntityMapper<*>)
         assertEquals(ByteArray::class, BlobProjectionDefinitionSelect::payload.returnType.classifier)
         assertFalse(BlobProjectionDefinitionSelect::payload.returnType.isMarkedNullable)
         assertEquals(ByteArray::class, BlobProjectionDefinitionSelect::optionalPayload.returnType.classifier)

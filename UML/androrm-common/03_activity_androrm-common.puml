@@ -24,7 +24,7 @@ case (TEXT)
 case (DATETIME)
   :日付/時刻形式またはCURRENT系を検証;
 case (BLOB)
-  :DEFAULT値非対応としてエラー;
+  :BLOBリテラル形式を検証;
 endswitch
 if (型と値が整合?) then (はい)
   :検証成功;

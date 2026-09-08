@@ -113,7 +113,7 @@ class RuntimeEntityMetaFactory {
                 hasColumnAnnotation = hasColumnAnnotation,
                 hasFunctionAnnotation = true,
                 functionType = functionAnnotation?.columnFunction,
-                functionArgs = functionAnnotation?.args?.toList() ?: emptyList(),
+                functionArgs = functionAnnotation?.args?.map(String::trim) ?: emptyList(),
                 rawFunction = functionAnnotation?.raw ?: EMPTY_STRING
             )
         } else {

@@ -1,0 +1,21 @@
+@startuml
+title app シーケンス図（TraceAspect / debug AOP）
+
+actor "実行メソッド" as Caller
+participant "TraceAspect" as TraceAspect
+
+Caller -> TraceAspect: @TraceLog/@InfoLog 対象メソッド呼び出し
+activate TraceAspect
+TraceAspect -> TraceAspect: traceLog()/infoLog() の advice 実行
+TraceAspect -> TraceAspect: joinPoint / signature / 引数情報を取得
+TraceAspect -> Caller: proceed()
+Caller --> TraceAspect: 戻り値または例外
+TraceAspect -> TraceAspect: 終了ログを出力
+TraceAspect --> Caller: 戻り値を返却
+deactivate TraceAspect
+
+note right of TraceAspect
+app 本体側は src/debug の TraceAspect を対象。
+他モジュールのクラスは参加者に含めない。
+end note
+@enduml

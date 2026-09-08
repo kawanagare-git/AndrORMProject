@@ -13,17 +13,15 @@ import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
-import org.jetbrains.kotlin.psi.KtPsiFactory
 import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.psiUtil.collectDescendantsOfType
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Locale
 
 /**
  * ## AndrORM テーブル名重複検査ルール
- * ### 同一ソースセット内の異なる TableDefinitionEntity が、同じ明示指定の @Table.name を持つ場合に報告する
+ * ### 同一ソースセット内の異なる TableDefinitionEntity（間接継承を含む）が、同じ明示指定の @Table.name を持つ場合に報告する
  * ### SELECT・DML用Entityなど、TableDefinitionEntity以外のクラスは検査対象外とする
  * @param config Detekt ルール設定情報
  * @author Masahiro Inoue
@@ -32,6 +30,9 @@ import java.util.Locale
 class AndrOrmDuplicateTableNameRule(
     config: Config = Config.empty,
 ) : Rule(config) {
+
+    /** package/import を解決する継承リゾルバ */
+    private val typeResolver = SourceSetTypeResolver()
 
     /** ルール定義情報 */
     override val issue: Issue = Issue(
@@ -98,26 +99,21 @@ class AndrOrmDuplicateTableNameRule(
         currentDefinitions: List<TableDefinition>,
     ): List<TableDefinition> {
         val currentPath = Path.of(currentSourcePath)
-        val sourceRoot = findSourceRoot(currentPath) ?: return currentDefinitions
-        val psiFactory = KtPsiFactory(currentFile.project, false)
+        if (findSourceRoot(currentPath) == null) return currentDefinitions
         val definitions = mutableListOf<TableDefinition>()
-
-        Files.walk(sourceRoot).use { paths ->
-            paths.filter { path ->
-                Files.isRegularFile(path) && path.fileName.toString().endsWith(".kt")
-            }.forEach { path ->
-                val normalizedPath = normalizeSourcePath(path.toString())
-                if (normalizedPath == currentSourcePath) {
-                    definitions.addAll(currentDefinitions)
-                } else {
-                    val sourceFile = psiFactory.createFile(
-                        path.fileName.toString(),
-                        Files.readString(path),
+        val index = typeResolver.indexFor(currentFile)
+        index.declarations.map { it.containingKtFile }
+            .distinctBy {
+                index.pathOf(it)?.toString() ?: it.virtualFile?.path ?: it.virtualFilePath
+            }
+            .forEach { sourceFile ->
+            val normalizedPath = normalizeSourcePath(
+                index.pathOf(sourceFile)?.toString()
+                    ?: sourceFile.virtualFile?.path
+                    ?: sourceFile.virtualFilePath,
                     )
                     definitions.addAll(extractTableDefinitions(sourceFile, normalizedPath))
                 }
-            }
-        }
         return definitions
     }
 
@@ -135,7 +131,7 @@ class AndrOrmDuplicateTableNameRule(
 
     /**
      * ## テーブル定義抽出
-     * ### TableDefinitionEntityを直接実装し、明示的な@Table.nameを持つクラスを抽出する
+     * ### TableDefinitionEntityを継承し、明示的な@Table.nameを持つクラスを抽出する
      * @param file 抽出対象のKotlinファイル
      * @param sourcePath 抽出対象ファイルの正規化済みパス
      * @return 抽出したテーブル定義
@@ -145,12 +141,9 @@ class AndrOrmDuplicateTableNameRule(
     private fun extractTableDefinitions(
         file: KtFile,
         sourcePath: String,
-    ): List<TableDefinition> = file.collectDescendantsOfType<KtClass>()
-        .filter { declaration ->
-            declaration.superTypeListEntries.any { superType ->
-                superType.typeReference?.text?.substringAfterLast('.') == TABLE_DEFINITION_ENTITY
-            }
-        }
+    ): List<TableDefinition> {
+        return file.collectDescendantsOfType<KtClass>()
+            .filter { declaration -> typeResolver.hasSuperType(declaration, TABLE_DEFINITION_ENTITY) }
         .mapNotNull { declaration ->
             val tableName = declaration.annotationEntries
                 .firstOrNull { annotation -> annotation.shortName?.asString() == TABLE_ANNOTATION }
@@ -176,6 +169,7 @@ class AndrOrmDuplicateTableNameRule(
                 declaration = declaration,
             )
         }
+    }
 
     /**
      * ## 明示テーブル名取得
@@ -261,13 +255,13 @@ class AndrOrmDuplicateTableNameRule(
         /** テーブル定義Entityインターフェースの短縮名 */
         const val TABLE_DEFINITION_ENTITY = "TableDefinitionEntity"
 
-        /** Kotlinソースルートとして扱うディレクトリ名 */
-        val SOURCE_ROOT_NAMES = setOf("java", "kotlin")
-
         /** Windows仮想ファイルパス判定に必要な最小文字数 */
         const val WINDOWS_VIRTUAL_PATH_MIN_LENGTH = 4
 
         /** Windowsドライブ文字直後のコロン位置 */
         const val WINDOWS_DRIVE_SEPARATOR_INDEX = 2
+
+        /** Kotlinソースルートとして扱うディレクトリ名 */
+        val SOURCE_ROOT_NAMES = setOf("java", "kotlin")
     }
 }

@@ -161,8 +161,15 @@ enum class ColumnFunction(
         }
     },
 
-    /** 文字列関数(substr) */
-    SUBSTR(MULTI, String::class.qualifiedName!!),
+    /** 文字列またはBLOB関数(substr) */
+    SUBSTR(MULTI, String::class.qualifiedName!!) {
+        override fun getReturnType(argTypes: List<String>): String =
+            if (argTypes.firstOrNull() == ByteArray::class.qualifiedName) {
+                ByteArray::class.qualifiedName!!
+            } else {
+                String::class.qualifiedName!!
+            }
+    },
 
     /** 文字列関数(concat) */
     CONCAT(MULTI, String::class.qualifiedName!!) {

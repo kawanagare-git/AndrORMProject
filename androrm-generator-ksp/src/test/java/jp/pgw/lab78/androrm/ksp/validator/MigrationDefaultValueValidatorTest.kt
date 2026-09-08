@@ -68,6 +68,31 @@ class MigrationDefaultValueValidatorTest {
         verify(logger, never()).error(any<String>(), anyOrNull())
     }
 
+    /** ByteArray用BLOBリテラルのMigrationDefaultを受理する。 */
+    @Test
+    fun testValidate_withValidByteArrayMigrationDefault_returnsTrue() {
+        val entity = entityOf(propertyOf("payload", "kotlin.ByteArray", "X'00017FFF'"))
+
+        assertTrue(target.validate(entity))
+        verify(logger, never()).error(any<String>(), anyOrNull())
+    }
+
+    /** 奇数桁BLOBリテラルのMigrationDefaultを拒否する。 */
+    @Test
+    fun testValidate_withOddLengthByteArrayMigrationDefault_returnsFalse() {
+        val entity = entityOf(propertyOf("payload", "kotlin.ByteArray", "X'0'"))
+
+        assertFalse(target.validate(entity))
+    }
+
+    /** 16進数以外を含むBLOBリテラルのMigrationDefaultを拒否する。 */
+    @Test
+    fun testValidate_withInvalidHexByteArrayMigrationDefault_returnsFalse() {
+        val entity = entityOf(propertyOf("payload", "kotlin.ByteArray", "X'GG'"))
+
+        assertFalse(target.validate(entity))
+    }
+
     /**
      * ## 無効なBoolean既定値の検証
      * ### 検証失敗時にEntity名、プロパティ名および値がログへ出力されることを確認する

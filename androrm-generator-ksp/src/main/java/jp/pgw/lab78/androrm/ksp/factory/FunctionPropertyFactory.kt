@@ -87,7 +87,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
             if (func.raw.isNotBlank()) {
                 addMember("$F_RAW = %S", func.raw)
             } else {
-                val argsLiteral = func.args.joinToString(", ") { "\"$it\"" }
+                val argsLiteral = normalizeFunctionArgs(func).joinToString(", ") { "\"$it\"" }
                 addMember("$F_ARGS = [%L]", argsLiteral)
             }
             // hideFromSelect 引数を設定する
@@ -119,7 +119,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
             return hintedResult
         }
         // 関数の種類（ColumnFunction）と引数の型に基づいて、適切な戻り値の型を決定するロジックを実装する
-        val argTypes = func.args.mapNotNull { arg ->
+        val argTypes = normalizeFunctionArgs(func).mapNotNull { arg ->
             propsByName[arg]?.type?.resolve()?.declaration?.qualifiedName?.asString()
                 ?: inferLiteralTypeName(arg)
         }
@@ -128,6 +128,10 @@ class FunctionPropertyFactory : LoggerLike by logger {
         logTraceExiting(result)
         return result
     }
+
+    /** FunctionProjection引数の外側空白だけを除去した正規化値を返す。 */
+    private fun normalizeFunctionArgs(func: FunctionProjection): List<String> =
+        func.args.map(String::trim)
 
     /**
      * ## リテラル型推論メソッド
@@ -147,6 +151,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
                 true
             ) -> Boolean::class.qualifiedName
 
+            isBlobLiteral(literal) -> ByteArray::class.qualifiedName
             literal.startsWith("'") && literal.endsWith("'") -> String::class.qualifiedName
             literal.matches(Regex("^-?\\d+$")) -> Long::class.qualifiedName
             literal.matches(Regex("^-?\\d+\\.\\d+$")) -> Double::class.qualifiedName
@@ -208,6 +213,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
         val trimmed = arg.trim()
         return trimmed in propertyNames ||
                 isStringLiteral(trimmed) ||
+                isBlobLiteral(trimmed) ||
                 isBooleanLiteral(trimmed) ||
                 isNumericLiteral(trimmed)
     }
@@ -221,6 +227,15 @@ class FunctionPropertyFactory : LoggerLike by logger {
      */
     private fun isStringLiteral(value: String): Boolean =
         value.length >= 2 && value.startsWith("'") && value.endsWith("'")
+
+    /**
+     * ## BLOBリテラル判定
+     * ### SQLiteのX'...'形式で、偶数桁の16進数または空文字を受け付ける
+     * @param value 対象の文字列
+     * @return 正常なBLOBリテラルの場合true
+     */
+    private fun isBlobLiteral(value: String): Boolean =
+        value.matches(Regex("(?i)x'(?:[0-9a-f]{2})*'"))
 
     /**
      * ## ブール値リテラル判定
