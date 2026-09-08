@@ -50,6 +50,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
+import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.primaryConstructor
 
@@ -73,6 +74,8 @@ open class AndrOrmDatabaseHelper(
     version: Int,
     private val entities: List<KClass<out TableDefinitionEntity>>,
 ) : SQLiteOpenHelper(context, databaseName, null, version) {
+    /** KSP生成EntityのMapper探索結果をEntity型ごとに再利用する。 */
+    private val cursorEntityMapperCache = mutableMapOf<KClass<out SelectEntity>, CursorEntityMapper<out SelectEntity>?>()
     /**
      * ## AndrORM データベースヘルパー生成
      * ### 可変長引数で指定された Entity を使用してデータベースヘルパーを生成する
@@ -442,13 +445,34 @@ open class AndrOrmDatabaseHelper(
         query: SelectQuery<SelectEntity>,
         entityResultTargets: List<EntityResultTarget>,
     ): List<Map<String, SelectEntity?>> {
-        // データの取得 ※マップ形式
-        val mapList = executeSelectAsMapList(query)
-        // エンティティの生成
-        return mapList.map { row ->
+        val mappers = entityResultTargets.map { target -> target to findCursorMapper(target.entityClass) }
+        if (mappers.any { it.second == null }) {
+            return executeSelectAsMapList(query).map { row ->
             entityResultTargets.associate { target ->
                 target.alias to target.createSelectEntityOrNull(row)
             }
+        }
+    }
+        val start = SystemClock.elapsedRealtimeNanos()
+        try {
+            return executeSelectAsCursor(query).use { cursor ->
+                val indexedTargets = mappers.map { (target, mapper) ->
+                    IndexedEntityResultTarget(
+                        target = target,
+                        mapper = requireNotNull(mapper),
+                        columnIndexes = target.resolveColumnIndexes(cursor),
+                    )
+                }
+                buildList {
+                    while (cursor.moveToNext()) {
+                        add(indexedTargets.associate { indexedTarget ->
+                            indexedTarget.target.alias to indexedTarget.createEntityOrNull(cursor)
+                        })
+                    }
+                }
+            }
+        } finally {
+            queryExecutionTime = SystemClock.elapsedRealtimeNanos() - start
         }
     }
 
@@ -910,6 +934,39 @@ open class AndrOrmDatabaseHelper(
 
         /** 復元する Entity のクラス */
         val entityClass: KClass<out SelectEntity> = tableRef.entityClass
+
+    }
+
+    /** KSP生成Entityに保持されたMapperを一度だけ取得する。 */
+    @Suppress("UNCHECKED_CAST")
+    private fun findCursorMapper(
+        entityClass: KClass<out SelectEntity>,
+    ): CursorEntityMapper<out SelectEntity>? = synchronized(cursorEntityMapperCache) {
+        if (cursorEntityMapperCache.containsKey(entityClass)) {
+            return@synchronized cursorEntityMapperCache[entityClass]
+        }
+        val mapper = entityClass.companionObjectInstance as? CursorEntityMapper<out SelectEntity>
+        cursorEntityMapperCache[entityClass] = mapper
+        mapper
+    }
+
+    /** Mapperへ渡すために実行開始時に解決したEntity単位のCursor情報。 */
+    private data class IndexedEntityResultTarget(
+        val target: EntityResultTarget,
+        val mapper: CursorEntityMapper<out SelectEntity>,
+        val columnIndexes: IntArray,
+    ) {
+        /** 現在行をMapperへ渡し、OUTER JOINの全NULL行をEntity nullへ変換する。 */
+        fun createEntityOrNull(cursor: Cursor): SelectEntity? {
+            val isNullJoinedEntity = target.nullableByJoin &&
+                    columnIndexes.isNotEmpty() &&
+                    columnIndexes.all(cursor::isNull)
+            return if (isNullJoinedEntity) {
+                null
+            } else {
+                mapper.map(cursor, columnIndexes)
+            }
+        }
     }
 
     /**
@@ -926,6 +983,29 @@ open class AndrOrmDatabaseHelper(
         }
         Thread(task, "AndrORM-select-column-metadata").start()
         return task
+    }
+
+    /**
+     * ## CursorカラムIndex解決
+     * ### Mapperの行処理前に、Entityプロパティ順のCursorカラムIndexを一度だけ解決する
+     */
+    private fun EntityResultTarget.resolveColumnIndexes(cursor: Cursor): IntArray {
+        val hiddenProperties = RuntimeEntityMetaFactory()
+            .create(entityClass)
+            .properties
+            .filter { it.hideFromSelect }
+            .map { it.propertyName }
+            .toSet()
+        val visibleColumnTargets = columnTargets.filterNot { it.propertyName in hiddenProperties }
+        val indexes = visibleColumnTargets.map { target ->
+            cursor.getColumnIndex(target.resultColumnName)
+        }.toIntArray()
+        visibleColumnTargets.forEachIndexed { index, target ->
+            if (indexes[index] < 0 && target.propertyName !in hiddenProperties) {
+                error(AE00029.format(target.resultColumnName))
+            }
+        }
+        return indexes
     }
 
     /**

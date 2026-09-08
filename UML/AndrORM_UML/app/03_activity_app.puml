@@ -1,0 +1,17 @@
+@startuml
+title app アクティビティ図（debugログAspect）
+start
+:対象メソッドが呼び出される;
+:TraceAspect が joinPoint を受け取る;
+:メソッド名・引数などのログ情報を整形;
+:対象メソッドを proceed する;
+if (例外発生?) then (はい)
+  :例外情報をログ出力;
+  :例外を再送出;
+  stop
+else (いいえ)
+  :戻り値・終了ログを出力;
+  :呼び出し元へ戻す;
+  stop
+endif
+@enduml

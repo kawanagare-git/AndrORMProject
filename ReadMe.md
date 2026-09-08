@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中のアルファ版です。  
-> 本資料の対象バージョンは`0.1.7-alpha`です。  
+> 本資料の対象バージョンは`0.1.8-alpha`です。  
 > 今後、APIや仕様が変更される可能性があります。
 
 ## AndrORMとは
@@ -115,9 +115,9 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.7-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.7-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.7-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
 }
 ```
 

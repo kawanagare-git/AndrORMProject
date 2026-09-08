@@ -8,9 +8,12 @@ import jp.pgw.lab78.androrm.common.database.columns.base.AndrOrmValueType
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
 import jp.pgw.lab78.androrm.ksp.factory.FunctionPropertyFactory
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger
+import jp.pgw.lab78.androrm.ksp.testsupport.KspSymbolMockFactory.propertyDeclarationOf
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.*
 import java.lang.reflect.InvocationTargetException
 
@@ -21,6 +24,109 @@ import java.lang.reflect.InvocationTargetException
  * @since 2026-05-03
  */
 class FunctionPropertyFactoryTest {
+
+    /** SUBSTRのByteArray引数をreturnHintなしでByteArrayへ推論する。 */
+    @Test
+    fun createAll_substrByteArrayWithoutReturnHint_usesByteArrayReturnType() {
+        val projection = FunctionProjection(
+            function = ColumnFunction.SUBSTR,
+            args = arrayOf("payload", "1", "2"),
+            alias = "PAYLOAD_PART",
+        )
+
+        val actual = target.createAll(
+            functions = listOf(projection),
+            propsByName = mapOf(
+                "payload" to propertyDeclarationOf(
+                    propertyName = "payload",
+                    typeName = "kotlin.ByteArray",
+                ),
+            ),
+        ).single()
+
+        assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY, actual.propertySpec.type)
+        assertEquals("payloadPart", actual.propertySpec.name)
+    }
+
+    /** FunctionProjection引数の外側空白を検証、型推論、生成アノテーションで統一して除去する。 */
+    @Test
+    fun createAll_normalizesFunctionArgumentOuterWhitespace() {
+        val projection = FunctionProjection(
+            function = ColumnFunction.SUBSTR,
+            args = arrayOf(" payload ", " 1 ", " 2 "),
+            alias = "PAYLOAD_PART",
+        )
+
+        val actual = target.createAll(
+            functions = listOf(projection),
+            propsByName = mapOf(
+                "payload" to propertyDeclarationOf("payload", "kotlin.ByteArray"),
+            ),
+        ).single()
+
+        assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY, actual.propertySpec.type)
+        assertTrue(actual.propertySpec.annotations.single().toString().contains("args = [\"payload\", \"1\", \"2\"]"))
+    }
+
+    /** BLOBリテラルをFunctionProjectionの引数として受理する。 */
+    @ParameterizedTest
+    @ValueSource(strings = ["X'00FF'", "X'00ff'", "x'00FF'", "x'00ff'", "X''", "x''"])
+    fun checkFunctionArgs_blobLiteral_isAccepted(literal: String) {
+        val projection = functionProjectionOf(
+            function = ColumnFunction.COALESCE,
+            alias = "PAYLOAD_VALUE",
+            "payload",
+            literal,
+        )
+
+        assertDoesNotThrow {
+            invokeCheckFunctionArgs(projection, setOf("payload"))
+        }
+    }
+
+    /** BLOBリテラルをByteArrayとしてCOALESCEの戻り値型推論へ渡す。 */
+    @Test
+    fun createAll_coalesceWithBlobLiteral_usesByteArrayReturnType() {
+        val projection = functionProjectionOf(
+            function = ColumnFunction.COALESCE,
+            alias = "PAYLOAD_VALUE",
+            "payload",
+            "X''",
+        )
+
+        val actual = target.createAll(
+            functions = listOf(projection),
+            propsByName = mapOf(
+                "payload" to propertyDeclarationOf(
+                    propertyName = "payload",
+                    typeName = "kotlin.ByteArray",
+                ),
+            ),
+        ).single()
+
+        assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY, actual.propertySpec.type)
+    }
+
+    /** 奇数桁または16進数以外のBLOBリテラルを拒否する。 */
+    @ParameterizedTest
+    @ValueSource(strings = ["X'0'", "X'GG'", "X'001'", "X'00G0'"])
+    fun checkFunctionArgs_invalidBlobLiteral_logsError(literal: String) {
+        val projection = functionProjectionOf(
+            function = ColumnFunction.COALESCE,
+            alias = "INVALID_BLOB",
+            literal,
+        )
+
+        invokeCheckFunctionArgs(projection, emptySet())
+
+        verify(mockKspLogger, atLeastOnce()).error(
+            check<String> { message ->
+                assertTrue(message.contains("is invalid"))
+                assertTrue(message.contains(literal))
+            },
+            anyOrNull(),
+        )
+    }
 
     /** 型推論不能なraw BLOB関数は要件7.2のreturnHintからByteArrayを生成する。 */
     @Test

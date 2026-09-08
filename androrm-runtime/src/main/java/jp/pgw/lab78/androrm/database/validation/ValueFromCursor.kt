@@ -55,7 +55,10 @@ enum class ValueFromCursor(
     /** Float / REAL */
     FLOAT(SqlValueType.FLOAT, Cursor.FIELD_TYPE_FLOAT, "REAL") {
         override fun getValueFromCursor(cursor: Cursor, columnIndex: Int) =
-            cursor.getFloat(columnIndex)
+            run {
+                typeChecker(cursor, columnIndex)
+                cursor.getFloat(columnIndex)
+            }
 
         override fun <Float> toColumnValue(value: Any): Float =
             SqlValueType.FLOAT.toColumnValue(value)

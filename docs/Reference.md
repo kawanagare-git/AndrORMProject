@@ -2,7 +2,7 @@
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 本資料の対象バージョンは`0.1.7-alpha`です。
+> 本資料の対象バージョンは`0.1.8-alpha`です。
 > アルファ版のため、今後APIや仕様が変更される可能性があります。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
@@ -107,6 +107,8 @@ androrm-common
 - `FunctionProjection`
 - `@EntityPackageInfo`
 - DML用途別マーカーインターフェース
+
+AndrORMのマーカーインターフェースは、利用者が定義した独自インターフェースを経由する間接継承も認識します。たとえば`CustomViewDefinition : ViewDefinitionEntity`を定義し、Entityが`CustomViewDefinition`を実装する場合も、`ViewDefinitionEntity`として扱われます。複数段の継承も同様です。
 - DML種別ごとの生成先パッケージ指定
 - `commonInterface = [NOT_USE]`と`customInterface`によるカスタム生成先パッケージ指定
 
@@ -375,9 +377,9 @@ AndrORMのランタイム、KSP Processor、Detektルールを追加します。
 - 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.7-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.7-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.7-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
 }
 ```
 Core Library Desugaringを有効にします。
@@ -428,10 +430,9 @@ Windows PowerShellの場合：
 .\gradlew :app:assembleDebug
 ```
 
-Unit Test：
+Unit Test（Runtime／Common／KSP／Detekt／shared-library）：
 
 ```powershell
-.\gradlew :app:testDebugUnitTest
 .\gradlew :androrm-runtime:testDebugUnitTest
 .\gradlew :androrm-common:test
 .\gradlew :androrm-generator-ksp:test
@@ -451,10 +452,9 @@ Detekt：
 .\gradlew detektAll
 ```
 
-`app`モジュールのUnit TestとAndroid Testだけを解析するタスクも用意されています。
+`app`モジュールのAndroid Testだけを解析するタスクも用意されています。
 
 ```powershell
-.\gradlew :app:detektUnitTestOnly
 .\gradlew :app:detektAndroidTestOnly
 ```
 
@@ -750,6 +750,15 @@ val select = Select(UserMasterManualSelect::class)
         UserMasterManualSelect::id eq 1
     }
 ```
+
+> [!NOTE]
+> SELECT用EntityをKSPで生成した場合、AndrORMはEntity専用のCursor変換処理も生成し、`executeSelectAsEntityList()`でCursorからEntityへ直接変換します。
+>
+> SELECT用Entityを手書きした場合、このKSP生成の変換処理は存在しないため、`executeSelectAsEntityList()`では従来のMapおよびリフレクションを使用したEntity変換処理へフォールバックします。
+>
+> JOINなどで複数のSELECT用Entityを使用する場合、いずれかのEntityにKSP生成のCursor変換処理が存在しなければ、そのSELECT全体が従来のEntity変換処理へフォールバックします。
+>
+> この違いはEntity取得時の内部処理および実行効率に関するものであり、SQLビルダーへ指定できる機能や取得結果の仕様が異なるものではありません。
 
 > [!WARNING]
 > `data class`ではない通常のKotlinクラスでも、クラスの構造によっては動作する可能性があります。ただし、AndrORMではEntityを`data class`として定義することを前提に検証しているため、通常クラスは動作保証の対象外です。
@@ -1249,7 +1258,7 @@ AndrOrmValueType.BYTE_ARRAY
 
 | 区分 | フレームワーク |
 |---|---|
-| Unit Test | JUnit5（Jupiter）。JUnit4／Vintage互換も有効 |
+| Unit Test | Runtime／Common／KSP／Detekt／shared-library各モジュールで実行 |
 | Android Test | JUnit4 |
 
 ## ディレクトリ構成
@@ -1258,7 +1267,6 @@ AndrOrmValueType.BYTE_ARRAY
 AndrORM/
 ├─ app/
 │  ├─ src/main/
-│  ├─ src/test/
 │  └─ src/androidTest/
 ├─ androrm-common/
 ├─ androrm-generator-ksp/

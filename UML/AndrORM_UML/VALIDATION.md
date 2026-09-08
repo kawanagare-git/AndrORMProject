@@ -1,0 +1,21 @@
+# 簡易検証結果
+
+- [OK] `00_component/01_component_modules.puml`
+- [OK] `androrm-common/01_class_androrm-common.puml`
+- [OK] `androrm-common/02_sequence_androrm-common.puml`
+- [OK] `androrm-common/03_activity_androrm-common.puml`
+- [OK] `androrm-detekt-rules/01_class_androrm-detekt-rules.puml`
+- [OK] `androrm-detekt-rules/02_sequence_androrm-detekt-rules.puml`
+- [OK] `androrm-detekt-rules/03_activity_androrm-detekt-rules.puml`
+- [OK] `androrm-generator-ksp/01_class_androrm-generator-ksp.puml`
+- [OK] `androrm-generator-ksp/02_sequence_androrm-generator-ksp.puml`
+- [OK] `androrm-generator-ksp/03_activity_androrm-generator-ksp.puml`
+- [OK] `androrm-runtime/01_class_androrm-runtime.puml`
+- [OK] `androrm-runtime/02_sequence_androrm-runtime.puml`
+- [OK] `androrm-runtime/03_activity_androrm-runtime.puml`
+- [OK] `app/01_class_app.puml`
+- [OK] `app/02_sequence_app.puml`
+- [OK] `app/03_activity_app.puml`
+- [OK] `shared-library/01_class_shared-library.puml`
+- [OK] `shared-library/02_sequence_shared-library.puml`
+- [OK] `shared-library/03_activity_shared-library.puml`

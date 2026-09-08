@@ -313,6 +313,27 @@ class ColumnFunctionTest {
     }
 
     /**
+     * ## SUBSTR は第1引数の型から戻り値型を推論できる
+     * ### StringはString、ByteArrayはByteArrayとして扱い、位置・長さ引数を型判定へ含めないことを確認する
+     * @author Masahiro Inoue
+     * @since 2026-09-07
+     */
+    @DisplayName("SUBSTR は第1引数の型から戻り値型を推論できる")
+    @ParameterizedTest(name = "[{index}] argTypes={0}")
+    @CsvSource(
+        "kotlin.String:kotlin.Long:kotlin.Long, kotlin.String",
+        "kotlin.ByteArray:kotlin.Long:kotlin.Long, kotlin.ByteArray",
+    )
+    fun testGetReturnTypeSubstr(
+        @ConvertWith(AnyListConverter::class)
+        argTypes: List<Any?>,
+        expected: String,
+    ) {
+        val actual = ColumnFunction.SUBSTR.getReturnType(argTypes.toStringList())
+        assertEquals(expected, actual)
+    }
+
+    /**
      * ## SUM の getReturnType は引数型から戻り値型を推論できる
      * ### ColumnFunction が仕様どおりに処理することを検証する
      * @author Masahiro Inoue

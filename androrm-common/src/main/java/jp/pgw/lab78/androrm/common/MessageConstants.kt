@@ -183,14 +183,6 @@ object MessageConstants {
     const val AE00023 = "Null bind value is not supported for executeSelect. index=%s"
 
     /**
-     * ## AE00024
-     * ### セレクト句に使用するバインド変数に BLOB(ByteArray) が設定されている場合
-     *
-     * 第1引数: 該当インデックス
-     */
-    const val AE00024 = "BLOB bind value is not supported for executeSelect. index=%s"
-
-    /**
      * ## AE00025
      * ### 取得対象のカラムの型が存在しない（事実上あり得ない）
      *

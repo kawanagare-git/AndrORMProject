@@ -110,8 +110,100 @@ class DataClassWriter(
             if (interfaceText.isNotBlank()) {
                 writer.append(" : $interfaceText")
             }
+            if (interfaces.any { it.toString().substringAfterLast('.') == "SelectEntity" }
+                && canGenerateCursorMapper(constructorProps)) {
+                writer.appendLine(" {")
+                appendCursorMapper(writer, classNameFQN, constructorProps)
+                writer.appendLine("}")
+            } else {
             writer.appendLine()
         }
+        }
         logTraceExiting(classNameFQN)
+    }
+
+    /**
+     * ## Cursor Mapper生成
+     * ### SELECT Entity専用のCursorからコンストラクタへの直接転送処理を生成する
+     * @param writer 生成ソース出力先
+     * @param classNameFQN 生成Entityの完全修飾名
+     * @param properties コンストラクタプロパティ
+     */
+    private fun appendCursorMapper(
+        writer: java.io.BufferedWriter,
+        classNameFQN: ClassName,
+        properties: List<GeneratedProperty>,
+    ) {
+        val visibleProperties = properties.filterNot { it.hideFromSelect }
+        val readers = visibleProperties.mapIndexed { index, property ->
+            property to cursorValueReader(
+                typeName = property.propertySpec.type.toString()
+                    .removeSuffix("?")
+                    .substringAfterLast('.'),
+                index = index,
+                nullable = property.propertySpec.type.isNullable,
+            )
+        }
+        writer.appendLine()
+        writer.appendLine("  /** KSP生成SELECT EntityのCursor直接Mapper。 */")
+        writer.appendLine(
+            "  public companion object : jp.pgw.lab78.androrm.database.CursorEntityMapper<${classNameFQN.simpleName}> {",
+        )
+        writer.appendLine("    /** Cursorの現在行を生成Entityへ直接転送する。 */")
+        writer.appendLine(
+            "    override fun map(cursor: android.database.Cursor, columnIndexes: IntArray): ${classNameFQN.simpleName} {",
+        )
+        writer.appendLine("      return ${classNameFQN.simpleName}(")
+        var visibleIndex = 0
+        properties.forEach { property ->
+            if (property.hideFromSelect) {
+                return@forEach
+            }
+            val reader = readers[visibleIndex].second!!
+            writer.appendLine(
+                "        ${property.propertySpec.name} = $reader,"
+            )
+            visibleIndex++
+        }
+        writer.appendLine("      )")
+        writer.appendLine("    }")
+        writer.appendLine("  }")
+    }
+
+    /** 全プロパティを既存のValueFromCursorで読み取れるか確認する。 */
+    private fun canGenerateCursorMapper(properties: List<GeneratedProperty>): Boolean =
+        properties.filterNot { it.hideFromSelect }.all { property ->
+            cursorValueReader(
+                typeName = property.propertySpec.type.toString()
+                    .removeSuffix("?")
+                    .substringAfterLast('.'),
+                index = 0,
+                nullable = property.propertySpec.type.isNullable,
+            ) != null
+        }
+
+    /** ValueFromCursorのenum名をKotlin型名から解決する。 */
+    private fun cursorValueReader(typeName: String, index: Int, nullable: Boolean): String? {
+        val valueFromCursor = when (typeName) {
+            "Int" -> "INT"
+            "Long" -> "LONG"
+            "Float" -> "FLOAT"
+            "Double" -> "DOUBLE"
+            "Boolean" -> "BOOLEAN"
+            "String" -> "STRING"
+            "LocalDate" -> "LOCAL_DATE"
+            "LocalTime" -> "LOCAL_TIME"
+            "LocalDateTime" -> "LOCAL_DATE_TIME"
+            "ByteArray" -> "BYTE_ARRAY"
+            else -> return null
+        }
+        val cursorRead =
+            "jp.pgw.lab78.androrm.database.validation.ValueFromCursor.$valueFromCursor." +
+                    "getValueFromCursor(cursor, columnIndexes[$index]) as $typeName"
+        return if (nullable) {
+            "(if (cursor.isNull(columnIndexes[$index])) null else $cursorRead)"
+        } else {
+            cursorRead
+        }
     }
 }

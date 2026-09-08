@@ -33,6 +33,9 @@ class AndrOrmViewDefinitionRule(config: Config = Config.empty) : Rule(config) {
     /** 既に確認した明示 relation 名 */
     private val relationByName = mutableMapOf<String, RelationDefinition>()
 
+    /** package/import を解決する継承リゾルバ */
+    private val typeResolver = SourceSetTypeResolver()
+
     /**
      * ## Kotlin ファイル訪問
      * @param file 解析対象ファイル
@@ -54,9 +57,10 @@ class AndrOrmViewDefinitionRule(config: Config = Config.empty) : Rule(config) {
      * @since 2026-08-31
      */
     private fun validateDeclaration(declaration: KtClass) {
+        if (declaration.isInterface()) return
         val hasView = declaration.hasAnnotation(VIEW)
         val hasTable = declaration.hasAnnotation(TABLE)
-        val hasViewMarker = declaration.hasSuperType(VIEW_DEFINITION_ENTITY)
+        val hasViewMarker = typeResolver.hasSuperType(declaration, VIEW_DEFINITION_ENTITY)
         if (hasView && !hasViewMarker) {
             report(declaration, "@View requires ViewDefinitionEntity: ${declaration.name}")
         }
@@ -77,7 +81,10 @@ class AndrOrmViewDefinitionRule(config: Config = Config.empty) : Rule(config) {
     private fun registerRelation(declaration: KtClass) {
         val kind = when {
             declaration.hasAnnotation(VIEW) -> VIEW
-            declaration.hasAnnotation(TABLE) && declaration.hasSuperType(TABLE_DEFINITION_ENTITY) -> TABLE
+            declaration.hasAnnotation(TABLE) && typeResolver.hasSuperType(
+                declaration,
+                TABLE_DEFINITION_ENTITY,
+            ) -> TABLE
             else -> return
         }
         val annotation = declaration.annotationEntries.first { it.shortName?.asString() == kind }
@@ -97,12 +104,6 @@ class AndrOrmViewDefinitionRule(config: Config = Config.empty) : Rule(config) {
     /** 指定アノテーションを持つ場合 true を返す。 */
     private fun KtClass.hasAnnotation(name: String): Boolean =
         annotationEntries.any { it.shortName?.asString() == name }
-
-    /** 指定インターフェースを直接実装する場合 true を返す。 */
-    private fun KtClass.hasSuperType(name: String): Boolean =
-        superTypeListEntries.any {
-            it.typeReference?.text?.substringAfterLast('.') == name
-        }
 
     /** @Table/@View の明示 name を取得する。 */
     private fun KtAnnotationEntry.explicitName(): String? {

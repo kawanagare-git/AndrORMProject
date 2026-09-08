@@ -188,6 +188,8 @@ class ValueFromCursorTest {
     @Test
     fun getValueFromCursor_withNonZeroInteger_throwsIllegalArgumentException() {
         val cursor = Mockito.mock(Cursor::class.java)
+        Mockito.`when`(cursor.getColumnName(0)).thenReturn("BOOLEAN_COLUMN")
+        Mockito.`when`(cursor.getType(0)).thenReturn(Cursor.FIELD_TYPE_INTEGER)
         Mockito.`when`(cursor.getInt(0)).thenReturn(2)
 
         assertThrows<IllegalArgumentException> {

@@ -23,13 +23,18 @@ dependencies {
     compileOnly(libs.detekt.api)
     testImplementation(libs.detekt.api)
     // （必要ならテスト用依存を追加）
-    testImplementation(kotlin("test"))
+    testImplementation(kotlin("test-junit5"))
     // ★ これがないと compileAndLint が存在しない
     testImplementation(libs.detekt.test)
+    testImplementation(libs.junit.jupiter.api)
+    testRuntimeOnly(libs.junit.jupiter.engine)
     // ログ出力用に androrm-common を追加
     implementation(project(":androrm-common"))
 }
 
+tasks.withType<Test>().configureEach {
+    useJUnitPlatform()
+}
 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
     enabled = false
 }

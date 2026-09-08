@@ -31,9 +31,12 @@ import jp.pgw.lab78.androrm.ksp.resolver.InterfaceResolver
 import jp.pgw.lab78.androrm.ksp.resolver.KspColumnAnnotationResolver
 import jp.pgw.lab78.androrm.ksp.validator.ColumnDefaultValueValidator
 import jp.pgw.lab78.androrm.ksp.validator.MigrationDefaultValueValidator
+import jp.pgw.lab78.androrm.ksp.validator.ViewDefinitionValidationSupport
 import jp.pgw.lab78.androrm.ksp.writer.DataClassWriter
 import jp.pgw.lab78.androrm.ksp.Constants.TABLE
 import jp.pgw.lab78.androrm.ksp.Constants.VIEW
+import jp.pgw.lab78.androrm.ksp.Constants.FUNCTION
+import jp.pgw.lab78.androrm.ksp.Constants.COLUMN
 
 /**
  * ## AndrORM プロパティプロセッサクラス
@@ -298,6 +301,43 @@ class PropsProcessor(
                 "ViewDefinitionEntity supports only SELECT or NOT_USE projections. " +
                         "Unsupported: ${unsupported.joinToString()}"
             )
+            return false
+        }
+        val sourceProperties = classDecl.getAllProperties().toList()
+        if (sourceProperties.any { property ->
+                property.annotations.any { it.shortName.asString() == FUNCTION }
+            } || definitions.any { it.functions.isNotEmpty() }) {
+            logError("ViewDefinitionEntity does not support FunctionProjection.")
+            return false
+        }
+        if (sourceProperties.any { property ->
+                property.annotations.any { annotation ->
+                    annotation.shortName.asString() == COLUMN &&
+                            annotation.arguments.any { argument ->
+                                argument.name?.asString() == "hideFromSelect" &&
+                                        argument.value == true
+                            }
+                }
+            } || definitions.any { definition ->
+                definition.properties.any { property -> property.hideFromSelect } ||
+                        definition.functions.any { function -> function.hideFromSelect }
+            }) {
+            logError("ViewDefinitionEntity does not support hideFromSelect.")
+            return false
+        }
+        val physicalNames = sourceProperties.map { property ->
+            val explicitName = property.annotations
+                .firstOrNull { it.shortName.asString() == COLUMN }
+                ?.arguments
+                ?.firstOrNull { it.name?.asString() == "name" }
+                ?.value as? String
+            ViewDefinitionValidationSupport.effectivePhysicalName(
+                property.simpleName.asString(),
+                explicitName,
+            )
+        }
+        if (ViewDefinitionValidationSupport.hasDuplicatePhysicalNames(physicalNames)) {
+            logError("ViewDefinitionEntity contains duplicate physical column names.")
             return false
         }
         if (definitions.none { DMLInterfaceEnum.SELECT in it.commonInterfaces }) {

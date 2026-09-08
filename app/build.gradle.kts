@@ -1,8 +1,6 @@
 // ＜app/build.gradle.kts＞
 import com.android.build.gradle.AppExtension
 import io.gitlab.arturbosch.detekt.Detekt
-import org.gradle.api.tasks.testing.logging.TestExceptionFormat
-import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
     id("com.android.application")
@@ -28,11 +26,9 @@ dependencies {
     implementation(project(":shared-library"))
     implementation(project(":androrm-common"))
     ksp(project(":androrm-generator-ksp"))
-    kspTest(project(":androrm-generator-ksp"))
     kspAndroidTest(project(":androrm-generator-ksp"))
 
     implementation(libs.core.ktx.v1131)
-    testImplementation(libs.junit.jupiter)
 
     debugImplementation(libs.aspectjrt)
     aspectjTools(libs.aspectjtools)
@@ -81,17 +77,6 @@ android {
             excludes += "kotlin/internal/internal.kotlin_builtins"
         }
     }
-    sourceSets {
-        getByName("test") {
-            java.srcDir("build/generated/ksp/debugUnitTest/kotlin")
-        }
-        getByName("androidTest") {
-            java.srcDir("build/generated/ksp/debugAndroidTest/kotlin")
-        }
-        getByName("test") {
-            java.srcDir(rootProject.file("test-support/src/test/kotlin"))
-        }
-    }
 }
 
 // --------------------------------------------------------
@@ -106,13 +91,6 @@ dependencies {
 
     // Material Components
     implementation(libs.material)
-
-    // ==== 単体テスト（JVM） ====
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.jupiter.engine)
-    testImplementation(libs.mockito.core)
-    testImplementation(libs.junit)
-    testRuntimeOnly(libs.junit.vintage.engine)
 
     // ==== インストルメンテーションテスト（Android） ====
     androidTestImplementation(libs.junit)
@@ -129,7 +107,7 @@ dependencies {
 
 //// AndrORM の detekt ルール
 // ==========================================================
-// detekt 共通設定（main + test + androidTest）
+// detekt 共通設定（main + androidTest）
 // ==========================================================
 detekt {
     buildUponDefaultConfig = true
@@ -151,7 +129,6 @@ tasks.withType<Detekt>().configureEach {
     setSource(
         files(
             "$projectDir/src/main/java",
-            "$projectDir/src/test/java",
             "$projectDir/src/androidTest/java",
         )
     )
@@ -165,27 +142,6 @@ tasks.withType<Detekt>().configureEach {
     reports {
         html.required.set(true)
         xml.required.set(true)
-        txt.required.set(true)
-    }
-}
-
-// ==========================================================
-// UnitTest だけ detekt
-// ==========================================================
-tasks.register<Detekt>("detektUnitTestOnly") {
-    description = "Run detekt on unit test sources only"
-
-    setSource(
-        files(
-            "$projectDir/src/test/java",
-        )
-    )
-
-    include("**/*.kt", "**/*.kts")
-    exclude("**/build/**")
-
-    reports {
-        html.required.set(true)
         txt.required.set(true)
     }
 }
@@ -216,9 +172,8 @@ tasks.register<Detekt>("detektAndroidTestOnly") {
 // ==========================================================
 tasks.named("check") {
     dependsOn(
-        "detektUnitTestOnly",   // UnitTest 専用
         "detektAndroidTestOnly", // AndroidTest 専用
-        "detekt",               // main + test + androidTest（共通）
+        "detekt",               // main + androidTest（共通）
     )
 }
 
@@ -229,9 +184,6 @@ tasks.named("assemble") {
 // KSP にモジュールディレクトリを渡す
 ksp {
     arg("androrm.moduleDir", project.projectDir.absolutePath)
-}
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
 }
 
 // debug だけ weaving する task
@@ -396,41 +348,15 @@ tasks.matching { it.name == "compileDebugJavaWithJavac" }.configureEach {
     }
 }
 
-// dex 側が存在する場合だけ weaving を前提にする
-tasks.matching { it.name == "testDebugUnitTest" }.configureEach {
-    dependsOn(weaveDebugAspectJ)
-}
-
 tasks.matching { it.name == "dexBuilderDebug" }.configureEach {
     dependsOn(weaveDebugAspectJ)
 }
 
-// Unit Test 設定
-tasks.withType<Test>().configureEach {
-    useJUnitPlatform()
-
-    systemProperty("file.encoding", "UTF-8")
-    jvmArgs(
-        "-Dfile.encoding=UTF-8",
-        "-Dsun.stdout.encoding=UTF-8",
-        "-Dsun.stderr.encoding=UTF-8"
-    )
-
-    testLogging {
-        events(
-//            TestLogEvent.PASSED,
-//            TestLogEvent.SKIPPED,
-            TestLogEvent.FAILED
-        )
-        exceptionFormat = TestExceptionFormat.FULL
-        showStandardStreams = true
-    }
-}
 // ==========================================================
-// UnitTest / AndroidTest 実行前に AndrORM detekt ルールを実行する
+// AndroidTest 実行前に AndrORM detekt ルールを実行する
 // ==========================================================
 tasks.register("andrormDetektCheckBeforeTest") {
-    description = "Run AndrORM detekt rules before android/unit tests."
+    description = "Run AndrORM detekt rules before android tests."
     group = "verification"
 
     dependsOn(
@@ -439,8 +365,7 @@ tasks.register("andrormDetektCheckBeforeTest") {
 }
 
 tasks.matching {
-    it.name == "testDebugUnitTest" ||
-            it.name == "connectedDebugAndroidTest"
+    it.name == "connectedDebugAndroidTest"
 }.configureEach {
     dependsOn("andrormDetektCheckBeforeTest")
 }
