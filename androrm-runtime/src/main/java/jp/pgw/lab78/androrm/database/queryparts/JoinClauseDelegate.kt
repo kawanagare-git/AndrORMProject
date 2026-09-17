@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  *
  * ### 仕様
  * #### Entity または `TableRef` と ON 条件から JOIN 句を追加し、句とバインド値を指定順に保持する。
- * #### ON 条件を後置指定する中間オブジェクトを提供し、追加時に所有側へ変更と結合テーブルを通知する。
+ * #### JOIN 句追加時に所有側へ変更と結合テーブルを通知する。
  *
  * @param owner join 呼び出し後に返す所有クラス
  * @param onChanged JOIN 条件変更時の処理
@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
  * @author Masahiro Inoue
  * @since 2026-05-24
  */
-class JoinClauseDelegate<O, E : Entity>(
+internal class JoinClauseDelegate<O, E : Entity>(
     private val owner: O,
     private val valueHolderFactory: () -> QueryWithBindValues = {
         object : QueryWithBindValues() {}
@@ -99,70 +99,6 @@ class JoinClauseDelegate<O, E : Entity>(
                 " on ${joinConditions.joinToString(" AND ") { it.build() }}"
 
         return owner
-    }
-
-    /**
-     * ## join メソッド
-     * ### on を後続指定するための中間オブジェクトを返す
-     * @param joinType JOIN種別
-     * @param joinedEntity 結合対象のEntityクラス
-     * @return JOIN条件指定用の中間オブジェクト
-     * @author Masahiro Inoue
-     * @since 2026-05-24
-     */
-    fun join(
-        joinType: JoinType,
-        joinedEntity: KClass<out E>,
-    ) =
-        JoinCondition(
-            joinType = joinType,
-            joinedTable = TableRef(
-                entityClass = joinedEntity,
-                alias = joinedEntity.getRelationAlias(),
-            ),
-        )
-
-    /**
-     * ## join メソッド
-     * ### on を後続指定するための中間オブジェクトを返す
-     * @param joinType JOIN種別
-     * @param joinedTable 結合対象のテーブル参照
-     * @return JOIN条件指定用の中間オブジェクト
-     * @author Masahiro Inoue
-     * @since 2026-05-24
-     */
-    fun join(
-        joinType: JoinType,
-        joinedTable: TableRef<out E>,
-    ) =
-        JoinCondition(
-            joinType = joinType,
-            joinedTable = joinedTable,
-        )
-
-    /**
-     * ## JOIN 条件指定用中間クラス
-     * @author Masahiro Inoue
-     * @since 2026-05-24
-     */
-    inner class JoinCondition internal constructor(
-        private val joinType: JoinType,
-        private val joinedTable: TableRef<out E>,
-    ) {
-        /**
-         * ## on メソッド
-         * ### JOIN 条件を指定する
-         * @param block 結合条件を構築する処理
-         * @return 所有クラス
-         * @author Masahiro Inoue
-         * @since 2026-05-24
-         */
-        fun on(block: ConditionBuilder.() -> Unit): O =
-            this@JoinClauseDelegate.join(
-                joinType = joinType,
-                joinedTable = joinedTable,
-                on = block,
-            )
     }
 
     /**

@@ -7,9 +7,9 @@ import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import jp.pgw.lab78.androrm.common.Constants.COMMA
 import jp.pgw.lab78.androrm.common.Constants.D_QUOTE
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
+import jp.pgw.lab78.shared.library.csv.CsvTableWriter
 import java.io.OutputStreamWriter
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -158,17 +158,25 @@ object AndroidTestCsvExporter {
                 ?: error("Failed to open CSV output stream. tableName=$tableName")
 
             OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
-                writer.appendLine(
-                    cursor.columnNames.joinToString(COMMA) { columnName ->
-                        escapeCsv(columnName)
-                    }
-                )
+                val columns = cursor.columnNames.toList()
+                val rows = mutableListOf<Map<String, String>>()
 
                 while (cursor.moveToNext()) {
-                    writer.appendLine(
-                        createCsvRecord(cursor)
-                    )
+                    val row = linkedMapOf<String, String>()
+                    columns.forEachIndexed { index, columnName ->
+                        row[columnName] = cursorValueToString(
+                            cursor = cursor,
+                            index = index,
+                        )
+                    }
+                    rows += row
                 }
+
+                CsvTableWriter.write(
+                    writer = writer,
+                    header = columns,
+                    rows = rows,
+                )
             }
         }
     }
@@ -195,19 +203,22 @@ object AndroidTestCsvExporter {
             stepName = stepName,
             tableName = resultName,
         )
-        val columns = rows.firstOrNull()?.keys?.toList().orEmpty()
         val outputStream = context.contentResolver.openOutputStream(uri)
             ?: error("Failed to open SELECT Map result CSV output stream.")
 
-        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
-            writer.appendLine(columns.joinToString(COMMA) { column -> escapeCsv(column) })
-            rows.forEach { row ->
-                writer.appendLine(
-                    columns.joinToString(COMMA) { column ->
-                        escapeCsv(selectValueToString(row[column]))
-                    }
-                )
+        val csvRows = rows.map { row ->
+            linkedMapOf<String, String>().apply {
+                row.forEach { (columnName, value) ->
+                    this[columnName] = selectValueToString(value)
+                }
             }
+        }
+
+        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
+            CsvTableWriter.write(
+                writer = writer,
+                rows = csvRows,
+            )
         }
 
         return uri
@@ -277,22 +288,21 @@ object AndroidTestCsvExporter {
         val outputStream = context.contentResolver.openOutputStream(uri)
             ?: error("Failed to open SELECT result CSV output stream.")
 
-        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
-            writer.appendLine(
-                columns.joinToString(COMMA) { column ->
-                    escapeCsv(column.header)
+        val header = columns.map { column -> column.header }
+        val csvRows = rows.map { row ->
+            linkedMapOf<String, String>().apply {
+                columns.forEach { column ->
+                    this[column.header] = column.valueToString(row[column.alias])
                 }
-            )
-
-            rows.forEach { row ->
-                writer.appendLine(
-                    columns.joinToString(COMMA) { column ->
-                        escapeCsv(
-                            column.valueToString(row[column.alias])
-                        )
-                    }
-                )
             }
+        }
+
+        OutputStreamWriter(outputStream, Charsets.UTF_8).buffered().use { writer ->
+            CsvTableWriter.write(
+                writer = writer,
+                header = header,
+                rows = csvRows,
+            )
         }
     }
 
@@ -401,27 +411,6 @@ object AndroidTestCsvExporter {
     }
 
     /**
-     * ## CSV レコード生成
-     * ### Cursor の現在行から CSV 1行分を生成する
-     * @param cursor Cursor
-     * @return CSV 1行分
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun createCsvRecord(
-        cursor: Cursor,
-    ): String =
-        (0 until cursor.columnCount)
-            .joinToString(COMMA) { index ->
-                escapeCsv(
-                    cursorValueToString(
-                        cursor = cursor,
-                        index = index,
-                    )
-                )
-            }
-
-    /**
      * ## Cursor 値文字列化
      * ### Cursor の型に応じて CSV 出力用文字列へ変換する
      * @param cursor Cursor
@@ -468,30 +457,6 @@ object AndroidTestCsvExporter {
                 "%02X".format(byte.toInt() and 0xFF)
             }
             .orEmpty()
-
-    /**
-     * ## CSV エスケープ
-     * ### カンマ、ダブルクォート、改行を含む値を CSV 形式にエスケープする
-     * @param value 値
-     * @return CSV 出力値
-     * @author Masahiro Inoue
-     * @since 2026-06-16
-     */
-    private fun escapeCsv(
-        value: String,
-    ): String {
-        val requiresQuote =
-            value.contains(COMMA) ||
-                    value.contains(D_QUOTE) ||
-                    value.contains("\n") ||
-                    value.contains("\r")
-
-        if (requiresQuote) {
-            return D_QUOTE + value.replace(D_QUOTE, D_QUOTE + D_QUOTE) + D_QUOTE
-        }
-
-        return value
-    }
 
     /**
      * ## SQL 識別子クォート

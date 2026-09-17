@@ -16,9 +16,9 @@ import jp.pgw.lab78.androrm.ksp.projectoin.ProjectionDefinition
 
 /**
  * ## インターフェース解決クラス
- * ### @EntityPackageInfo アノテーションと commonInterface を基に、出力先 package 名を解決する
- * ### commonInterface の列挙値から FQN を解決する
- * ### commonInterface / customInterface から、実装対象の interface 一覧を構築する
+ * ### @EntityPackageInfo アノテーションと andrOrmSubPackage を基に、出力先 package 名を解決する
+ * ### andrOrmSubPackage の列挙値から FQN を解決する
+ * ### andrOrmSubPackage / customSubPackage から、実装対象の interface 一覧を構築する
  * @author Masahiro Inoue
  * @since 2026-04-21
  */
@@ -43,12 +43,12 @@ class InterfaceResolver() : LoggerLike by logger {
 
     /**
      * ## package 名解決
-     * ### @EntityPackageInfo と commonInterface を基に
+     * ### @EntityPackageInfo と andrOrmSubPackage を基に
      * ### 出力先 package 名を解決する
      * @param classDeclaration 対象クラスの宣言
      * @param symbols KSP のシンボルのシーケンスル
-     * @param commonInterface @Projection アノテーションの commonInterface 引数。未指定の場合は null
-     * @param customInterfaces @Projection アノテーションの customInterface 引数
+     * @param andrOrmSubPackage @Projection アノテーションの andrOrmSubPackage 引数。未指定の場合は null
+     * @param customSubPackages @Projection アノテーションの customSubPackage 引数
      * @return 出力先 package 名
      * @author Masahiro Inoue
      * @since 2026-04-21
@@ -56,42 +56,42 @@ class InterfaceResolver() : LoggerLike by logger {
     fun resolvePackageNameFromAnnotation(
         classDeclaration: KSClassDeclaration,
         symbols: Sequence<KSAnnotated>,
-        commonInterface: DMLInterfaceEnum?,
-        customInterfaces: List<String>,
+        andrOrmSubPackage: DMLInterfaceEnum?,
+        customSubPackages: List<String>,
     ): String {
         logTraceEntered(
             classDeclaration,
             symbols,
-            commonInterface ?: EMPTY_STRING,
-            customInterfaces,
+            andrOrmSubPackage ?: EMPTY_STRING,
+            customSubPackages,
         )
-        // commonInterface が NOT_USE の場合は、basePackage と customInterface から package 名を構築して返す
-        if (commonInterface == DMLInterfaceEnum.NOT_USE) {
+        // andrOrmSubPackage が NOT_USE の場合は、basePackage と customSubPackage から package 名を構築して返す
+        if (andrOrmSubPackage == DMLInterfaceEnum.NOT_USE) {
             val basePackage = resolveBasePackage(symbols)
                 ?: classDeclaration.packageName.asString()
-            val customInterface = customInterfaces
+            val customSubPackage = customSubPackages
                 .firstOrNull { it.isNotBlank() }
                 ?.trim('.')
                 .orEmpty()
-            return listOf(basePackage.trim('.'), customInterface)
+            return listOf(basePackage.trim('.'), customSubPackage)
                 .filter { it.isNotBlank() }
                 .joinToString(".")
                 .also { logTraceExiting(it) }
         }
-        // commonInterface が空の場合は、クラスの package 名を返す
-        if (commonInterface == null) {
+        // andrOrmSubPackage が空の場合は、クラスの package 名を返す
+        if (andrOrmSubPackage == null) {
             val result = classDeclaration.packageName.asString()
             logTraceExiting(result)
             return result
         }
-        // commonInterface から FQN を解決する
-        val common = generateCommonInterface(commonInterface)
+        // andrOrmSubPackage から FQN を解決する
+        val common = generateCommonInterface(andrOrmSubPackage)
         //
         symbols.filterIsInstance<KSFile>().forEach { symbol ->
             val annotation = symbol.annotations.firstOrNull {
                 it.shortName.asString() == ENTITY_PACKAGE_INFO
             }
-            // @EntityPackageInfo アノテーションが存在し、かつ commonInterface に対応する relation が定義されている場合は、basePackage と relation から package 名を構築して返す
+            // @EntityPackageInfo アノテーションが存在し、かつ andrOrmSubPackage に対応する relation が定義されている場合は、basePackage と relation から package 名を構築して返す
             if (annotation?.let {
                     it.annotationType.resolve().declaration.qualifiedName?.asString() ==
                             ENTITY_PACKAGE_INFO_FQN
@@ -101,7 +101,7 @@ class InterfaceResolver() : LoggerLike by logger {
                 val base = annotation.arguments.firstOrNull {
                     it.name?.asString() == BASE_PACKAGE
                 }?.value
-                // commonInterface に対応する relation を抽出
+                // andrOrmSubPackage に対応する relation を抽出
                 val sub = PackageInterfaceRelation.entries.firstOrNull {
                     DMLInterfaceEnum.valueOf(it.name).interfaceFQN == common.canonicalName
                 }
@@ -114,7 +114,7 @@ class InterfaceResolver() : LoggerLike by logger {
                 return "$base.$sub".also { logTraceExiting(it) }
             }
         }
-        // @EntityPackageInfo アノテーションが存在しない、または commonInterface に対応する relation が定義されていない場合は、commonInterface の FQN を package 名として返す
+        // @EntityPackageInfo アノテーションが存在しない、または andrOrmSubPackage に対応する relation が定義されていない場合は、andrOrmSubPackage の FQN を package 名として返す
         return common.packageName.also { logTraceExiting(it) }
     }
 
@@ -152,24 +152,24 @@ class InterfaceResolver() : LoggerLike by logger {
 
     /**
      * ## 共通インターフェース解決
-     * ### commonInterface の列挙値から FQN を解決する
-     * @param commonInterface @Projection アノテーションの commonInterface 引数
-     * @return commonInterface に対応するインターフェースの ClassName オブジェクト
+     * ### andrOrmSubPackage の列挙値から FQN を解決する
+     * @param andrOrmSubPackage @Projection アノテーションの andrOrmSubPackage 引数
+     * @return andrOrmSubPackage に対応するインターフェースの ClassName オブジェクト
      * @author Masahiro Inoue
      * @since 2026-04-21
      */
-    private fun generateCommonInterface(commonInterface: DMLInterfaceEnum): ClassName {
-        logTraceEntered(commonInterface)
-        // commonInterface から FQN を解決して返す
-        return ClassName.bestGuess(commonInterface.interfaceFQN)
+    private fun generateCommonInterface(andrOrmSubPackage: DMLInterfaceEnum): ClassName {
+        logTraceEntered(andrOrmSubPackage)
+        // andrOrmSubPackage から FQN を解決して返す
+        return ClassName.bestGuess(andrOrmSubPackage.interfaceFQN)
             .also { logTraceExiting(it) }
     }
 
     /**
      * ## interface 一覧生成
-     * ### commonInterface から
+     * ### andrOrmSubPackage から
      * ### 実装対象の interface 一覧を構築する
-     * @param definition データクラスのマテリアルマップ。commonInterface を含む
+     * @param definition データクラスのマテリアルマップ。andrOrmSubPackage を含む
      * @return 実装対象の interface 一覧の TypeName のリスト
      * @author Masahiro Inoue
      * @since 2026-04-21
@@ -178,9 +178,9 @@ class InterfaceResolver() : LoggerLike by logger {
         definition: ProjectionDefinition,
     ): List<TypeName> {
         logTraceEntered(definition)
-        // commonInterface から、実装対象の interface 一覧を構築する
+        // andrOrmSubPackages から、実装対象の interface 一覧を構築する
         return buildList<TypeName> {
-            definition.commonInterfaces
+            definition.andrOrmSubPackages
                 .filterNot { it == DMLInterfaceEnum.NOT_USE }
                 .forEach { common ->
                     add(ClassName.bestGuess(common.interfaceFQN))

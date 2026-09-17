@@ -126,7 +126,7 @@ class BlobProjectionIntegrationTest {
 @Projection(
     entityNameExtend = "Select",
     properties = [ColumnProjection("id"), ColumnProjection("payload"), ColumnProjection("optionalPayload")],
-    commonInterface = [DMLInterfaceEnum.SELECT],
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT],
 )
 @Table(name = "BLOB_PROJECTION_TEST", alias = "BP")
 data class BlobProjectionDefinition(

@@ -1,0 +1,72 @@
+name: Validate release tooling
+
+on:
+  pull_request:
+    paths:
+      - "release/**"
+      - "scripts/**"
+      - ".github/workflows/validate-release-tooling.yml"
+      - "settings.gradle"
+      - "settings.gradle.kts"
+      - "**/build.gradle"
+      - "**/build.gradle.kts"
+  push:
+    branches:
+      - master
+      - mk-develop
+    paths:
+      - "release/**"
+      - "scripts/**"
+      - ".github/workflows/validate-release-tooling.yml"
+      - "settings.gradle"
+      - "settings.gradle.kts"
+      - "**/build.gradle"
+      - "**/build.gradle.kts"
+
+jobs:
+  validate-windows-powershell:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse PowerShell scripts with Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $failed = $false
+          $scriptPaths = @(
+            ".\scripts\update-release-manifest.ps1",
+            ".\scripts\release-preflight.ps1",
+            ".\scripts\post-publish-check.ps1"
+          )
+
+          foreach ($scriptPath in $scriptPaths) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $scriptPath),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+
+            if ($errors.Count -gt 0) {
+              Write-Host "Parser errors: $scriptPath" -ForegroundColor Red
+              $errors | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+              $failed = $true
+            }
+          }
+
+          if ($failed) {
+            exit 1
+          }
+
+      - name: Execute manifest update in non-interactive mode
+        shell: powershell
+        run: |
+          .\scripts\update-release-manifest.ps1 -NonInteractive
+
+      - name: Confirm manifest is synchronized
+        shell: powershell
+        run: |
+          git diff --exit-code -- release/androrm-release-manifest.json

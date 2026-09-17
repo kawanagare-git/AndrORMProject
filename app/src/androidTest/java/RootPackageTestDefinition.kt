@@ -12,7 +12,7 @@ import jp.pgw.lab78.androrm.common.database.annotation.Table
             properties = [
                 ColumnProjection("id"),
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT],
+            andrOrmSubPackage = [DMLInterfaceEnum.SELECT],
         ),
     ],
 )

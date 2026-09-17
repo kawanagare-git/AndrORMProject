@@ -5,7 +5,6 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00007
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00008
 import jp.pgw.lab78.androrm.common.database.SupportFunction.findColumnAnnotation
 import jp.pgw.lab78.androrm.common.database.SupportFunction.simpleNameToSnakeCase
-import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Function
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.annotation.View
@@ -33,7 +32,7 @@ import kotlin.reflect.full.primaryConstructor
  * @author Masahiro Inoue
  * @since 2026-04-27
  */
-class RuntimeEntityMetaFactory {
+internal class RuntimeEntityMetaFactory {
 
     /**
      * ## EntityMeta 生成

@@ -5,6 +5,22 @@
 > This reference targets version `0.1.8-alpha`.
 > As this is an alpha release, the API and specifications may change in the future.
 
+## API changes for the beta transition
+
+As AndrORM moves from alpha to `0.2.0-beta`, the following public API names will be changed.  
+When migrating from `0.1.8-alpha` or earlier, replace the old names with the new names.
+
+| Alpha | `0.2.0-beta` | Description |
+|---|---|---|
+| `commonInterface` | `andrOrmSubPackage` | Specifies the AndrORM-provided generated subpackage for each DML type |
+| `customInterface` | `customSubPackage` | Specifies a custom generated subpackage when `andrOrmSubPackage = [NOT_USE]` |
+| `graterThan` | `greaterThan` | Corrects the condition DSL method name |
+| `graterEqual` | `greaterEqual` | Corrects the condition DSL method name |
+| `lesserThan` | `lessThan` | Standardizes the condition DSL method name |
+
+> [!NOTE]
+> The current body text and code examples still target `0.1.8-alpha`. After the `0.2.0-beta` implementation is reflected, the API names and version references in this document will be updated for `0.2.0-beta`.
+
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
 
 It uses Kotlin `data class` declarations as table definitions and provides purpose-specific entity generation with KSP, a type-safe SQL builder, DML and SELECT execution, database upgrades, transactions, and SAVEPOINT support.

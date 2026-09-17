@@ -52,7 +52,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
     val self = this as R
 
     /** WHERE 句生成委譲 */
-    protected val whereDelegate =
+    private val whereDelegate =
         WhereClauseDelegate<BaseSelect<T, R>>(
             owner = this,
             ownerName = this.javaClass.simpleName,
@@ -61,7 +61,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
         )
 
     /** JOIN 句生成委譲 */
-    protected open val joinDelegate =
+    private val joinDelegate =
         JoinClauseDelegate<BaseSelect<T, R>, SelectEntity>(
             owner = this,
             onChanged = {
@@ -86,7 +86,7 @@ abstract class BaseSelect<T : SelectEntity, R : BaseSelect<T, R>> : QueryWithBin
     protected val logger: Logger by lazy { APP.create(minLogLevel = TRACE) }
 
     /** Entity メタ情報生成 */
-    protected val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
+    internal val runtimeEntityMetaFactory = RuntimeEntityMetaFactory()
 
     /** 主 Entity の正規化済みメタ情報 */
     protected abstract val mainEntityMeta: EntityMeta

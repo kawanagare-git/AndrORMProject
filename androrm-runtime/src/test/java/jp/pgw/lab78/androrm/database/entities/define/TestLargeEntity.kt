@@ -34,7 +34,7 @@ import java.time.LocalDateTime
                     hideFromSelect = true
                 ),
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT]
+            andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
         ),
     ]
 )

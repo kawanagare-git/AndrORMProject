@@ -65,11 +65,11 @@ class BaseConditionBuilderTest {
                 "ne" -> EmployeeEntity::employeeId ne value
                 "notEqual" -> EmployeeEntity::employeeId notEqual value
                 "gt" -> EmployeeEntity::employeeId gt value
-                "graterThan" -> EmployeeEntity::employeeId graterThan value
+                "graterThan" -> EmployeeEntity::employeeId greaterThan value
                 "ge" -> EmployeeEntity::employeeId ge value
-                "graterEqual" -> EmployeeEntity::employeeId graterEqual value
+                "graterEqual" -> EmployeeEntity::employeeId greaterEqual value
                 "lt" -> EmployeeEntity::employeeId lt value
-                "lesserThan" -> EmployeeEntity::employeeId lesserThan value
+                "lesserThan" -> EmployeeEntity::employeeId lessThan value
                 "le" -> EmployeeEntity::employeeId le value
                 "lessEqual" -> EmployeeEntity::employeeId lessEqual value
                 "like" -> EmployeeEntity::employeeId like value
@@ -129,11 +129,11 @@ class BaseConditionBuilderTest {
                 "ne" -> columnRef ne value
                 "notEqual" -> columnRef notEqual value
                 "gt" -> columnRef gt value
-                "graterThan" -> columnRef graterThan value
+                "graterThan" -> columnRef greaterThan value
                 "ge" -> columnRef ge value
-                "graterEqual" -> columnRef graterEqual value
+                "graterEqual" -> columnRef greaterEqual value
                 "lt" -> columnRef lt value
-                "lesserThan" -> columnRef lesserThan value
+                "lesserThan" -> columnRef lessThan value
                 "le" -> columnRef le value
                 "lessEqual" -> columnRef lessEqual value
                 "like" -> columnRef like value
@@ -190,11 +190,11 @@ class BaseConditionBuilderTest {
                 "ne" -> lhs ne rhs
                 "notEqual" -> lhs notEqual rhs
                 "gt" -> lhs gt rhs
-                "graterThan" -> lhs graterThan rhs
+                "graterThan" -> lhs greaterThan rhs
                 "ge" -> lhs ge rhs
-                "graterEqual" -> lhs graterEqual rhs
+                "graterEqual" -> lhs greaterEqual rhs
                 "lt" -> lhs lt rhs
-                "lesserThan" -> lhs lesserThan rhs
+                "lesserThan" -> lhs lessThan rhs
                 "le" -> lhs le rhs
                 "lessEqual" -> lhs lessEqual rhs
                 else -> error("Unsupported methodName: $methodName")

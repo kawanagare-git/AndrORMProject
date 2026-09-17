@@ -19,7 +19,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
         ColumnProjection("id", hideFromSelect = true),
         ColumnProjection("name", hideFromSelect = true)
     ],
-    commonInterface = [DMLInterfaceEnum.SELECT]
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
 )
 data class TestAllHiddenEntity(
     @Column(name = "ID")

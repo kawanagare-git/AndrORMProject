@@ -31,7 +31,7 @@ import java.time.LocalDateTime
             functions = [
                 FunctionProjection(function = COUNT, args = [], alias = "ALL_LINE")
             ],
-            commonInterface = [SELECT, UPSERT]
+            andrOrmSubPackage = [SELECT, UPSERT]
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -44,7 +44,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updatedAt"),
                 ColumnProjection("updatedBy")
             ],
-            commonInterface = [INSERT, ABSERT]
+            andrOrmSubPackage = [INSERT, ABSERT]
         ),
     ]
 )

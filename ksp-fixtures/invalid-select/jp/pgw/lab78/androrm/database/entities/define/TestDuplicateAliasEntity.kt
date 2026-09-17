@@ -19,7 +19,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
         ColumnProjection("id"),
         ColumnProjection("employeeId")
     ],
-    commonInterface = [DMLInterfaceEnum.SELECT]
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
 )
 data class TestDuplicateAliasEntity(
     @Column(name = "ID", alias = "DUP")

@@ -9,7 +9,8 @@ plugins {
     kotlin("android") version "1.9.24" apply false
     kotlin("kapt") version "1.9.24" apply false
     kotlin("jvm") version "1.9.24" apply false
-
+    // dokka
+    id("org.jetbrains.dokka") version "2.2.0"
     id("io.gitlab.arturbosch.detekt") version "1.23.6"
     // KSP（バージョンは libs.versions.toml の plugins.ksp から取る）
     alias(libs.plugins.ksp) apply false
@@ -67,4 +68,10 @@ tasks.withType<Test>().configureEach {
 
     systemProperty("file.encoding", "UTF-8")
     jvmArgs("-Dfile.encoding=UTF-8")
+}
+dependencies {
+    dokka(project(":androrm-common"))
+    dokka(project(":androrm-runtime"))
+    dokka(project(":androrm-generator-ksp"))
+    dokka(project(":shared-library"))
 }

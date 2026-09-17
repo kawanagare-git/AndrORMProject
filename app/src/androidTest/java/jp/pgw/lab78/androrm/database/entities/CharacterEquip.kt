@@ -29,7 +29,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT, ABSERT],
+            andrOrmSubPackage = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -39,7 +39,7 @@ import java.time.LocalDateTime
                 ColumnProjection("equipSlot"),
                 ColumnProjection("itemPk"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Slot",
@@ -48,7 +48,7 @@ import java.time.LocalDateTime
                 ColumnProjection("characterPk", hideFromSelect = true),
                 ColumnProjection("equipSlot"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "SlotItem",
@@ -58,7 +58,7 @@ import java.time.LocalDateTime
                 ColumnProjection("equipSlot"),
                 ColumnProjection("itemPk", hideFromSelect = true),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "UpdateAudit",
@@ -70,7 +70,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "Upsert",
@@ -83,7 +83,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPSERT],
+            andrOrmSubPackage = [UPSERT],
         ),
         Projection(
             entityNameExtend = "Delete",
@@ -91,7 +91,7 @@ import java.time.LocalDateTime
                 ColumnProjection("characterPk"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [DELETE],
+            andrOrmSubPackage = [DELETE],
         ),
     ]
 )

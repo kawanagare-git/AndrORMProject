@@ -33,7 +33,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT, ABSERT],
+            andrOrmSubPackage = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -45,7 +45,7 @@ import java.time.LocalDateTime
                 ColumnProjection("characterName"),
                 ColumnProjection("mainElement"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Name",
@@ -54,14 +54,14 @@ import java.time.LocalDateTime
                 ColumnProjection("characterPk"),
                 ColumnProjection("characterName"),
             ],
-            customInterface = ["getname"]
+            customSubPackage = ["getname"]
         ),
         Projection(
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("characterPk"),
             ],
-            commonInterface = [DELETE],
+            andrOrmSubPackage = [DELETE],
         ),
     ]
 )

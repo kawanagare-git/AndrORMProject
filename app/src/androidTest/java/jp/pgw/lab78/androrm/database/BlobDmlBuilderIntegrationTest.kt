@@ -103,10 +103,10 @@ class BlobDmlBuilderIntegrationTest {
 
     /** BLOB DML Builderのテーブル定義。 */
     @Table(name = "BLOB_DML_BUILDER")
-    @Projection(entityNameExtend = "Insert", properties = [ColumnProjection("id"), ColumnProjection("payload")], commonInterface = [INSERT])
-    @Projection(entityNameExtend = "Update", properties = [ColumnProjection("id"), ColumnProjection("payload")], commonInterface = [UPDATE])
-    @Projection(entityNameExtend = "Upsert", properties = [ColumnProjection("id"), ColumnProjection("payload")], commonInterface = [UPSERT])
-    @Projection(entityNameExtend = "Absert", properties = [ColumnProjection("id"), ColumnProjection("payload")], commonInterface = [ABSERT])
+    @Projection(entityNameExtend = "Insert", properties = [ColumnProjection("id"), ColumnProjection("payload")], andrOrmSubPackage = [INSERT])
+    @Projection(entityNameExtend = "Update", properties = [ColumnProjection("id"), ColumnProjection("payload")], andrOrmSubPackage = [UPDATE])
+    @Projection(entityNameExtend = "Upsert", properties = [ColumnProjection("id"), ColumnProjection("payload")], andrOrmSubPackage = [UPSERT])
+    @Projection(entityNameExtend = "Absert", properties = [ColumnProjection("id"), ColumnProjection("payload")], andrOrmSubPackage = [ABSERT])
     data class BlobDmlBuilderDefinition(
         @PrimaryKey @Column val id: Long,
         @Column val payload: ByteArray,

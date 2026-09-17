@@ -27,7 +27,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
             alias = "DUP"
         )
     ],
-    commonInterface = [DMLInterfaceEnum.SELECT]
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
 )
 data class TestDuplicateAliasMixEntity(
     @Column(name = "ID", alias = "DUP")

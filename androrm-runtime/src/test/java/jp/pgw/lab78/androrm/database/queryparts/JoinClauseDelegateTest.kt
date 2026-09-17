@@ -161,8 +161,7 @@ class JoinClauseDelegateTest {
         )
 
         val actualOwner = target
-            .join(JoinType.LEFT, joinTable)
-            .on {
+            .join(JoinType.LEFT, joinTable) {
                 fromTable[TestSelectEntity::id] eq joinTable[TestSelectEntity::id]
             }
 

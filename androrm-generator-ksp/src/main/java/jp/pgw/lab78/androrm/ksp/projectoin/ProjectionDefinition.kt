@@ -11,8 +11,8 @@ import jp.pgw.lab78.androrm.common.annotation.FunctionProjection
  * @param aliasExtend エイリアスの拡張部分（省略可能）
  * @param properties プロパティのリスト
  * @param functions 関数のリスト
- * @param commonInterfaces 共通インターフェースのリスト
- * @param customInterfaces カスタム生成先サブパッケージのリスト
+ * @param andrOrmSubPackages 共通インターフェースのリスト
+ * @param customSubPackages カスタム生成先サブパッケージのリスト
  * @author Masahiro Inoue
  * @since 2026-04-17
  */
@@ -21,6 +21,6 @@ data class ProjectionDefinition(
     val aliasExtend: String = "",
     val properties: List<ColumnProjection> = emptyList(),
     val functions: List<FunctionProjection> = emptyList(),
-    val commonInterfaces: List<DMLInterfaceEnum> = emptyList(),
-    val customInterfaces: List<String> = emptyList(),
+    val andrOrmSubPackages: List<DMLInterfaceEnum> = emptyList(),
+    val customSubPackages: List<String> = emptyList(),
 )

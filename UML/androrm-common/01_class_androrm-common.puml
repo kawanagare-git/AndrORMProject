@@ -67,8 +67,8 @@ package "jp.pgw.lab78.androrm.common.annotation" {
     +aliasExtend: String
     +properties: Array
     +functions: Array
-    +commonInterface: Array
-    +customInterface: Array
+    +andrOrmSubPackage: Array
+    +customSubPackage: Array
   }
   class "Projections" as Projections {
     +value: Array

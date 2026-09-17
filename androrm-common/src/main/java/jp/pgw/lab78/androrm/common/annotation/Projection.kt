@@ -11,8 +11,8 @@ import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
  * @param aliasExtend エイリアス派生
  * @param properties クラスに定義する ColumnProjection ※複数指定可
  * @param functions クラスに定義する FunctionProjection ※複数指定可
- * @param commonInterface 共通インターフェース ※複数指定可
- * @param customInterface commonInterface が NOT_USE の場合に使用する生成先サブパッケージ
+ * @param andrOrmSubPackage 共通インターフェース ※複数指定可
+ * @param customSubPackage andrOrmSubPackage が NOT_USE の場合に使用する生成先サブパッケージ
  * @author Masahiro Inoue
  * @since 2025-08-01
  */
@@ -29,7 +29,7 @@ annotation class Projection(
     /** エンティティに関数を使用する場合に指定 */
     val functions: Array<FunctionProjection> = [],
     /** 共通インターフェス */
-    val commonInterface: Array<DMLInterfaceEnum> = [DMLInterfaceEnum.NOT_USE],
+    val andrOrmSubPackage: Array<DMLInterfaceEnum> = [DMLInterfaceEnum.NOT_USE],
     /** カスタム生成先サブパッケージ */
-    val customInterface: Array<String> = [""],
+    val customSubPackage: Array<String> = [""],
 )

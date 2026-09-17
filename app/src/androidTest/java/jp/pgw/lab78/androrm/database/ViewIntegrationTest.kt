@@ -156,7 +156,7 @@ class ViewIntegrationTest {
             ColumnProjection("id"),
             ColumnProjection("name"),
         ],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @View(name = "KSP_ACTIVE_EMPLOYEE", alias = "KAV")
     private data class KspActiveEmployeeViewDefinition(
