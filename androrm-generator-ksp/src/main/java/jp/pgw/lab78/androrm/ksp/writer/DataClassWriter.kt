@@ -110,16 +110,68 @@ class DataClassWriter(
             if (interfaceText.isNotBlank()) {
                 writer.append(" : $interfaceText")
             }
-            if (interfaces.any { it.toString().substringAfterLast('.') == "SelectEntity" }
-                && canGenerateCursorMapper(constructorProps)) {
+            val generateCursorMapper =
+                interfaces.any { it.toString().substringAfterLast('.') == "SelectEntity" } &&
+                        canGenerateCursorMapper(constructorProps)
+            val generateStringMapMapper =
+                interfaces.isNotEmpty() && canGenerateStringMapMapper(constructorProps)
+            if (generateCursorMapper || generateStringMapMapper) {
                 writer.appendLine(" {")
-                appendCursorMapper(writer, classNameFQN, constructorProps)
+                appendMapperCompanion(
+                    writer = writer,
+                    classNameFQN = classNameFQN,
+                    properties = constructorProps,
+                    generateCursorMapper = generateCursorMapper,
+                    generateStringMapMapper = generateStringMapMapper,
+                )
                 writer.appendLine("}")
             } else {
-            writer.appendLine()
-        }
+                writer.appendLine()
+            }
         }
         logTraceExiting(classNameFQN)
+    }
+
+    /**
+     * ## Mapper companion object生成
+     * ### Cursor Mapperと文字列Map Mapperを一つのcompanion objectへまとめて生成する
+     * @param writer 生成ソース出力先
+     * @param classNameFQN 生成Entityの完全修飾名
+     * @param properties コンストラクタプロパティ
+     * @param generateCursorMapper Cursor Mapperを生成する場合true
+     * @param generateStringMapMapper 文字列Map Mapperを生成する場合true
+     */
+    private fun appendMapperCompanion(
+        writer: java.io.BufferedWriter,
+        classNameFQN: ClassName,
+        properties: List<GeneratedProperty>,
+        generateCursorMapper: Boolean,
+        generateStringMapMapper: Boolean,
+    ) {
+        val mapperInterfaces = buildList {
+            if (generateCursorMapper) {
+                add(
+                    "jp.pgw.lab78.androrm.database.CursorEntityMapper<${classNameFQN.simpleName}>"
+                )
+            }
+            if (generateStringMapMapper) {
+                add(
+                    "jp.pgw.lab78.androrm.database.StringMapEntityMapper<${classNameFQN.simpleName}>"
+                )
+            }
+        }
+        writer.appendLine()
+        writer.appendLine("  /** KSP生成Entityの直接転送Mapper。 */")
+        writer.appendLine(
+            "  public companion object : ${mapperInterfaces.joinToString(", ")} {",
+        )
+        if (generateCursorMapper) {
+            appendCursorMapper(writer, classNameFQN, properties)
+        }
+        if (generateStringMapMapper) {
+            appendStringMapMapper(writer, classNameFQN, properties)
+        }
+        writer.appendLine("  }")
     }
 
     /**
@@ -137,18 +189,11 @@ class DataClassWriter(
         val visibleProperties = properties.filterNot { it.hideFromSelect }
         val readers = visibleProperties.mapIndexed { index, property ->
             property to cursorValueReader(
-                typeName = property.propertySpec.type.toString()
-                    .removeSuffix("?")
-                    .substringAfterLast('.'),
+                typeName = simpleTypeName(property),
                 index = index,
                 nullable = property.propertySpec.type.isNullable,
             )
         }
-        writer.appendLine()
-        writer.appendLine("  /** KSP生成SELECT EntityのCursor直接Mapper。 */")
-        writer.appendLine(
-            "  public companion object : jp.pgw.lab78.androrm.database.CursorEntityMapper<${classNameFQN.simpleName}> {",
-        )
         writer.appendLine("    /** Cursorの現在行を生成Entityへ直接転送する。 */")
         writer.appendLine(
             "    override fun map(cursor: android.database.Cursor, columnIndexes: IntArray): ${classNameFQN.simpleName} {",
@@ -167,19 +212,204 @@ class DataClassWriter(
         }
         writer.appendLine("      )")
         writer.appendLine("    }")
-        writer.appendLine("  }")
+    }
+
+    /**
+     * ## 文字列Map Mapper生成
+     * ### DBカラム名をキーとするMap<String, String?>と生成Entityの相互変換処理を生成する
+     * @param writer 生成ソース出力先
+     * @param classNameFQN 生成Entityの完全修飾名
+     * @param properties コンストラクタプロパティ
+     */
+    private fun appendStringMapMapper(
+        writer: java.io.BufferedWriter,
+        classNameFQN: ClassName,
+        properties: List<GeneratedProperty>,
+    ) {
+        val columnLiterals = properties.map { property ->
+            kotlinStringLiteral(property.columnName)
+        }
+        writer.appendLine()
+        writer.appendLine("    /** Map変換対象となるDBカラム名。 */")
+        writer.appendLine(
+            "    private val stringMapColumnNames: Set<String> = setOf(${columnLiterals.joinToString(", ")})"
+        )
+        writer.appendLine()
+        writer.appendLine("    /** DBカラム名Mapを生成Entityへ直接転送する。 */")
+        writer.appendLine(
+            "    override fun fromMap(row: Map<String, String?>, ignoreUnknownColumns: Boolean): ${classNameFQN.simpleName} {"
+        )
+        writer.appendLine("      if (!ignoreUnknownColumns) {")
+        writer.appendLine(
+            "        row.keys.firstOrNull { columnName -> columnName !in stringMapColumnNames }?.let { columnName ->"
+        )
+        writer.appendLine(
+            "          throw IllegalArgumentException(\"Column [\$columnName] does not exist in ${classNameFQN.simpleName}.\")"
+        )
+        writer.appendLine("        }")
+        writer.appendLine("      }")
+        writer.appendLine("      return ${classNameFQN.simpleName}(")
+        properties.forEach { property ->
+            val reader = requireNotNull(stringMapValueReader(property, classNameFQN))
+            writer.appendLine(
+                "        ${property.propertySpec.name} = $reader,"
+            )
+        }
+        writer.appendLine("      )")
+        writer.appendLine("    }")
+        writer.appendLine()
+        writer.appendLine("    /** 生成EntityをDBカラム名Mapへ直接転送する。 */")
+        writer.appendLine(
+            "    override fun toMap(entity: ${classNameFQN.simpleName}): Map<String, String?> = linkedMapOf("
+        )
+        properties.forEach { property ->
+            val columnLiteral = kotlinStringLiteral(property.columnName)
+            val writerExpression = requireNotNull(stringMapValueWriter(property))
+            writer.appendLine("      $columnLiteral to $writerExpression,")
+        }
+        writer.appendLine("    )")
+
+        if (properties.any { simpleTypeName(it) == "Boolean" }) {
+            writer.appendLine()
+            writer.appendLine("    /** Boolean文字列を厳密に変換する。 */")
+            writer.appendLine(
+                "    private fun parseBoolean(columnName: String, value: String): Boolean = when (value.lowercase()) {"
+            )
+            writer.appendLine("      \"1\", \"true\" -> true")
+            writer.appendLine("      \"0\", \"false\" -> false")
+            writer.appendLine(
+                "      else -> throw IllegalArgumentException(\"Column [\$columnName] has invalid Boolean value [\$value].\")"
+            )
+            writer.appendLine("    }")
+        }
+
+        if (properties.any { simpleTypeName(it) == "ByteArray" }) {
+            writer.appendLine()
+            writer.appendLine("    /** 16進数文字列をByteArrayへ変換する。 */")
+            writer.appendLine(
+                "    private fun decodeHex(columnName: String, value: String): ByteArray {"
+            )
+            writer.appendLine(
+                "      require(value.length % 2 == 0) { \"Column [\$columnName] has invalid hexadecimal value [\$value].\" }"
+            )
+            writer.appendLine("      return ByteArray(value.length / 2) { index ->")
+            writer.appendLine("        val high = value[index * 2].digitToIntOrNull(16)")
+            writer.appendLine("        val low = value[index * 2 + 1].digitToIntOrNull(16)")
+            writer.appendLine(
+                "        require(high != null && low != null) { \"Column [\$columnName] has invalid hexadecimal value [\$value].\" }"
+            )
+            writer.appendLine("        ((high shl 4) or low).toByte()")
+            writer.appendLine("      }")
+            writer.appendLine("    }")
+            writer.appendLine()
+            writer.appendLine("    /** ByteArrayを大文字16進数文字列へ変換する。 */")
+            writer.appendLine("    private fun ByteArray.toHexString(): String {")
+            writer.appendLine("      val hex = \"0123456789ABCDEF\"")
+            writer.appendLine("      return buildString(size * 2) {")
+            writer.appendLine("        this@toHexString.forEach { byte ->")
+            writer.appendLine("          val value = byte.toInt() and 0xFF")
+            writer.appendLine("          append(hex[value ushr 4])")
+            writer.appendLine("          append(hex[value and 0x0F])")
+            writer.appendLine("        }")
+            writer.appendLine("      }")
+            writer.appendLine("    }")
+        }
     }
 
     /** 全プロパティを既存のValueFromCursorで読み取れるか確認する。 */
     private fun canGenerateCursorMapper(properties: List<GeneratedProperty>): Boolean =
         properties.filterNot { it.hideFromSelect }.all { property ->
             cursorValueReader(
-                typeName = property.propertySpec.type.toString()
-                    .removeSuffix("?")
-                    .substringAfterLast('.'),
+                typeName = simpleTypeName(property),
                 index = 0,
                 nullable = property.propertySpec.type.isNullable,
             ) != null
+        }
+
+    /** 全プロパティを文字列Mapとの相互変換対象として扱えるか確認する。 */
+    private fun canGenerateStringMapMapper(properties: List<GeneratedProperty>): Boolean =
+        properties.all { property ->
+            simpleTypeName(property) in STRING_MAP_SUPPORTED_TYPES
+        }
+
+    /** GeneratedPropertyの型単純名を取得する。 */
+    private fun simpleTypeName(property: GeneratedProperty): String =
+        property.propertySpec.type.toString()
+            .removeSuffix("?")
+            .substringAfterLast('.')
+
+    /** MapからEntityへ設定する1プロパティ分の式を生成する。 */
+    private fun stringMapValueReader(
+        property: GeneratedProperty,
+        classNameFQN: ClassName,
+    ): String? {
+        val typeName = simpleTypeName(property)
+        if (typeName !in STRING_MAP_SUPPORTED_TYPES) return null
+        val columnLiteral = kotlinStringLiteral(property.columnName)
+        val conversion = when (typeName) {
+            "Int" -> "value.toInt()"
+            "Long" -> "value.toLong()"
+            "Float" -> "value.toFloat()"
+            "Double" -> "value.toDouble()"
+            "Boolean" -> "parseBoolean($columnLiteral, value)"
+            "String" -> "value"
+            "LocalDate" -> "java.time.LocalDate.parse(value)"
+            "LocalTime" -> "java.time.LocalTime.parse(value)"
+            "LocalDateTime" -> "java.time.LocalDateTime.parse(value)"
+            "ByteArray" -> "decodeHex($columnLiteral, value)"
+            else -> return null
+        }
+        return if (property.propertySpec.type.isNullable) {
+            "row[$columnLiteral]?.let { value -> $conversion }"
+        } else {
+            "requireNotNull(row[$columnLiteral]) { " +
+                    kotlinStringLiteral(
+                        "Column [${property.columnName}] is missing or null for ${classNameFQN.simpleName}."
+                    ) +
+                    " }.let { value -> $conversion }"
+        }
+    }
+
+    /** EntityからMapへ設定する1プロパティ分の式を生成する。 */
+    private fun stringMapValueWriter(property: GeneratedProperty): String? {
+        val typeName = simpleTypeName(property)
+        if (typeName !in STRING_MAP_SUPPORTED_TYPES) return null
+        val access = "entity.${property.propertySpec.name}"
+        return when (typeName) {
+            "String" -> access
+            "Boolean" -> if (property.propertySpec.type.isNullable) {
+                "$access?.let { value -> if (value) \"true\" else \"false\" }"
+            } else {
+                "if ($access) \"true\" else \"false\""
+            }
+            "ByteArray" -> if (property.propertySpec.type.isNullable) {
+                "$access?.toHexString()"
+            } else {
+                "$access.toHexString()"
+            }
+            else -> if (property.propertySpec.type.isNullable) {
+                "$access?.toString()"
+            } else {
+                "$access.toString()"
+            }
+        }
+    }
+
+    /** Kotlinソースへ埋め込む文字列リテラルを生成する。 */
+    private fun kotlinStringLiteral(value: String): String =
+        buildString {
+            append('"')
+            value.forEach { char ->
+                when (char) {
+                    '\\' -> append("\\\\")
+                    '"' -> append("\\\"")
+                    '\n' -> append("\\n")
+                    '\r' -> append("\\r")
+                    '\t' -> append("\\t")
+                    else -> append(char)
+                }
+            }
+            append('"')
         }
 
     /** ValueFromCursorのenum名をKotlin型名から解決する。 */
@@ -205,5 +435,21 @@ class DataClassWriter(
         } else {
             cursorRead
         }
+    }
+
+    companion object {
+        /** 文字列Mapとの相互変換に対応するKotlin型。 */
+        private val STRING_MAP_SUPPORTED_TYPES = setOf(
+            "Int",
+            "Long",
+            "Float",
+            "Double",
+            "Boolean",
+            "String",
+            "LocalDate",
+            "LocalTime",
+            "LocalDateTime",
+            "ByteArray",
+        )
     }
 }

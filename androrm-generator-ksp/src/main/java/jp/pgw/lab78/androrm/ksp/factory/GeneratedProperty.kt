@@ -7,10 +7,12 @@ import com.squareup.kotlinpoet.PropertySpec
  * ### PropertySpec と SELECT 非表示フラグをセットで保持する
  * @property propertySpec 生成対象プロパティ
  * @property hideFromSelect SELECT 非表示の場合 true
+ * @property columnName Map変換で使用するDBカラム名または関数結果名
  * @author Masahiro Inoue
  * @since 2026-06-11
  */
 data class GeneratedProperty(
     val propertySpec: PropertySpec,
     val hideFromSelect: Boolean,
+    val columnName: String = propertySpec.name,
 )

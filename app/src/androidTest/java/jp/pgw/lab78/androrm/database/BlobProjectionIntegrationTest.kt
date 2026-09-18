@@ -19,6 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -70,6 +71,84 @@ class BlobProjectionIntegrationTest {
         assertArrayEquals(ByteArray(0), rows[1].payload)
         assertArrayEquals(ByteArray(0), rows[1].optionalPayload)
         assertTrue(query.bindValues.isEmpty())
+    }
+
+    /** KSP生成Entityで文字列Mapとの相互変換を検証する。 */
+    @Test
+    fun generatedEntity_stringMapRoundTrip() {
+        assertTrue(BlobProjectionDefinitionSelect is StringMapEntityMapper<*>)
+        val source = linkedMapOf(
+            "ID" to "7",
+            "PAYLOAD" to "00017F80FF",
+            "OPTIONAL_PAYLOAD" to null,
+        )
+
+        val entity = BlobProjectionDefinitionSelect.fromMap(source)
+
+        assertEquals(7L, entity.id)
+        assertArrayEquals(byteArrayOf(0, 1, 127, -128, -1), entity.payload)
+        assertNull(entity.optionalPayload)
+
+        val actual = BlobProjectionDefinitionSelect.toMap(entity)
+        assertEquals("7", actual["ID"])
+        assertEquals("00017F80FF", actual["PAYLOAD"])
+        assertTrue(actual.containsKey("OPTIONAL_PAYLOAD"))
+        assertNull(actual["OPTIONAL_PAYLOAD"])
+    }
+
+    /** 未知列はデフォルトでエラーとし、明示指定時だけ無視する。 */
+    @Test
+    fun generatedEntity_unknownColumnBehaviorCanBeSwitched() {
+        val source = linkedMapOf(
+            "ID" to "8",
+            "PAYLOAD" to "0102",
+            "OPTIONAL_PAYLOAD" to null,
+            "ANOTHER_ENTITY_COLUMN" to "ignored",
+        )
+
+        try {
+            BlobProjectionDefinitionSelect.fromMap(source)
+            fail("Unknown column must fail when ignoreUnknownColumns is false.")
+        } catch (exception: IllegalArgumentException) {
+            assertTrue(exception.message.orEmpty().contains("ANOTHER_ENTITY_COLUMN"))
+        }
+
+        val entity = BlobProjectionDefinitionSelect.fromMap(
+            row = source,
+            ignoreUnknownColumns = true,
+        )
+        assertEquals(8L, entity.id)
+        assertArrayEquals(byteArrayOf(1, 2), entity.payload)
+    }
+
+    /** Map一覧とEntity一覧の一括変換を検証する。 */
+    @Test
+    fun generatedEntity_stringMapListRoundTrip() {
+        val source = listOf(
+            linkedMapOf(
+                "ID" to "9",
+                "PAYLOAD" to "AA",
+                "OPTIONAL_PAYLOAD" to null,
+                "SHARED_COLUMN" to "first",
+            ),
+            linkedMapOf(
+                "ID" to "10",
+                "PAYLOAD" to "BB",
+                "OPTIONAL_PAYLOAD" to "CC",
+                "SHARED_COLUMN" to "second",
+            ),
+        )
+
+        val entities = BlobProjectionDefinitionSelect.fromMapList(
+            rows = source,
+            ignoreUnknownColumns = true,
+        )
+        val maps = BlobProjectionDefinitionSelect.toMapList(entities)
+
+        assertEquals(listOf(9L, 10L), entities.map { it.id })
+        assertEquals(listOf("9", "10"), maps.map { it.getValue("ID") })
+        assertEquals(listOf("AA", "BB"), maps.map { it.getValue("PAYLOAD") })
+        assertEquals(listOf(null, "CC"), maps.map { it["OPTIONAL_PAYLOAD"] })
     }
 
     /** raw SQL関数のBLOB結果をCursorで取得する。 */
