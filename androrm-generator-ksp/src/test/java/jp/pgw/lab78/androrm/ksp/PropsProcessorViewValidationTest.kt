@@ -4,14 +4,7 @@ import com.google.devtools.ksp.processing.CodeGenerator
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.ClassKind
-import com.google.devtools.ksp.symbol.KSAnnotation
-import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSDeclaration
-import com.google.devtools.ksp.symbol.KSValueArgument
-import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.KSTypeReference
-import com.google.devtools.ksp.symbol.KSPropertyDeclaration
+import com.google.devtools.ksp.symbol.*
 import jp.pgw.lab78.androrm.common.EntityConstants.DMLInterfaceEnum
 import jp.pgw.lab78.androrm.common.annotation.ColumnProjection
 import jp.pgw.lab78.androrm.common.annotation.EntityPackageInfo
@@ -23,21 +16,11 @@ import jp.pgw.lab78.androrm.common.database.annotation.View
 import jp.pgw.lab78.androrm.common.dml.interfaces.ViewDefinitionEntity
 import jp.pgw.lab78.androrm.ksp.logging.CreateLogger
 import jp.pgw.lab78.androrm.ksp.testsupport.KspSymbolMockFactory
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.MethodOrderer
-import org.junit.jupiter.api.Order
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestMethodOrder
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.atLeastOnce
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.*
 import java.io.ByteArrayOutputStream
 
 /** PropsProcessorの入口からVIEW定義検証を実行するテスト。 */
@@ -123,14 +106,14 @@ class PropsProcessorViewValidationTest {
     )
     @Order(6)
     fun unsupportedCommonInterfaceIsRejected(interfaceType: DMLInterfaceEnum) {
-        assertRejected(classDeclaration(commonInterfaces = listOf(interfaceType)))
+        assertRejected(classDeclaration(andrOrmSubPackages = listOf(interfaceType)))
     }
 
     /** SELECT Projectionが存在しない定義を拒否する。 */
     @Test
     @Order(7)
     fun noSelectProjectionIsRejected() {
-        assertRejected(classDeclaration(commonInterfaces = listOf(DMLInterfaceEnum.NOT_USE)))
+        assertRejected(classDeclaration(andrOrmSubPackages = listOf(DMLInterfaceEnum.NOT_USE)))
     }
 
     /** View本体の実効物理名重複をProcessor入口で拒否する。 */
@@ -169,7 +152,7 @@ class PropsProcessorViewValidationTest {
     @Order(10)
     fun selectProjectionIsAcceptedByValidation() {
         assertDoesNotThrow {
-            invokeProcessor(classDeclaration(commonInterfaces = listOf(DMLInterfaceEnum.SELECT)))
+            invokeProcessor(classDeclaration(andrOrmSubPackages = listOf(DMLInterfaceEnum.SELECT)))
         }
         verify(logger, never()).error(any(), anyOrNull())
     }
@@ -181,7 +164,7 @@ class PropsProcessorViewValidationTest {
         assertDoesNotThrow {
             invokeProcessor(
                 classDeclaration(
-                    commonInterfaces = listOf(DMLInterfaceEnum.SELECT),
+                    andrOrmSubPackages = listOf(DMLInterfaceEnum.SELECT),
                     additionalProjectionInterfaces = listOf(DMLInterfaceEnum.NOT_USE),
                 ),
             )
@@ -196,7 +179,7 @@ class PropsProcessorViewValidationTest {
         assertDoesNotThrow {
             invokeProcessor(
                 classDeclaration(
-                    commonInterfaces = listOf(DMLInterfaceEnum.SELECT),
+                    andrOrmSubPackages = listOf(DMLInterfaceEnum.SELECT),
                     additionalProjectionInterfaces = listOf(DMLInterfaceEnum.SELECT),
                 ),
             )
@@ -236,19 +219,19 @@ class PropsProcessorViewValidationTest {
         extraAnnotations: List<KSAnnotation> = emptyList(),
         projectionProperties: List<KSAnnotation> = listOf(columnProjection()),
         projectionFunctions: List<KSAnnotation> = emptyList(),
-        commonInterfaces: List<DMLInterfaceEnum> = listOf(DMLInterfaceEnum.SELECT),
+        andrOrmSubPackages: List<DMLInterfaceEnum> = listOf(DMLInterfaceEnum.SELECT),
         additionalProjectionInterfaces: List<DMLInterfaceEnum> = emptyList(),
     ): KSClassDeclaration {
         val projectionAnnotations = listOf(
             projectionAnnotation(
                 properties = projectionProperties,
                 functions = projectionFunctions,
-                commonInterfaces = commonInterfaces,
+                andrOrmSubPackages = andrOrmSubPackages,
             ),
         ) + additionalProjectionInterfaces.map { interfaceType ->
             projectionAnnotation(
                 properties = listOf(columnProjection()),
-                commonInterfaces = listOf(interfaceType),
+                andrOrmSubPackages = listOf(interfaceType),
             )
         }
         val marker = KspSymbolMockFactory.classDeclarationOf(
@@ -273,7 +256,7 @@ class PropsProcessorViewValidationTest {
     private fun projectionAnnotation(
         properties: List<KSAnnotation>,
         functions: List<KSAnnotation> = emptyList(),
-        commonInterfaces: List<DMLInterfaceEnum>,
+        andrOrmSubPackages: List<DMLInterfaceEnum>,
     ): KSAnnotation = annotation(
         "Projection",
         Projection::class.qualifiedName!!,
@@ -281,8 +264,8 @@ class PropsProcessorViewValidationTest {
             valueArgument("entityNameExtend", "Select"),
             valueArgument("properties", properties),
             valueArgument("functions", functions),
-            valueArgument("commonInterface", commonInterfaces),
-            valueArgument("customInterface", listOf("")),
+            valueArgument("andrOrmSubPackage", andrOrmSubPackages),
+            valueArgument("customSubPackage", listOf("")),
         ),
     )
 

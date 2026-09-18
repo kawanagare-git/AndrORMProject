@@ -28,7 +28,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
             hideFromSelect = true
         )
     ],
-    commonInterface = [DMLInterfaceEnum.SELECT]
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
 )
 data class TestAllHiddenMixEntity(
     @Column(name = "ID")

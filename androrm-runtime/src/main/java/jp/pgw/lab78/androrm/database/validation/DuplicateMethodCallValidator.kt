@@ -8,7 +8,7 @@ import jp.pgw.lab78.androrm.common.MessageConstants.AE00010
  * @author Masahiro Inoue
  * @since 2026-05-14
  */
-interface QueryMethodCall {
+internal interface QueryMethodCall {
     val methodName: String
 }
 
@@ -22,7 +22,7 @@ interface QueryMethodCall {
  * @author Masahiro Inoue
  * @since 2026-05-14
  */
-class DuplicateMethodCallValidator<M : QueryMethodCall>(
+internal class DuplicateMethodCallValidator<M : QueryMethodCall>(
     private val ownerName: String,
 ) {
     private val calledMethodSet = mutableSetOf<M>()

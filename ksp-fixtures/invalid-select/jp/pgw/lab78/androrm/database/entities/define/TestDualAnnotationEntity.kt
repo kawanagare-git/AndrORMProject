@@ -21,7 +21,7 @@ import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
         ColumnProjection("id"),
         ColumnProjection("countValue")
     ],
-    commonInterface = [DMLInterfaceEnum.SELECT]
+    andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
 )
 data class TestDualAnnotationEntity(
     @PrimaryKey

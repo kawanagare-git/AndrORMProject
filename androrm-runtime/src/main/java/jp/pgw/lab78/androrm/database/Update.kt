@@ -4,6 +4,7 @@ import jp.pgw.lab78.androrm.common.Constants
 import jp.pgw.lab78.androrm.common.Constants.EMPTY_STRING
 import jp.pgw.lab78.androrm.common.MessageConstants
 import jp.pgw.lab78.androrm.common.database.SupportFunction
+import jp.pgw.lab78.androrm.common.database.SupportFunction.getRelationAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableAlias
 import jp.pgw.lab78.androrm.common.database.SupportFunction.getTableName
 import jp.pgw.lab78.androrm.common.dml.interfaces.Entity
@@ -212,28 +213,41 @@ class Update<T : UpdateEntity>(
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
-     * @param joinType 結合方法
-     * @param joinedEntity 結合エンティティ
+     * @param joinType JOIN種別
+     * @param joinedEntity 結合対象のEntityクラス
+     * @return JOIN条件指定用の中間オブジェクト
      * @author Masahiro Inoue
-     * @since 2026-05-25
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
         joinedEntity: KClass<out Entity>,
-    ) = joinDelegate.join(joinType = joinType, joinedEntity = joinedEntity)
+    ) =
+        JoinCondition(
+            joinType = joinType,
+            joinedTable = TableRef(
+                entityClass = joinedEntity,
+                alias = joinedEntity.getRelationAlias(),
+            ),
+        )
 
     /**
      * ## join メソッド
      * ### on を後続指定するための中間オブジェクトを返す
-     * @param joinType 結合方法
-     * @param joinedTable 結合テーブル参照
+     * @param joinType JOIN種別
+     * @param joinedTable 結合対象のテーブル参照
+     * @return JOIN条件指定用の中間オブジェクト
      * @author Masahiro Inoue
-     * @since 2026-05-25
+     * @since 2026-05-24
      */
     fun join(
         joinType: JoinType,
         joinedTable: TableRef<out Entity>,
-    ) = joinDelegate.join(joinType = joinType, joinedTable = joinedTable)
+    ) =
+        JoinCondition(
+            joinType = joinType,
+            joinedTable = joinedTable,
+        )
 
     /**
      * ## where
@@ -347,5 +361,30 @@ class Update<T : UpdateEntity>(
                 "alias[$tableAlias:$tableName]"
             )
         }
+    }
+
+    /**
+     * ## JOIN 条件指定用中間クラス
+     * @author Masahiro Inoue
+     * @since 2026-05-24
+     */
+    inner class JoinCondition internal constructor(
+        private val joinType: JoinType,
+        private val joinedTable: TableRef<out Entity>,
+    ) {
+        /**
+         * ## on メソッド
+         * ### JOIN 条件を指定する
+         * @param block 結合条件を構築する処理
+         * @return 所有クラス
+         * @author Masahiro Inoue
+         * @since 2026-05-24
+         */
+        fun on(block: ConditionBuilder.() -> Unit): Update<T> =
+            this@Update.join(
+                joinType = joinType,
+                joinedTable = joinedTable,
+                on = block,
+            )
     }
 }

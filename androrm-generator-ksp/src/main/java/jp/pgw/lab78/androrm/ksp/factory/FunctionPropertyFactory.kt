@@ -59,6 +59,7 @@ class FunctionPropertyFactory : LoggerLike by logger {
                     .addAnnotation(annotation)
                     .build(),
                 hideFromSelect = func.hideFromSelect,
+                columnName = func.alias,
             )
         }
         logTraceExiting(result)

@@ -26,7 +26,7 @@ import java.time.LocalDateTime
                 ColumnProjection("payMonth"),
                 ColumnProjection("createdAt")
             ],
-            commonInterface = [DMLInterfaceEnum.UPSERT, DMLInterfaceEnum.ABSERT]
+            andrOrmSubPackage = [DMLInterfaceEnum.UPSERT, DMLInterfaceEnum.ABSERT]
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -37,7 +37,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updatedAt"),
                 ColumnProjection("updatedBy")
             ],
-            commonInterface = [DMLInterfaceEnum.INSERT]
+            andrOrmSubPackage = [DMLInterfaceEnum.INSERT]
         ),
         Projection(
             entityNameExtend = "Selective",
@@ -53,7 +53,7 @@ import java.time.LocalDateTime
                 FunctionProjection(function = MAX, args = ["deduction"], alias = "MAX_DEDUCTION"),
                 FunctionProjection(function = AVG, args = ["deduction"], alias = "AVG_DEDUCTION")
             ],
-            commonInterface = [DMLInterfaceEnum.SELECT]
+            andrOrmSubPackage = [DMLInterfaceEnum.SELECT]
         ),
     ]
 )

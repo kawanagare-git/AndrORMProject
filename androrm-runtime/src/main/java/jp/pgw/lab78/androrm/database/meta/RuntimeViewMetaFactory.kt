@@ -21,7 +21,7 @@ import kotlin.reflect.full.primaryConstructor
  * @author Masahiro Inoue
  * @since 2026-08-31
  */
-class RuntimeViewMetaFactory {
+internal class RuntimeViewMetaFactory {
     /**
      * ## VIEW メタ情報生成
      * @param entityClass VIEW 定義 Entity

@@ -4,8 +4,11 @@ import jp.pgw.lab78.androrm.common.database.columns.controller.SqlValueType
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 /**
  * ## SQL値型テスト
@@ -66,5 +69,20 @@ class SqlValueTypeTest {
         assertThrows<IllegalArgumentException> {
             SqlValueType.BYTE_ARRAY.toColumnValue<ByteArray>("X'00'")
         }
+    }
+
+    /** 大文字・小文字のBLOBリテラルと空BLOBを同じ形式として受理する。 */
+    @ParameterizedTest
+    @ValueSource(strings = ["X'01AF'", "X'01af'", "x'01AF'", "x'01af'", "x''"])
+    fun byteArray_matchesCaseInsensitiveBlobLiteral(candidate: String) {
+        assertTrue(SqlValueType.BYTE_ARRAY.matches(candidate))
+    }
+
+    /** 小文字BLOBリテラルをByteArrayへ変換する。 */
+    @Test
+    fun byteArray_toEntity_convertsLowercaseLiteral() {
+        val actual = SqlValueType.BYTE_ARRAY.toEntity("x'00ff'") as ByteArray
+
+        assertArrayEquals(byteArrayOf(0x00, 0xFF.toByte()), actual)
     }
 }

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.ksp)
     // Maven Central公開用
     id("com.vanniktech.maven.publish")
+    // dokka
+    id("org.jetbrains.dokka")
 }
 group = providers.gradleProperty("andrormGroup").get()
 version = providers.gradleProperty("andrormVersion").get()

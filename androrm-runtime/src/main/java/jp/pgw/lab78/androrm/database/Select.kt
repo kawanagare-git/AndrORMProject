@@ -7,12 +7,12 @@ import jp.pgw.lab78.androrm.common.Constants.PRIMARY_DELIMITER
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00004
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00005
 import jp.pgw.lab78.androrm.common.MessageConstants.AE00006
+import jp.pgw.lab78.androrm.common.database.function.SqlAggregateFunction
 import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.logging.aop.InfoLog
 import jp.pgw.lab78.androrm.common.logging.aop.TraceLog
 import jp.pgw.lab78.androrm.common.meta.EntityMeta
 import jp.pgw.lab78.androrm.common.meta.PropertyMeta
-import jp.pgw.lab78.androrm.common.database.function.SqlAggregateFunction
 import jp.pgw.lab78.androrm.database.DmlConstant.MULTI_SPACE_REGEX
 import jp.pgw.lab78.androrm.database.condition.ConditionBuilder
 import jp.pgw.lab78.androrm.database.condition.base.BaseSelect
@@ -204,7 +204,7 @@ class Select<T : SelectEntity>(
      */
     @InfoLog
     override fun where(block: ConditionBuilder.() -> Unit): Select<T> =
-        self.also { whereDelegate.where(block) }
+        super.where(block)
 
     /**
      * ## order メソッド

@@ -9,7 +9,6 @@ import jp.pgw.lab78.androrm.common.annotation.Projection
 import jp.pgw.lab78.androrm.common.database.annotation.Column
 import jp.pgw.lab78.androrm.common.database.annotation.Table
 import jp.pgw.lab78.androrm.common.database.function.ColumnFunction
-import jp.pgw.lab78.androrm.common.dml.interfaces.SelectEntity
 import jp.pgw.lab78.androrm.common.dml.interfaces.TableDefinitionEntity
 import jp.pgw.lab78.androrm.database.entities.select.FunctionProjectionDefinitionSelect
 import org.junit.After
@@ -80,7 +79,7 @@ class FunctionProjectionMapperIntegrationTest {
                 alias = "PAYLOAD_PART",
             ),
         ],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @Table(name = "FUNCTION_PROJECTION_TEST", alias = "FP")
     data class FunctionProjectionDefinition(

@@ -1,9 +1,25 @@
 # AndrORM
 
 > [!IMPORTANT]
-> AndrORMは現在開発中のアルファ版です。  
-> 本資料の対象バージョンは`0.1.8-alpha`です。  
+> AndrORMは現在開発中のベータ版です。  
+> 本資料の対象バージョンは`0.2.0-beta`です。  
 > 今後、APIや仕様が変更される可能性があります。
+
+## beta版への移行に伴うAPI変更
+
+次期beta版 `0.2.0-beta` への移行に伴い、alpha版で公開していた以下のAPI名を変更します。  
+`0.1.8-alpha`以前から移行する場合は、旧名称を新名称へ置き換えてください。
+
+| alpha版 | `0.2.0-beta` | 内容 |
+|---|---|---|
+| `commonInterface` | `andrOrmSubPackage` | AndrORMが用意するDML種別ごとの生成先サブパッケージを指定 |
+| `customInterface` | `customSubPackage` | `andrOrmSubPackage = [NOT_USE]`の場合に使用するカスタム生成先サブパッケージを指定 |
+| `graterThan` | `greaterThan` | 条件DSLの名称修正 |
+| `graterEqual` | `greaterEqual` | 条件DSLの名称修正 |
+| `lesserThan` | `lessThan` | 条件DSLの名称整理 |
+
+> [!NOTE]
+> 現在の本文およびコード例は`0.2.0-beta`を対象としています。
 
 ## AndrORMとは
 
@@ -115,9 +131,9 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.2.0-beta")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.2.0-beta")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.2.0-beta")
 }
 ```
 
@@ -133,7 +149,7 @@ dependencies {
                 ColumnProjection("productName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -142,7 +158,7 @@ dependencies {
                 ColumnProjection("productName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [INSERT],
+            andrOrmSubPackage = [INSERT],
         ),
     ],
 )

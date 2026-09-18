@@ -223,7 +223,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    infix fun <T : Entity> KProperty1<T, *>.graterThan(value: Any) {
+    infix fun <T : Entity> KProperty1<T, *>.greaterThan(value: Any) {
         this.gt(value)
     }
 
@@ -256,7 +256,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.graterThan(value: Any) {
+    infix fun <T : Entity> ColumnRef<out T, *>.greaterThan(value: Any) {
         this.gt(value)
     }
 
@@ -267,7 +267,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.graterThan(rhs: ColumnRef<out T, *>) =
+    infix fun <T : Entity> ColumnRef<out T, *>.greaterThan(rhs: ColumnRef<out T, *>) =
         this.gt(rhs as Any)
 
     /**
@@ -294,7 +294,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    infix fun <T : Entity> KProperty1<T, *>.graterEqual(value: Any) {
+    infix fun <T : Entity> KProperty1<T, *>.greaterEqual(value: Any) {
         this.ge(value)
     }
 
@@ -327,7 +327,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.graterEqual(value: Any) {
+    infix fun <T : Entity> ColumnRef<out T, *>.greaterEqual(value: Any) {
         this.ge(value)
     }
 
@@ -338,7 +338,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.graterEqual(rhs: ColumnRef<out T, *>) {
+    infix fun <T : Entity> ColumnRef<out T, *>.greaterEqual(rhs: ColumnRef<out T, *>) {
         this.ge(rhs as Any)
     }
 
@@ -366,7 +366,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2025-10-19
      */
-    infix fun <T : Entity> KProperty1<T, *>.lesserThan(value: Any) {
+    infix fun <T : Entity> KProperty1<T, *>.lessThan(value: Any) {
         this.lt(value)
     }
 
@@ -399,7 +399,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-13
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.lesserThan(value: Any) {
+    infix fun <T : Entity> ColumnRef<out T, *>.lessThan(value: Any) {
         this.lt(value)
     }
 
@@ -410,7 +410,7 @@ abstract class BaseConditionBuilder<B : BaseConditionBuilder<B>>(
      * @author Masahiro Inoue
      * @since 2026-05-12
      */
-    infix fun <T : Entity> ColumnRef<out T, *>.lesserThan(rhs: ColumnRef<out T, *>) {
+    infix fun <T : Entity> ColumnRef<out T, *>.lessThan(rhs: ColumnRef<out T, *>) {
         this.lt(rhs as Any)
     }
 

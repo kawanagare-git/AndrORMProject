@@ -95,7 +95,7 @@ class UnionAllMapperIntegrationTest {
     @Projection(
         entityNameExtend = "Select",
         properties = [ColumnProjection("id"), ColumnProjection("label")],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @Table(name = "UNION_RESULT_UNUSED", alias = "UR")
     data class UnionResultDefinition(
@@ -107,7 +107,7 @@ class UnionAllMapperIntegrationTest {
     @Projection(
         entityNameExtend = "Select",
         properties = [ColumnProjection("id"), ColumnProjection("label")],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @Table(name = "UNION_SOURCE_A", alias = "UA")
     data class UnionSourceADefinition(
@@ -119,7 +119,7 @@ class UnionAllMapperIntegrationTest {
     @Projection(
         entityNameExtend = "Select",
         properties = [ColumnProjection("id"), ColumnProjection("label")],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @Table(name = "UNION_SOURCE_B", alias = "UB")
     data class UnionSourceBDefinition(

@@ -75,7 +75,7 @@ open class AndrOrmDatabaseHelper(
     private val entities: List<KClass<out TableDefinitionEntity>>,
 ) : SQLiteOpenHelper(context, databaseName, null, version) {
     /** KSP生成EntityのMapper探索結果をEntity型ごとに再利用する。 */
-    private val cursorEntityMapperCache = mutableMapOf<KClass<out SelectEntity>, CursorEntityMapper<out SelectEntity>?>()
+    private val cursorEntityMapperCache = mutableMapOf<KClass<out SelectEntity>, CursorEntityMapper<SelectEntity>?>()
     /**
      * ## AndrORM データベースヘルパー生成
      * ### 可変長引数で指定された Entity を使用してデータベースヘルパーを生成する
@@ -941,11 +941,11 @@ open class AndrOrmDatabaseHelper(
     @Suppress("UNCHECKED_CAST")
     private fun findCursorMapper(
         entityClass: KClass<out SelectEntity>,
-    ): CursorEntityMapper<out SelectEntity>? = synchronized(cursorEntityMapperCache) {
+    ): CursorEntityMapper<SelectEntity>? = synchronized(cursorEntityMapperCache) {
         if (cursorEntityMapperCache.containsKey(entityClass)) {
             return@synchronized cursorEntityMapperCache[entityClass]
         }
-        val mapper = entityClass.companionObjectInstance as? CursorEntityMapper<out SelectEntity>
+        val mapper = entityClass.companionObjectInstance as? CursorEntityMapper<SelectEntity>
         cursorEntityMapperCache[entityClass] = mapper
         mapper
     }
@@ -953,7 +953,7 @@ open class AndrOrmDatabaseHelper(
     /** Mapperへ渡すために実行開始時に解決したEntity単位のCursor情報。 */
     private data class IndexedEntityResultTarget(
         val target: EntityResultTarget,
-        val mapper: CursorEntityMapper<out SelectEntity>,
+        val mapper: CursorEntityMapper<SelectEntity>,
         val columnIndexes: IntArray,
     ) {
         /** 現在行をMapperへ渡し、OUTER JOINの全NULL行をEntity nullへ変換する。 */

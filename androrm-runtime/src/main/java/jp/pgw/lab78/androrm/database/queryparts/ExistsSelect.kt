@@ -18,7 +18,7 @@ import jp.pgw.lab78.androrm.database.reference.TableRef
  * @author Masahiro Inoue
  * @since 2026-07-10
  */
-class ExistsSelect<T : SelectEntity>(
+class ExistsSelect<T : SelectEntity> internal constructor(
     private val fromTable: TableRef<T>,
 ) : BaseSelect<T, ExistsSelect<T>>() {
     /** select 文の土台 */

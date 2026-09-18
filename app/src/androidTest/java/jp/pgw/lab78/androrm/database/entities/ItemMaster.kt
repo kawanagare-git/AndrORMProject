@@ -32,7 +32,7 @@ import java.time.LocalDateTime
                 ColumnProjection("createMethod"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [INSERT, ABSERT],
+            andrOrmSubPackage = [INSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Base",
@@ -45,7 +45,7 @@ import java.time.LocalDateTime
                 ColumnProjection("subEffect"),
                 ColumnProjection("equipableSlot"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "ItemName",
@@ -54,7 +54,7 @@ import java.time.LocalDateTime
                 ColumnProjection("itemPk", true),
                 ColumnProjection("itemName"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "ItemEffect",
@@ -65,7 +65,7 @@ import java.time.LocalDateTime
                 ColumnProjection("mainEffect"),
                 ColumnProjection("subEffect"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Equip",
@@ -76,7 +76,7 @@ import java.time.LocalDateTime
                 ColumnProjection("itemName"),
                 ColumnProjection("equipableSlot"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "UpdateEffect",
@@ -87,7 +87,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "UpdateEquip",
@@ -98,7 +98,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "UpdateAudit",
@@ -108,7 +108,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "Upsert",
@@ -124,7 +124,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateMethod"),
                 ColumnProjection("updateTime"),
             ],
-            commonInterface = [UPSERT],
+            andrOrmSubPackage = [UPSERT],
         ),
         Projection(
             entityNameExtend = "Delete",
@@ -132,7 +132,7 @@ import java.time.LocalDateTime
                 ColumnProjection("itemPk"),
                 ColumnProjection("updateMethod"),
             ],
-            commonInterface = [DELETE],
+            andrOrmSubPackage = [DELETE],
         ),
     ]
 )

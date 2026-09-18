@@ -61,6 +61,13 @@ class ColumnPropertyFactory(private val columnAnnotationResolver: KspColumnAnnot
         )
         val columnAnnotation =
             columnAnnotationResolver.find(ownerClass = ownerClass, property = prop)
+        val resolvedColumnName = columnAnnotation
+            ?.arguments
+            ?.firstOrNull { it.name?.asString() == COLUMN_NAME }
+            ?.value
+            ?.let { it as? String }
+            ?.takeIf { it.isNotBlank() }
+            ?: prop.simpleName.asString().toSnakeCase()
         // 実装先に付与された@Columnは、後で解決済みの@Columnとして追加するため、ここではコピーしない。
         prop.annotations
             .filterNot { annotation ->
@@ -88,6 +95,7 @@ class ColumnPropertyFactory(private val columnAnnotationResolver: KspColumnAnnot
         val result = GeneratedProperty(
             propertySpec = builder.initializer(prop.simpleName.asString()).build(),
             hideFromSelect = hideFromSelect,
+            columnName = resolvedColumnName,
         )
         logTraceExiting(result)
         return result

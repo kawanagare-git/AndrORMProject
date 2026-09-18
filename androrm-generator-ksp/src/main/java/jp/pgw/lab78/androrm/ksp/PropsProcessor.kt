@@ -185,7 +185,7 @@ class PropsProcessor(
                 if (columnDefaultValueValidator.validate(classDecl, definition)) {
                     val entityMeta = kspEntityMetaFactory.create(classDecl, definition)
                     val requireSelectableProperties =
-                        definition.commonInterfaces.contains(DMLInterfaceEnum.SELECT)
+                        definition.andrOrmSubPackages.contains(DMLInterfaceEnum.SELECT)
                     val validationResult = EntityMetaValidator().validate(
                         entityMeta = entityMeta,
                         requireSelectableProperties = requireSelectableProperties,
@@ -228,8 +228,8 @@ class PropsProcessor(
                 ENTITY_PACKAGE_INFO_FQN,
                 false,
             ),
-            definition.commonInterfaces.firstOrNull(),
-            definition.customInterfaces,
+            definition.andrOrmSubPackages.firstOrNull(),
+            definition.customSubPackages,
         )
         // パッケージ名、クラス名、テーブル名などメタ情報を構築
         val createClassName = classDecl.simpleName.asString() + definition.entityNameExtend
@@ -293,7 +293,7 @@ class PropsProcessor(
             logError("A VIEW definition cannot have both @Table and @View.")
             return false
         }
-        val unsupported = definitions.flatMap { it.commonInterfaces }
+        val unsupported = definitions.flatMap { it.andrOrmSubPackages }
             .filterNot { it == DMLInterfaceEnum.SELECT || it == DMLInterfaceEnum.NOT_USE }
             .distinct()
         if (unsupported.isNotEmpty()) {
@@ -340,7 +340,7 @@ class PropsProcessor(
             logError("ViewDefinitionEntity contains duplicate physical column names.")
             return false
         }
-        if (definitions.none { DMLInterfaceEnum.SELECT in it.commonInterfaces }) {
+        if (definitions.none { DMLInterfaceEnum.SELECT in it.andrOrmSubPackages }) {
             logError("ViewDefinitionEntity requires at least one SELECT projection.")
             return false
         }

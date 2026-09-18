@@ -97,7 +97,7 @@ class AllTypeCursorMapperIntegrationTest {
             ColumnProjection("payload"), ColumnProjection("optionalName"),
             ColumnProjection("optionalPayload"),
         ],
-        commonInterface = [SELECT],
+        andrOrmSubPackage = [SELECT],
     )
     @Table(name = "ALL_TYPE_MAPPER", alias = "ATM")
     data class AllTypeDefinition(

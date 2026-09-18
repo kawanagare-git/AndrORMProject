@@ -46,6 +46,7 @@ class FunctionPropertyFactoryTest {
 
         assertEquals(com.squareup.kotlinpoet.BYTE_ARRAY, actual.propertySpec.type)
         assertEquals("payloadPart", actual.propertySpec.name)
+        assertEquals("PAYLOAD_PART", actual.columnName)
     }
 
     /** FunctionProjection引数の外側空白を検証、型推論、生成アノテーションで統一して除去する。 */

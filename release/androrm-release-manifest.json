@@ -1,0 +1,57 @@
+{
+    "schemaVersion":  1,
+    "repository":  {
+                       "owner":  "kawanagare-git",
+                       "name":  "AndrORMProject",
+                       "developmentBranch":  "mk-develop",
+                       "releaseBranch":  "master"
+                   },
+    "publication":  {
+                        "groupId":  "io.github.kawanagare-git",
+                        "versionProperty":  "andrormVersion"
+                    },
+    "modules":  [
+                    {
+                        "projectPath":  ":app",
+                        "artifactId":  "app",
+                        "publishRequired":  false,
+                        "directConsumerDependency":  false,
+                        "consumerConfiguration":  ""
+                    },
+                    {
+                        "projectPath":  ":androrm-common",
+                        "artifactId":  "androrm-common",
+                        "publishRequired":  true,
+                        "directConsumerDependency":  false,
+                        "consumerConfiguration":  ""
+                    },
+                    {
+                        "projectPath":  ":androrm-generator-ksp",
+                        "artifactId":  "androrm-generator-ksp",
+                        "publishRequired":  true,
+                        "directConsumerDependency":  true,
+                        "consumerConfiguration":  "ksp"
+                    },
+                    {
+                        "projectPath":  ":shared-library",
+                        "artifactId":  "shared-library",
+                        "publishRequired":  true,
+                        "directConsumerDependency":  false,
+                        "consumerConfiguration":  ""
+                    },
+                    {
+                        "projectPath":  ":androrm-detekt-rules",
+                        "artifactId":  "androrm-detekt-rules",
+                        "publishRequired":  true,
+                        "directConsumerDependency":  true,
+                        "consumerConfiguration":  "detektPlugins"
+                    },
+                    {
+                        "projectPath":  ":androrm-runtime",
+                        "artifactId":  "androrm-runtime",
+                        "publishRequired":  true,
+                        "directConsumerDependency":  true,
+                        "consumerConfiguration":  "implementation"
+                    }
+                ]
+}

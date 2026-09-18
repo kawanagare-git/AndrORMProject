@@ -22,7 +22,7 @@ import java.time.LocalDateTime
             entityNameExtend = "IdSelection",
             aliasExtend = "ID",
             properties = [ColumnProjection("employeeId")],
-            commonInterface = [SELECT]
+            andrOrmSubPackage = [SELECT]
         ),
         Projection(
             entityNameExtend = "",
@@ -34,7 +34,7 @@ import java.time.LocalDateTime
                 ColumnProjection("gender"),
                 ColumnProjection("position"),
             ],
-            commonInterface = [SELECT, UPDATE]
+            andrOrmSubPackage = [SELECT, UPDATE]
         ),
         Projection(
             entityNameExtend = "",
@@ -50,7 +50,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updatedAt"),
                 ColumnProjection("updatedBy"),
             ],
-            commonInterface = [ABSERT]
+            andrOrmSubPackage = [ABSERT]
         ),
     ]
 )

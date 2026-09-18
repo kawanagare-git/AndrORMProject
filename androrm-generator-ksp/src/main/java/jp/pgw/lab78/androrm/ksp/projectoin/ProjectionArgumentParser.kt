@@ -42,11 +42,11 @@ class ProjectionArgumentParser() : LoggerLike by logger {
         /** @Projection の変数名定義（functions） */
         private const val FUNCTIONS = "functions"
 
-        /** @Projection の変数名定義（commonInterface） */
-        private const val COMMON_INTERFACE = "commonInterface"
+        /** @Projection の変数名定義（andrOrmSubPackage） */
+        private const val ANDRORM_SUB_PACKAGE = "andrOrmSubPackage"
 
-        /** @Projection の変数名定義（customInterface） */
-        private const val CUSTOM_INTERFACE = "customInterface"
+        /** @Projection の変数名定義（customSubPackage） */
+        private const val CUSTOM_SUB_PACKAGE = "customSubPackage"
 
         /** @ColumnProjection の変数名定義（property） */
         private const val CP_PROPERTY = "property"
@@ -91,8 +91,8 @@ class ProjectionArgumentParser() : LoggerLike by logger {
         var aliasExtend = EMPTY_STRING
         var properties: List<ColumnProjection> = emptyList()
         var functions: List<FunctionProjection> = emptyList()
-        var commonInterfaces: List<DMLInterfaceEnum> = emptyList()
-        var customInterfaces: List<String> = emptyList()
+        var andrOrmSubPackages: List<DMLInterfaceEnum> = emptyList()
+        var customSubPackages: List<String> = emptyList()
 
         annotation.arguments.forEach { arg ->
             val argName = arg.name?.asString()
@@ -145,8 +145,8 @@ class ProjectionArgumentParser() : LoggerLike by logger {
                 // COMMON_INTERFACE:List<DMLInterfaceEnum> 型で、null の場合は空リストを使用。
                 // リストの各要素は DMLInterfaceEnum として処理。KSType や String からも
                 // DMLInterfaceEnum を抽出できるようにする
-                COMMON_INTERFACE -> {
-                    commonInterfaces = (value as? List<*>)?.mapNotNull { element ->
+                ANDRORM_SUB_PACKAGE -> {
+                    andrOrmSubPackages = (value as? List<*>)?.mapNotNull { element ->
                         when (element) {
                             is DMLInterfaceEnum -> element
                             is KSClassDeclaration -> runCatching {
@@ -168,8 +168,8 @@ class ProjectionArgumentParser() : LoggerLike by logger {
                     } ?: emptyList()
                 }
                 // CUSTOM_INTERFACE:List<String> 型で、null の場合は空リストを使用。
-                CUSTOM_INTERFACE -> {
-                    customInterfaces = (value as? List<*>)?.filterIsInstance<String>()
+                CUSTOM_SUB_PACKAGE -> {
+                    customSubPackages = (value as? List<*>)?.filterIsInstance<String>()
                         ?.filter { it.isNotBlank() }
                         ?: emptyList()
                 }
@@ -180,8 +180,8 @@ class ProjectionArgumentParser() : LoggerLike by logger {
             aliasExtend = aliasExtend,
             properties = properties,
             functions = functions,
-            commonInterfaces = commonInterfaces,
-            customInterfaces = customInterfaces
+            andrOrmSubPackages = andrOrmSubPackages,
+            customSubPackages = customSubPackages
         )
         logTraceExiting(result)
         return result

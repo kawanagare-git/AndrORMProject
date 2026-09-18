@@ -21,7 +21,7 @@ import jp.pgw.lab78.androrm.database.condition.sealed.Condition
  * @author Masahiro Inoue
  * @since 2026-05-24
  */
-class WhereClauseDelegate<O>(
+internal class WhereClauseDelegate<O>(
     private val owner: O,
     private val ownerName: String,
     private var enableAlias: Boolean = true,

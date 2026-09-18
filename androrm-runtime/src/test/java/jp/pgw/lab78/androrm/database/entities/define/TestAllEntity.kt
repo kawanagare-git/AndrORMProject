@@ -20,7 +20,7 @@ import java.time.LocalDateTime
             entityNameExtend = "IdOnly",
             aliasExtend = "ID",
             properties = [ColumnProjection("id")],
-            commonInterface = [SELECT]
+            andrOrmSubPackage = [SELECT]
         ),
         Projection(
             entityNameExtend = "Comprehensive",
@@ -32,7 +32,7 @@ import java.time.LocalDateTime
                 ColumnProjection("updateDate"),
                 ColumnProjection("insertDateTime")
             ],
-            commonInterface = [INSERT, UPSERT, ABSERT]
+            andrOrmSubPackage = [INSERT, UPSERT, ABSERT]
         ),
         Projection(
             entityNameExtend = "Comprehensive",
@@ -42,7 +42,7 @@ import java.time.LocalDateTime
                 ColumnProjection("address"),
                 ColumnProjection("birthday"),
             ],
-            commonInterface = [ABSERT]
+            andrOrmSubPackage = [ABSERT]
         ),
         Projection(
             entityNameExtend = "Update",
@@ -51,7 +51,7 @@ import java.time.LocalDateTime
                 ColumnProjection("address"),
                 ColumnProjection("updateDate"),
             ],
-            commonInterface = [UPDATE]
+            andrOrmSubPackage = [UPDATE]
         ),
         Projection(
             entityNameExtend = "Delete",
@@ -59,7 +59,7 @@ import java.time.LocalDateTime
                 ColumnProjection("id", hideFromSelect = true),
                 ColumnProjection("address", hideFromSelect = true),
             ],
-            commonInterface = [DELETE]
+            andrOrmSubPackage = [DELETE]
         ),
     ]
 )
