@@ -1,9 +1,9 @@
-# AndrORM
+﻿# AndrORM
 
 > [!IMPORTANT]
 > AndrORMは現在開発中です。
-> 本資料の対象バージョンは`0.1.8-alpha`です。
-> アルファ版のため、今後APIや仕様が変更される可能性があります。
+> 本資料の対象バージョンは`0.2.0-beta`です。
+> ベータ版のため、今後APIや仕様が変更される可能性があります。
 
 ## beta版への移行に伴うAPI変更
 
@@ -19,7 +19,7 @@
 | `lesserThan` | `lessThan` | 条件DSLの名称整理 |
 
 > [!NOTE]
-> 現在の本文およびコード例は`0.1.8-alpha`を対象としています。`0.2.0-beta`の実装反映後、本文中のAPI名とバージョン表記を`0.2.0-beta`へ更新します。
+> 現在の本文およびコード例は`0.2.0-beta`を対象としています。
 
 AndrORMは、Android／Kotlin向けに開発中のSQLite ORMです。
 
@@ -126,7 +126,7 @@ androrm-common
 
 AndrORMのマーカーインターフェースは、利用者が定義した独自インターフェースを経由する間接継承も認識します。たとえば`CustomViewDefinition : ViewDefinitionEntity`を定義し、Entityが`CustomViewDefinition`を実装する場合も、`ViewDefinitionEntity`として扱われます。複数段の継承も同様です。
 - DML種別ごとの生成先パッケージ指定
-- `commonInterface = [NOT_USE]`と`customInterface`によるカスタム生成先パッケージ指定
+- `andrOrmSubPackage = [NOT_USE]`と`customSubPackage`によるカスタム生成先パッケージ指定
 
 ### Detektによる静的検証
 
@@ -194,7 +194,7 @@ VIEW定義では、次の制約があります。
 
 `ViewDefinitionEntity`へ`@Projection`または`@Projections`を指定すると、VIEWを通常の`Select`から参照するためのEntityをKSPで生成できます。
 
-VIEW定義のProjectionで指定できる`commonInterface`は`SELECT`または`NOT_USE`のみです。Projectionを指定する場合は、少なくとも1つの`SELECT` Projectionが必要です。
+VIEW定義のProjectionで指定できる`andrOrmSubPackage`は`SELECT`または`NOT_USE`のみです。Projectionを指定する場合は、少なくとも1つの`SELECT` Projectionが必要です。
 
 INSERT、UPDATE、DELETE、UPSERT、ABSERT用EntityはVIEW定義から生成できません。
 
@@ -355,9 +355,9 @@ VIEWが別のVIEWを参照する場合は、参照されるVIEWを先に`views`�
 
 - `eq`／`equal`
 - `ne`／`notEqual`
-- `gt`／`graterThan`
-- `ge`／`graterEqual`
-- `lt`／`lesserThan`
+- `gt`／`greaterThan`
+- `ge`／`greaterEqual`
+- `lt`／`lessThan`
 - `le`／`lessEqual`
 - `like`／`notLike`
 - `glob`／`notGlob`
@@ -393,9 +393,9 @@ AndrORMのランタイム、KSP Processor、Detektルールを追加します。
 - 対象モジュール側：`build.gradle.kts（:<モジュール名>）`
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.2.0-beta")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.2.0-beta")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.2.0-beta")
 }
 ```
 Core Library Desugaringを有効にします。
@@ -536,7 +536,7 @@ import java.time.LocalDateTime
                 ColumnProjection("userName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -547,7 +547,7 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [INSERT],
+            andrOrmSubPackage = [INSERT],
         ),
         Projection(
             entityNameExtend = "Update",
@@ -556,7 +556,7 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "Upsert",
@@ -567,14 +567,14 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [UPSERT, ABSERT],
+            andrOrmSubPackage = [UPSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("id", hideFromSelect = true),
             ],
-            commonInterface = [DELETE],
+            andrOrmSubPackage = [DELETE],
         ),
     ],
 )
@@ -610,8 +610,8 @@ data class UserMaster(
 | `aliasExtend` | テーブルaliasへ追加する名称 |
 | `properties` | 生成対象プロパティ |
 | `functions` | 生成対象SQL関数プロパティ |
-| `commonInterface` | SELECT／INSERTなどの共通インターフェース |
-| `customInterface` | `commonInterface = [NOT_USE]`の場合に、`basePackage`へ追加する生成先サブパッケージ |
+| `andrOrmSubPackage` | SELECT／INSERTなどの生成先サブパッケージを決定するDML種別指定 |
+| `customSubPackage` | `andrOrmSubPackage = [NOT_USE]`の場合に、`basePackage`へ追加する生成先サブパッケージ |
 
 生成クラス名は、原則として次の形式です。
 
@@ -625,13 +625,57 @@ data class UserMaster(
 UserMaster + Select = UserMasterSelect
 ```
 
-`customInterface`は、生成クラスが実装するKotlinインターフェースを指定する項目ではありません。`commonInterface = [NOT_USE]`と組み合わせ、`@EntityPackageInfo.basePackage`を基準とする生成先サブパッケージを指定します。
+`customSubPackage`は、生成クラスが実装するKotlinインターフェースを指定する項目ではありません。`andrOrmSubPackage = [NOT_USE]`と組み合わせ、`@EntityPackageInfo.basePackage`を基準とする生成先サブパッケージを指定します。
 
 ### `hideFromSelect`
 
 `ColumnProjection.hideFromSelect = true`を指定したプロパティは、Entityメタ情報には保持されますが、SELECT句の抽出対象から除外されます。
 
 条件式やDELETE用Entityなど、抽出結果として不要なプロパティを定義する際に使用します。
+
+## `Map<String, String?>`とEntityの相互変換
+
+KSPで生成されたEntityは、対応可能なプロパティ型だけで構成されている場合、`StringMapEntityMapper<T>`を実装する`companion object`を自動生成します。
+Mapのキーには、EntityのDBカラム名を使用します。
+
+利用できるメソッドは次のとおりです。
+
+| メソッド | 内容 |
+|---|---|
+| `fromMap(row, ignoreUnknownColumns = false)` | `Map<String, String?>`からEntityを生成 |
+| `toMap(entity)` | Entityを`Map<String, String?>`へ変換 |
+| `fromMapList(rows, ignoreUnknownColumns = false)` | Map一覧をEntity一覧へ変換 |
+| `toMapList(entities)` | Entity一覧をMap一覧へ変換 |
+
+`fromMap()`および`fromMapList()`では、MapにEntity側へ存在しないDBカラム名が含まれている場合の動作を`ignoreUnknownColumns`で切り替えます。
+
+- `false`（デフォルト）：Entityに存在しないカラムを検出すると`IllegalArgumentException`を送出します。
+- `true`：Entityに存在しないカラムを無視して変換を継続します。
+
+`ignoreUnknownColumns = true`は、1つのCSVを複数のEntityへ分割して取り込む場合などに利用できます。
+ただし、Entityのnon-nullプロパティに対応するカラムがMapに存在しない場合、または値が`null`の場合は、`ignoreUnknownColumns`の値にかかわらず`IllegalArgumentException`を送出します。nullableプロパティでは`null`を保持できます。
+
+```kotlin
+val entity = UserMasterSelect.fromMap(row)
+
+val entities = UserMasterSelect.fromMapList(
+    rows = rows,
+    ignoreUnknownColumns = true,
+)
+
+val row = UserMasterSelect.toMap(entity)
+val rows = UserMasterSelect.toMapList(entities)
+```
+
+対応型と文字列表現は次のとおりです。
+
+| Kotlin型 | Map上の文字列表現 |
+|---|---|
+| `Int` / `Long` / `Float` / `Double` | 各数値の文字列表現 |
+| `Boolean` | 読込時は`true` / `false` / `1` / `0`、出力時は`true` / `false` |
+| `String` | 文字列をそのまま使用 |
+| `LocalDate` / `LocalTime` / `LocalDateTime` | ISO形式の文字列 |
+| `ByteArray` | 16進数文字列。出力時は大文字 |
 
 ## Entity生成
 通常KSPでのEntity生成は以下のコマンドを用いる
@@ -696,13 +740,13 @@ findProjectionClasses: Exiting: []
 package com.example.database.entities.define
 ```
 
-通常は、`basePackage`と`commonInterface`に対応するサブパッケージを結合した場所へ生成されます。たとえば`commonInterface = [SELECT]`の生成先は、次のとおりです。
+通常は、`basePackage`と`andrOrmSubPackage`に対応するサブパッケージを結合した場所へ生成されます。たとえば`andrOrmSubPackage = [SELECT]`の生成先は、次のとおりです。
 
 ```text
 com.example.database.entities.select
 ```
 
-標準DMLインターフェースを使用せず、任意のサブパッケージへ生成する場合は、`commonInterface = [NOT_USE]`と`customInterface`を組み合わせます。
+標準DMLインターフェースを使用せず、任意のサブパッケージへ生成する場合は、`andrOrmSubPackage = [NOT_USE]`と`customSubPackage`を組み合わせます。
 
 ```kotlin
 Projection(
@@ -712,8 +756,8 @@ Projection(
         ColumnProjection("createdAt"),
         ColumnProjection("updatedAt"),
     ],
-    commonInterface = [NOT_USE],
-    customInterface = ["interfaces.ManagementColumns"],
+    andrOrmSubPackage = [NOT_USE],
+    customSubPackage = ["interfaces.ManagementColumns"],
 )
 ```
 
@@ -729,7 +773,7 @@ Projection(
 com.example.database.entities.interfaces.ManagementColumns.UserMasterManagementColumns
 ```
 
-`customInterface`に複数の値を指定した場合、生成先の決定に使用されるのは最初の空白でない値です。
+`customSubPackage`に複数の値を指定した場合、生成先の決定に使用されるのは最初の空白でない値です。
 
 ## Entityの定義方法
 

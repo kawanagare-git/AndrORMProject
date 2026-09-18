@@ -1,8 +1,8 @@
 # AndrORM
 
 > [!IMPORTANT]
-> AndrORMは現在開発中のアルファ版です。  
-> 本資料の対象バージョンは`0.1.8-alpha`です。  
+> AndrORMは現在開発中のベータ版です。  
+> 本資料の対象バージョンは`0.2.0-beta`です。  
 > 今後、APIや仕様が変更される可能性があります。
 
 ## beta版への移行に伴うAPI変更
@@ -19,7 +19,7 @@
 | `lesserThan` | `lessThan` | 条件DSLの名称整理 |
 
 > [!NOTE]
-> 現在の本文およびコード例は`0.1.8-alpha`を対象としています。`0.2.0-beta`の実装反映後、本文中のAPI名とバージョン表記を`0.2.0-beta`へ更新します。
+> 現在の本文およびコード例は`0.2.0-beta`を対象としています。
 
 ## AndrORMとは
 
@@ -131,9 +131,9 @@ plugins {
 
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.2.0-beta")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.2.0-beta")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.2.0-beta")
 }
 ```
 
@@ -149,7 +149,7 @@ dependencies {
                 ColumnProjection("productName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -158,7 +158,7 @@ dependencies {
                 ColumnProjection("productName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [INSERT],
+            andrOrmSubPackage = [INSERT],
         ),
     ],
 )

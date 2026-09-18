@@ -1,9 +1,9 @@
-# AndrORM
+﻿# AndrORM
 
 > [!IMPORTANT]
 > AndrORM is currently under development.
-> This reference targets version `0.1.8-alpha`.
-> As this is an alpha release, the API and specifications may change in the future.
+> This reference targets version `0.2.0-beta`.
+> As this is a beta release, the API and specifications may change in the future.
 
 ## API changes for the beta transition
 
@@ -19,7 +19,7 @@ When migrating from `0.1.8-alpha` or earlier, replace the old names with the new
 | `lesserThan` | `lessThan` | Standardizes the condition DSL method name |
 
 > [!NOTE]
-> The current body text and code examples still target `0.1.8-alpha`. After the `0.2.0-beta` implementation is reflected, the API names and version references in this document will be updated for `0.2.0-beta`.
+> The current body text and code examples target `0.2.0-beta`.
 
 AndrORM is an SQLite ORM for Android and Kotlin that is currently under development.
 
@@ -126,7 +126,7 @@ androrm-common
 
 AndrORM recognizes indirect inheritance of marker interfaces through user-defined interfaces. For example, an entity implementing `CustomViewDefinition`, where `CustomViewDefinition : ViewDefinitionEntity`, is also treated as a `ViewDefinitionEntity`. The same rule applies to multiple inheritance levels.
 - Per-DML generated-package configuration
-- Custom generated subpackages using `commonInterface = [NOT_USE]` and `customInterface`
+- Custom generated subpackages using `andrOrmSubPackage = [NOT_USE]` and `customSubPackage`
 
 ### Static Validation with Detekt
 
@@ -194,7 +194,7 @@ VIEW definitions have the following restrictions.
 
 When `@Projection` or `@Projections` is applied to a `ViewDefinitionEntity`, KSP can generate an entity used to query the VIEW with the normal `Select` builder.
 
-Only `SELECT` and `NOT_USE` can be specified in `commonInterface` for VIEW projections. When projections are specified, at least one `SELECT` projection is required.
+Only `SELECT` and `NOT_USE` can be specified in `andrOrmSubPackage` for VIEW projections. When projections are specified, at least one `SELECT` projection is required.
 
 INSERT, UPDATE, DELETE, UPSERT, and ABSERT entities cannot be generated from a VIEW definition.
 
@@ -355,9 +355,9 @@ The main conditional operations can be specified through the DSL.
 
 - `eq` / `equal`
 - `ne` / `notEqual`
-- `gt` / `graterThan`
-- `ge` / `graterEqual`
-- `lt` / `lesserThan`
+- `gt` / `greaterThan`
+- `ge` / `greaterEqual`
+- `lt` / `lessThan`
 - `le` / `lessEqual`
 - `like` / `notLike`
 - `glob` / `notGlob`
@@ -393,9 +393,9 @@ Add the AndrORM runtime, KSP processor, and Detekt rules.
 - Target module: `build.gradle.kts (:<module-name>)`
 ```kotlin
 dependencies {
-    implementation("io.github.kawanagare-git:androrm-runtime:0.1.8-alpha")
-    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.1.8-alpha")
-    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.1.8-alpha")
+    implementation("io.github.kawanagare-git:androrm-runtime:0.2.0-beta")
+    ksp("io.github.kawanagare-git:androrm-generator-ksp:0.2.0-beta")
+    detektPlugins("io.github.kawanagare-git:androrm-detekt-rules:0.2.0-beta")
 }
 ```
 Enable Core Library Desugaring.
@@ -537,7 +537,7 @@ import java.time.LocalDateTime
                 ColumnProjection("userName"),
                 ColumnProjection("enabled"),
             ],
-            commonInterface = [SELECT],
+            andrOrmSubPackage = [SELECT],
         ),
         Projection(
             entityNameExtend = "Insert",
@@ -548,7 +548,7 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [INSERT],
+            andrOrmSubPackage = [INSERT],
         ),
         Projection(
             entityNameExtend = "Update",
@@ -557,7 +557,7 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [UPDATE],
+            andrOrmSubPackage = [UPDATE],
         ),
         Projection(
             entityNameExtend = "Upsert",
@@ -568,14 +568,14 @@ import java.time.LocalDateTime
                 ColumnProjection("enabled"),
                 ColumnProjection("updatedAt"),
             ],
-            commonInterface = [UPSERT, ABSERT],
+            andrOrmSubPackage = [UPSERT, ABSERT],
         ),
         Projection(
             entityNameExtend = "Delete",
             properties = [
                 ColumnProjection("id", hideFromSelect = true),
             ],
-            commonInterface = [DELETE],
+            andrOrmSubPackage = [DELETE],
         ),
     ],
 )
@@ -611,8 +611,8 @@ data class UserMaster(
 | `aliasExtend` | Name appended to the table alias |
 | `properties` | Properties to generate |
 | `functions` | SQL function properties to generate |
-| `commonInterface` | Common interfaces such as SELECT and INSERT |
-| `customInterface` | Generated subpackage appended to `basePackage` when `commonInterface = [NOT_USE]` |
+| `andrOrmSubPackage` | DML type specification that determines the generated subpackage, such as SELECT or INSERT |
+| `customSubPackage` | Generated subpackage appended to `basePackage` when `andrOrmSubPackage = [NOT_USE]` |
 
 Generated class names generally use the following format.
 
@@ -626,13 +626,57 @@ Example:
 UserMaster + Select = UserMasterSelect
 ```
 
-`customInterface` does not specify a Kotlin interface implemented by the generated class. Together with `commonInterface = [NOT_USE]`, it specifies a generated subpackage relative to `@EntityPackageInfo.basePackage`.
+`customSubPackage` does not specify a Kotlin interface implemented by the generated class. Together with `andrOrmSubPackage = [NOT_USE]`, it specifies a generated subpackage relative to `@EntityPackageInfo.basePackage`.
 
 ### `hideFromSelect`
 
 A property with `ColumnProjection.hideFromSelect = true` remains in the entity metadata but is excluded from the SELECT list.
 
 Use this for properties that are required for conditions or DELETE entities but are not needed in the query result.
+
+## Converting between `Map<String, String?>` and Entity
+
+For KSP-generated entities composed only of supported property types, AndrORM automatically generates a `companion object` that implements `StringMapEntityMapper<T>`.
+Map keys use the DB column names of the entity.
+
+The following methods are available.
+
+| Method | Description |
+|---|---|
+| `fromMap(row, ignoreUnknownColumns = false)` | Creates an entity from `Map<String, String?>` |
+| `toMap(entity)` | Converts an entity to `Map<String, String?>` |
+| `fromMapList(rows, ignoreUnknownColumns = false)` | Converts a list of maps to a list of entities |
+| `toMapList(entities)` | Converts a list of entities to a list of maps |
+
+In `fromMap()` and `fromMapList()`, `ignoreUnknownColumns` controls the behavior when the Map contains DB column names that do not exist in the target entity.
+
+- `false` (default): Throws `IllegalArgumentException` when a column not present in the entity is detected.
+- `true`: Ignores columns not present in the entity and continues conversion.
+
+`ignoreUnknownColumns = true` can be used when importing one CSV and splitting its columns across multiple entities.
+However, if a column corresponding to a non-null entity property is missing from the Map, or its value is `null`, `IllegalArgumentException` is thrown regardless of `ignoreUnknownColumns`. Nullable properties preserve `null`.
+
+```kotlin
+val entity = UserMasterSelect.fromMap(row)
+
+val entities = UserMasterSelect.fromMapList(
+    rows = rows,
+    ignoreUnknownColumns = true,
+)
+
+val row = UserMasterSelect.toMap(entity)
+val rows = UserMasterSelect.toMapList(entities)
+```
+
+Supported types and their string representations are as follows.
+
+| Kotlin type | String representation in Map |
+|---|---|
+| `Int` / `Long` / `Float` / `Double` | String representation of each numeric value |
+| `Boolean` | Reads `true` / `false` / `1` / `0`; writes `true` / `false` |
+| `String` | Used as-is |
+| `LocalDate` / `LocalTime` / `LocalDateTime` | ISO-format string |
+| `ByteArray` | Hexadecimal string; uppercase when written |
 
 ## Entity Generation
 Use the following command for normal KSP entity generation.
@@ -697,13 +741,13 @@ The destination package can be changed with `@file:EntityPackageInfo` at the beg
 package com.example.database.entities.define
 ```
 
-Normally, the generated package combines `basePackage` with the subpackage corresponding to `commonInterface`. For example, the destination for `commonInterface = [SELECT]` is:
+Normally, the generated package combines `basePackage` with the subpackage corresponding to `andrOrmSubPackage`. For example, the destination for `andrOrmSubPackage = [SELECT]` is:
 
 ```text
 com.example.database.entities.select
 ```
 
-To generate an entity in an arbitrary subpackage without a standard DML interface, combine `commonInterface = [NOT_USE]` with `customInterface`.
+To generate an entity in an arbitrary subpackage without a standard DML interface, combine `andrOrmSubPackage = [NOT_USE]` with `customSubPackage`.
 
 ```kotlin
 Projection(
@@ -713,8 +757,8 @@ Projection(
         ColumnProjection("createdAt"),
         ColumnProjection("updatedAt"),
     ],
-    commonInterface = [NOT_USE],
-    customInterface = ["interfaces.ManagementColumns"],
+    andrOrmSubPackage = [NOT_USE],
+    customSubPackage = ["interfaces.ManagementColumns"],
 )
 ```
 
@@ -730,7 +774,7 @@ Example:
 com.example.database.entities.interfaces.ManagementColumns.UserMasterManagementColumns
 ```
 
-If `customInterface` contains multiple values, the first non-blank value is used to determine the destination package.
+If `customSubPackage` contains multiple values, the first non-blank value is used to determine the destination package.
 
 ## Defining Entities
 
